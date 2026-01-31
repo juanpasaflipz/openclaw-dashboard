@@ -1,0 +1,21 @@
+# LLM_CONFIG.md - Language Model Configuration
+
+*This is a template file. Copy it to LLM_CONFIG.md and fill in your API credentials.*
+
+- **Provider:** anthropic | openai | openrouter | ollama | custom
+- **Model:** claude-3-5-sonnet-20241022 | gpt-4 | etc.
+- **Base URL:** (optional, for custom providers)
+- **Temperature:** 0.7
+- **Max Tokens:** 4096
+
+## API Key
+```
+your-api-key-here
+```
+
+---
+
+This configuration connects your OpenClaw agent to the AI language model.
+Keep your API key secure and never share it publicly.
+
+**IMPORTANT:** Never commit this file to version control!

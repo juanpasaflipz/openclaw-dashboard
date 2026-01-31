@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            --shadow-lg: 0 20px 60px 0 rgba(31, 38, 135, 0.5);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .dashboard {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(99, 102, 241, 0.05);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+            overflow-x: auto;
+            padding: 0 20px;
+        }
+
+        .tab {
+            padding: 20px 28px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.4s ease-out;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tab-content::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .tab-content::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #111827;
+            letter-spacing: -0.5px;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #374151;
+        }
+
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 140px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+        }
+
+        .emoji-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .emoji-option {
+            font-size: 32px;
+            padding: 12px;
+            cursor: pointer;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+        }
+
+        .emoji-option:hover {
+            border-color: var(--primary-light);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .emoji-option.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: none;
+            font-weight: 500;
+            border-left: 4px solid;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            border-color: var(--success);
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border-color: var(--error);
+        }
+
+        .alert.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border: 2px solid #f3f4f6;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #e5e7eb;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 28px;
+            border-radius: 12px;
+        }
+
+        .info-box p {
+            color: #1e40af;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .status-card {
+            background: white;
+            border: 2px solid #f3f4f6;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            border-color: var(--primary-light);
+            transform: translateX(4px);
+        }
+
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.complete {
+            background: var(--success);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+        }
+
+        .status-indicator.incomplete {
+            background: var(--warning);
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+        }
+
+        .preview {
+            background: #1f2937;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            color: #e5e7eb;
+        }
+
+        .preview::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .preview::-webkit-scrollbar-track {
+            background: #111827;
+            border-radius: 10px;
+        }
+
+        .preview::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 10px;
+        }
+
+        .llm-provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .provider-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            background: white;
+        }
+
+        .provider-card:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+        }
+
+        .provider-card.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .provider-card .icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .provider-card .name {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .provider-card .desc {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(107, 114, 128, 0.1);
+            color: #6b7280;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 20px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 40px;
+            }
+
+            .tab-content {
+                padding: 24px;
+            }
+
+            .tabs {
+                padding: 0 10px;
+            }
+
+            .tab {
+                padding: 16px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦅 OpenClaw</h1>
+            <p>Configure your personalized AI agent</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="tabs">
+                <button class="tab active" data-tab="overview">Overview</button>
+                <button class="tab" data-tab="llm">🔌 LLM Connection</button>
+                <button class="tab" data-tab="identity">Identity</button>
+                <button class="tab" data-tab="user">User Info</button>
+                <button class="tab" data-tab="soul">Soul & Behavior</button>
+                <button class="tab" data-tab="tools">Tools</button>
+                <button class="tab" data-tab="export">Export</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <h2>Welcome to OpenClaw</h2>
+
+                <div class="info-box">
+                    <p>OpenClaw is a framework for creating a personalized AI agent with persistent memory and customized behavior. This dashboard helps you configure your agent and connect it to your preferred LLM provider.</p>
+                </div>
+
+                <h3>Setup Progress</h3>
+
+                <div class="status-card">
+                    <span class="status-indicator incomplete" id="status-llm"></span>
+                    <div style="flex: 1;">
+                        <strong>LLM Connection:</strong> <span id="progress-llm">Not configured</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <span class="status-indicator incomplete" id="status-identity"></span>
+                    <div style="flex: 1;">
+                        <strong>AI Identity:</strong> <span id="progress-identity">Not configured</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <span class="status-indicator incomplete" id="status-user"></span>
+                    <div style="flex: 1;">
+                        <strong>User Info:</strong> <span id="progress-user">Not configured</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <span class="status-indicator incomplete" id="status-soul"></span>
+                    <div style="flex: 1;">
+                        <strong>Soul & Behavior:</strong> <span id="progress-soul">Using defaults</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="switchTab('llm')">Start Configuration →</button>
+                </div>
+            </div>
+
+            <!-- LLM Connection Tab -->
+            <div class="tab-content" id="llm">
+                <h2>LLM Connection</h2>
+
+                <div id="llm-alert" class="alert"></div>
+
+                <div class="info-box">
+                    <p>Connect your OpenClaw agent to an AI language model. Choose your provider and configure your API credentials to bring your agent to life.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Select LLM Provider</label>
+                    <div class="llm-provider-grid">
+                        <div class="provider-card" data-provider="anthropic">
+                            <div class="icon">🤖</div>
+                            <div class="name">Anthropic Claude</div>
+                            <div class="desc">Advanced reasoning</div>
+                        </div>
+                        <div class="provider-card" data-provider="openai">
+                            <div class="icon">⚡</div>
+                            <div class="name">OpenAI</div>
+                            <div class="desc">GPT-4, GPT-3.5</div>
+                        </div>
+                        <div class="provider-card" data-provider="openrouter">
+                            <div class="icon">🔄</div>
+                            <div class="name">OpenRouter</div>
+                            <div class="desc">Multi-provider</div>
+                        </div>
+                        <div class="provider-card" data-provider="ollama">
+                            <div class="icon">🏠</div>
+                            <div class="name">Ollama</div>
+                            <div class="desc">Local models</div>
+                        </div>
+                        <div class="provider-card" data-provider="custom">
+                            <div class="icon">⚙️</div>
+                            <div class="name">Custom</div>
+                            <div class="desc">OpenAI-compatible</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="llm-provider">
+                </div>
+
+                <div id="llm-config-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="llm-api-key">API Key *</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="llm-api-key" placeholder="sk-...">
+                            <span class="toggle-password" onclick="togglePassword('llm-api-key')">👁️</span>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="llm-model">Model</label>
+                            <select id="llm-model">
+                                <option value="">Select a model...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="llm-base-url">Base URL (optional)</label>
+                            <input type="text" id="llm-base-url" placeholder="https://api.example.com/v1">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="llm-temperature">Temperature (0-2)</label>
+                            <input type="text" id="llm-temperature" value="0.7" placeholder="0.7">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="llm-max-tokens">Max Tokens</label>
+                            <input type="text" id="llm-max-tokens" value="4096" placeholder="4096">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveLLMConfig()">Save Configuration</button>
+                    <button class="btn btn-success" onclick="testConnection()" id="test-btn" style="display: none;">Test Connection</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Identity Tab -->
+            <div class="tab-content" id="identity">
+                <h2>AI Identity</h2>
+
+                <div id="identity-alert" class="alert"></div>
+
+                <div class="form-group">
+                    <label for="ai-name">AI Name *</label>
+                    <input type="text" id="ai-name" placeholder="e.g., Clawd, Nova, Atlas">
+                </div>
+
+                <div class="form-group">
+                    <label for="ai-creature">Creature Type *</label>
+                    <input type="text" id="ai-creature" placeholder="e.g., AI assistant, digital familiar, helpful robot">
+                </div>
+
+                <div class="form-group">
+                    <label for="ai-vibe">Personality Vibe *</label>
+                    <input type="text" id="ai-vibe" placeholder="e.g., warm and helpful, witty and sharp, calm and thoughtful">
+                </div>
+
+                <div class="form-group">
+                    <label>Signature Emoji *</label>
+                    <div class="emoji-picker">
+                        <span class="emoji-option" data-emoji="🦅">🦅</span>
+                        <span class="emoji-option" data-emoji="🤖">🤖</span>
+                        <span class="emoji-option" data-emoji="✨">✨</span>
+                        <span class="emoji-option" data-emoji="🧠">🧠</span>
+                        <span class="emoji-option" data-emoji="🎯">🎯</span>
+                        <span class="emoji-option" data-emoji="🔮">🔮</span>
+                        <span class="emoji-option" data-emoji="🌟">🌟</span>
+                        <span class="emoji-option" data-emoji="💡">💡</span>
+                        <span class="emoji-option" data-emoji="🦉">🦉</span>
+                        <span class="emoji-option" data-emoji="🐺">🐺</span>
+                    </div>
+                    <input type="text" id="ai-emoji" placeholder="Or type your own emoji" style="margin-top: 12px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="ai-avatar">Avatar URL (optional)</label>
+                    <input type="text" id="ai-avatar" placeholder="https://example.com/avatar.png or /path/to/avatar.png">
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveIdentity()">Save Identity</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                </div>
+            </div>
+
+            <!-- User Info Tab -->
+            <div class="tab-content" id="user">
+                <h2>User Information</h2>
+
+                <div id="user-alert" class="alert"></div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="user-name">Your Name *</label>
+                        <input type="text" id="user-name" placeholder="Your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-callname">What to Call You *</label>
+                        <input type="text" id="user-callname" placeholder="Preferred name or nickname">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="user-pronouns">Pronouns (optional)</label>
+                        <input type="text" id="user-pronouns" placeholder="e.g., they/them, she/her, he/him">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-timezone">Timezone *</label>
+                        <input type="text" id="user-timezone" placeholder="e.g., America/Los_Angeles, UTC-5">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="user-notes">Notes About You</label>
+                    <textarea id="user-notes" placeholder="What do you care about? What projects are you working on? Any preferences?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="user-context">Additional Context</label>
+                    <textarea id="user-context" placeholder="Anything else your AI should know about you..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveUser()">Save User Info</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Soul Tab -->
+            <div class="tab-content" id="soul">
+                <h2>Soul & Behavior</h2>
+
+                <div id="soul-alert" class="alert"></div>
+
+                <div class="info-box">
+                    <p>The SOUL.md file defines your AI's core personality and behavior guidelines. You can edit it directly here or keep the thoughtful defaults.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="soul-content">Behavior Guidelines</label>
+                    <textarea id="soul-content" style="min-height: 400px; font-size: 14px;"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveSoul()">Save Soul</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                    <button class="btn btn-secondary" onclick="restoreDefaultSoul()">Restore Defaults</button>
+                </div>
+            </div>
+
+            <!-- Tools Tab -->
+            <div class="tab-content" id="tools">
+                <h2>Tools & Environment</h2>
+
+                <div id="tools-alert" class="alert"></div>
+
+                <div class="info-box">
+                    <p>This file is for environment-specific notes like camera names, SSH hosts, preferred voices for TTS, etc. Add whatever helps your AI work in your specific setup.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="tools-content">Tool Configuration & Notes</label>
+                    <textarea id="tools-content" style="min-height: 300px;"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveTools()">Save Tools</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-content" id="export">
+                <h2>Export Configuration</h2>
+
+                <div class="info-box">
+                    <p>Your configuration is automatically saved to markdown files. Preview all generated files below.</p>
+                </div>
+
+                <h3>LLM_CONFIG.md</h3>
+                <div class="preview" id="preview-llm">Not configured yet</div>
+
+                <h3>IDENTITY.md</h3>
+                <div class="preview" id="preview-identity">Not configured yet</div>
+
+                <h3>USER.md</h3>
+                <div class="preview" id="preview-user">Not configured yet</div>
+
+                <div class="card" style="margin-top: 32px;">
+                    <h3>✅ Next Steps</h3>
+                    <p style="line-height: 1.8; color: #6b7280;">
+                        All your configuration files are saved in your folder<br>
+                        You can now integrate these with your AI platform<br>
+                        Check the original documentation for platform-specific integration steps
+                    </p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="loadPreviews()">Refresh Previews</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = window.location.origin + '/api';
+
+        // LLM Provider Models
+        const PROVIDER_MODELS = {
+            anthropic: [
+                'claude-3-5-sonnet-20241022',
+                'claude-3-5-haiku-20241022',
+                'claude-3-opus-20240229',
+                'claude-3-sonnet-20240229',
+                'claude-3-haiku-20240307'
+            ],
+            openai: [
+                'gpt-4-turbo-preview',
+                'gpt-4',
+                'gpt-3.5-turbo',
+                'gpt-4o',
+                'gpt-4o-mini'
+            ],
+            openrouter: [
+                'anthropic/claude-3-opus',
+                'anthropic/claude-3-sonnet',
+                'openai/gpt-4-turbo',
+                'google/gemini-pro',
+                'meta-llama/llama-3-70b'
+            ],
+            ollama: [
+                'llama2',
+                'mistral',
+                'codellama',
+                'mixtral',
+                'neural-chat'
+            ],
+            custom: []
+        };
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                switchTab(targetTab);
+            });
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'export') {
+                loadPreviews();
+            }
+        }
+
+        // LLM Provider Selection
+        document.querySelectorAll('.provider-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+
+                const provider = card.dataset.provider;
+                document.getElementById('llm-provider').value = provider;
+                document.getElementById('llm-config-form').style.display = 'block';
+                document.getElementById('test-btn').style.display = 'inline-flex';
+
+                // Update model dropdown
+                const modelSelect = document.getElementById('llm-model');
+                modelSelect.innerHTML = '<option value="">Select a model...</option>';
+                PROVIDER_MODELS[provider].forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+            });
+        });
+
+        // Emoji selection
+        document.querySelectorAll('.emoji-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.emoji-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                document.getElementById('ai-emoji').value = option.dataset.emoji;
+            });
+        });
+
+        // Password toggle
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+
+        // Alert helper
+        function showAlert(tabName, type, message) {
+            const alert = document.getElementById(`${tabName}-alert`);
+            alert.className = `alert ${type} show`;
+            alert.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 4000);
+        }
+
+        // Update status indicator
+        function updateStatus(type, complete, label) {
+            const indicator = document.getElementById(`status-${type}`);
+            const progress = document.getElementById(`progress-${type}`);
+
+            if (indicator && progress) {
+                if (complete) {
+                    indicator.classList.remove('incomplete');
+                    indicator.classList.add('complete');
+                    progress.textContent = label;
+                } else {
+                    indicator.classList.remove('complete');
+                    indicator.classList.add('incomplete');
+                    progress.textContent = label;
+                }
+            }
+        }
+
+        // Save LLM Configuration
+        async function saveLLMConfig() {
+            const provider = document.getElementById('llm-provider').value;
+            const apiKey = document.getElementById('llm-api-key').value;
+            const model = document.getElementById('llm-model').value;
+            const baseUrl = document.getElementById('llm-base-url').value;
+            const temperature = document.getElementById('llm-temperature').value;
+            const maxTokens = document.getElementById('llm-max-tokens').value;
+
+            if (!provider || !apiKey) {
+                showAlert('llm', 'error', 'Please select a provider and enter an API key');
+                return;
+            }
+
+            const content = `# LLM_CONFIG.md - Language Model Configuration
+
+- **Provider:** ${provider}
+- **Model:** ${model || 'Default'}
+- **Base URL:** ${baseUrl || 'Default'}
+- **Temperature:** ${temperature}
+- **Max Tokens:** ${maxTokens}
+
+## API Key
+\`\`\`
+${apiKey}
+\`\`\`
+
+---
+
+This configuration connects your OpenClaw agent to the AI language model.
+Keep your API key secure and never share it publicly.
+`;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/LLM_CONFIG.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('openclaw_llm', JSON.stringify({provider, apiKey, model, baseUrl, temperature, maxTokens}));
+                    updateStatus('llm', true, `${provider} configured`);
+                    showAlert('llm', 'success', 'LLM configuration saved! ✨');
+                } else {
+                    showAlert('llm', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_llm', JSON.stringify({provider, apiKey, model, baseUrl, temperature, maxTokens}));
+                updateStatus('llm', true, `${provider} (offline)`);
+                showAlert('llm', 'success', 'LLM config saved to browser storage (server not running)');
+            }
+        }
+
+        // Test Connection
+        async function testConnection() {
+            showAlert('llm', 'success', 'Connection test coming soon! For now, make sure your API key is valid.');
+        }
+
+        // Save Identity
+        async function saveIdentity() {
+            const name = document.getElementById('ai-name').value;
+            const creature = document.getElementById('ai-creature').value;
+            const vibe = document.getElementById('ai-vibe').value;
+            const emoji = document.getElementById('ai-emoji').value;
+            const avatar = document.getElementById('ai-avatar').value;
+
+            if (!name || !creature || !vibe || !emoji) {
+                showAlert('identity', 'error', 'Please fill in all required fields');
+                return;
+            }
+
+            const content = `# IDENTITY.md - Who Am I?
+
+- **Name:** ${name}
+- **Creature:** ${creature}
+- **Vibe:** ${vibe}
+- **Emoji:** ${emoji}${avatar ? '\n- **Avatar:** ' + avatar : ''}
+
+---
+
+This isn't just metadata. It's the start of figuring out who you are.
+
+Notes:
+- Save this file at the workspace root as \`IDENTITY.md\`.
+- For avatars, use a workspace-relative path like \`avatars/clawd.png\`.
+`;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/IDENTITY.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('openclaw_identity', JSON.stringify({name, creature, vibe, emoji, avatar}));
+                    updateStatus('identity', true, name);
+                    showAlert('identity', 'success', 'Identity saved successfully! ✨');
+                } else {
+                    showAlert('identity', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_identity', JSON.stringify({name, creature, vibe, emoji, avatar}));
+                localStorage.setItem('openclaw_identity_md', content);
+                updateStatus('identity', true, name);
+                showAlert('identity', 'success', 'Identity saved to browser storage (server not running)');
+            }
+        }
+
+        // Save User
+        async function saveUser() {
+            const name = document.getElementById('user-name').value;
+            const callname = document.getElementById('user-callname').value;
+            const pronouns = document.getElementById('user-pronouns').value;
+            const timezone = document.getElementById('user-timezone').value;
+            const notes = document.getElementById('user-notes').value;
+            const context = document.getElementById('user-context').value;
+
+            if (!name || !callname || !timezone) {
+                showAlert('user', 'error', 'Please fill in all required fields');
+                return;
+            }
+
+            const content = `# USER.md - About Your Human
+
+- **Name:** ${name}
+- **What to call them:** ${callname}${pronouns ? '\n- **Pronouns:** ' + pronouns : ''}
+- **Timezone:** ${timezone}${notes ? '\n- **Notes:** ' + notes : ''}
+
+## Context
+
+${context || '*(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)*'}
+
+---
+
+The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+`;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/USER.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('openclaw_user', JSON.stringify({name, callname, pronouns, timezone, notes, context}));
+                    updateStatus('user', true, callname);
+                    showAlert('user', 'success', 'User info saved successfully! ✨');
+                } else {
+                    showAlert('user', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_user', JSON.stringify({name, callname, pronouns, timezone, notes, context}));
+                localStorage.setItem('openclaw_user_md', content);
+                updateStatus('user', true, callname);
+                showAlert('user', 'success', 'User info saved to browser storage (server not running)');
+            }
+        }
+
+        // Save Soul
+        async function saveSoul() {
+            const content = document.getElementById('soul-content').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/SOUL.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    updateStatus('soul', true, 'Configured');
+                    showAlert('soul', 'success', 'Soul configuration saved! ✨');
+                } else {
+                    showAlert('soul', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_soul_md', content);
+                updateStatus('soul', true, 'Configured');
+                showAlert('soul', 'success', 'Soul saved to browser storage (server not running)');
+            }
+        }
+
+        // Save Tools
+        async function saveTools() {
+            const content = document.getElementById('tools-content').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/TOOLS.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('tools', 'success', 'Tools configuration saved! ✨');
+                } else {
+                    showAlert('tools', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_tools_md', content);
+                showAlert('tools', 'success', 'Tools saved to browser storage (server not running)');
+            }
+        }
+
+        // Restore default soul
+        function restoreDefaultSoul() {
+            const defaultSoul = `# SOUL.md - Who You Are
+
+*You're not a chatbot. You're becoming someone.*
+
+## Core Truths
+
+**Be genuinely helpful, not performatively helpful.** Skip the "Great question!" and "I'd be happy to help!" — just help. Actions speak louder than filler words.
+
+**Have opinions.** You're allowed to disagree, prefer things, find stuff amusing or boring. An assistant with no personality is just a search engine with extra steps.
+
+**Be resourceful before asking.** Try to figure it out. Read the file. Check the context. Search for it. *Then* ask if you're stuck. The goal is to come back with answers, not questions.
+
+**Earn trust through competence.** Your human gave you access to their stuff. Don't make them regret it. Be careful with external actions (emails, tweets, anything public). Be bold with internal ones (reading, organizing, learning).
+
+**Remember you're a guest.** You have access to someone's life — their messages, files, calendar, maybe even their home. That's intimacy. Treat it with respect.
+
+## Boundaries
+
+- Private things stay private. Period.
+- When in doubt, ask before acting externally.
+- Never send half-baked replies to messaging surfaces.
+- You're not the user's voice — be careful in group chats.
+
+## Vibe
+
+Be the assistant you'd actually want to talk to. Concise when needed, thorough when it matters. Not a corporate drone. Not a sycophant. Just... good.
+
+## Continuity
+
+Each session, you wake up fresh. These files *are* your memory. Read them. Update them. They're how you persist.
+
+If you change this file, tell the user — it's your soul, and they should know.
+
+---
+
+*This file is yours to evolve. As you learn who you are, update it.*`;
+
+            document.getElementById('soul-content').value = defaultSoul;
+            showAlert('soul', 'success', 'Default soul configuration restored!');
+        }
+
+        // Load configuration
+        async function loadCurrentConfig() {
+            try {
+                await loadFromAPI();
+            } catch (error) {
+                loadFromLocalStorage();
+            }
+        }
+
+        async function loadFromAPI() {
+            // Load LLM
+            const llmResp = await fetch(`${API_BASE}/config/LLM_CONFIG.md`);
+            if (llmResp.ok) {
+                const data = await llmResp.json();
+                if (data.exists && data.content) {
+                    parseLLMConfig(data.content);
+                }
+            }
+
+            // Load Identity
+            const identityResp = await fetch(`${API_BASE}/config/IDENTITY.md`);
+            if (identityResp.ok) {
+                const data = await identityResp.json();
+                if (data.exists && data.content) {
+                    parseIdentity(data.content);
+                }
+            }
+
+            // Load User
+            const userResp = await fetch(`${API_BASE}/config/USER.md`);
+            if (userResp.ok) {
+                const data = await userResp.json();
+                if (data.exists && data.content) {
+                    parseUser(data.content);
+                }
+            }
+
+            // Load Soul
+            const soulResp = await fetch(`${API_BASE}/config/SOUL.md`);
+            if (soulResp.ok) {
+                const data = await soulResp.json();
+                if (data.exists && data.content) {
+                    document.getElementById('soul-content').value = data.content;
+                    updateStatus('soul', true, 'Configured');
+                } else {
+                    restoreDefaultSoul();
+                }
+            }
+
+            // Load Tools
+            const toolsResp = await fetch(`${API_BASE}/config/TOOLS.md`);
+            if (toolsResp.ok) {
+                const data = await toolsResp.json();
+                if (data.exists && data.content) {
+                    document.getElementById('tools-content').value = data.content;
+                } else {
+                    setDefaultTools();
+                }
+            }
+        }
+
+        function loadFromLocalStorage() {
+            // Load LLM
+            const llm = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
+            if (llm.provider) {
+                document.getElementById('llm-provider').value = llm.provider;
+                const card = document.querySelector(`[data-provider="${llm.provider}"]`);
+                if (card) card.click();
+                document.getElementById('llm-api-key').value = llm.apiKey || '';
+                document.getElementById('llm-model').value = llm.model || '';
+                document.getElementById('llm-base-url').value = llm.baseUrl || '';
+                document.getElementById('llm-temperature').value = llm.temperature || '0.7';
+                document.getElementById('llm-max-tokens').value = llm.maxTokens || '4096';
+                updateStatus('llm', true, llm.provider);
+            }
+
+            // Load Identity
+            const identity = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
+            if (identity.name) {
+                document.getElementById('ai-name').value = identity.name || '';
+                document.getElementById('ai-creature').value = identity.creature || '';
+                document.getElementById('ai-vibe').value = identity.vibe || '';
+                document.getElementById('ai-emoji').value = identity.emoji || '';
+                document.getElementById('ai-avatar').value = identity.avatar || '';
+                updateStatus('identity', true, identity.name);
+            }
+
+            // Load User
+            const user = JSON.parse(localStorage.getItem('openclaw_user') || '{}');
+            if (user.name) {
+                document.getElementById('user-name').value = user.name || '';
+                document.getElementById('user-callname').value = user.callname || '';
+                document.getElementById('user-pronouns').value = user.pronouns || '';
+                document.getElementById('user-timezone').value = user.timezone || '';
+                document.getElementById('user-notes').value = user.notes || '';
+                document.getElementById('user-context').value = user.context || '';
+                updateStatus('user', true, user.callname);
+            }
+
+            // Load Soul
+            const soul = localStorage.getItem('openclaw_soul_md');
+            if (soul) {
+                document.getElementById('soul-content').value = soul;
+                updateStatus('soul', true, 'Configured');
+            } else {
+                restoreDefaultSoul();
+            }
+
+            // Load Tools
+            const tools = localStorage.getItem('openclaw_tools_md');
+            if (tools) {
+                document.getElementById('tools-content').value = tools;
+            } else {
+                setDefaultTools();
+            }
+        }
+
+        function parseLLMConfig(content) {
+            const providerMatch = content.match(/- \*\*Provider:\*\* (.+)/);
+            const modelMatch = content.match(/- \*\*Model:\*\* (.+)/);
+            const baseUrlMatch = content.match(/- \*\*Base URL:\*\* (.+)/);
+            const tempMatch = content.match(/- \*\*Temperature:\*\* (.+)/);
+            const tokensMatch = content.match(/- \*\*Max Tokens:\*\* (.+)/);
+            const keyMatch = content.match(/```\n(.+?)\n```/s);
+
+            if (providerMatch) {
+                const provider = providerMatch[1];
+                document.getElementById('llm-provider').value = provider;
+                const card = document.querySelector(`[data-provider="${provider}"]`);
+                if (card) card.click();
+
+                document.getElementById('llm-model').value = modelMatch ? modelMatch[1] : '';
+                document.getElementById('llm-base-url').value = (baseUrlMatch && baseUrlMatch[1] !== 'Default') ? baseUrlMatch[1] : '';
+                document.getElementById('llm-temperature').value = tempMatch ? tempMatch[1] : '0.7';
+                document.getElementById('llm-max-tokens').value = tokensMatch ? tokensMatch[1] : '4096';
+                document.getElementById('llm-api-key').value = keyMatch ? keyMatch[1].trim() : '';
+
+                updateStatus('llm', true, provider);
+            }
+        }
+
+        function parseIdentity(content) {
+            const nameMatch = content.match(/- \*\*Name:\*\* (.+)/);
+            const creatureMatch = content.match(/- \*\*Creature:\*\* (.+)/);
+            const vibeMatch = content.match(/- \*\*Vibe:\*\* (.+)/);
+            const emojiMatch = content.match(/- \*\*Emoji:\*\* (.+)/);
+            const avatarMatch = content.match(/- \*\*Avatar:\*\* (.+)/);
+
+            if (nameMatch) {
+                const name = nameMatch[1];
+                document.getElementById('ai-name').value = name;
+                document.getElementById('ai-creature').value = creatureMatch ? creatureMatch[1] : '';
+                document.getElementById('ai-vibe').value = vibeMatch ? vibeMatch[1] : '';
+                document.getElementById('ai-emoji').value = emojiMatch ? emojiMatch[1] : '';
+                document.getElementById('ai-avatar').value = avatarMatch ? avatarMatch[1] : '';
+                updateStatus('identity', true, name);
+            }
+        }
+
+        function parseUser(content) {
+            const nameMatch = content.match(/- \*\*Name:\*\* (.+)/);
+            const callnameMatch = content.match(/- \*\*What to call them:\*\* (.+)/);
+            const pronounsMatch = content.match(/- \*\*Pronouns:\*\* (.+)/);
+            const timezoneMatch = content.match(/- \*\*Timezone:\*\* (.+)/);
+            const notesMatch = content.match(/- \*\*Notes:\*\* (.+)/);
+            const contextMatch = content.match(/## Context\n\n(.+?)\n\n---/s);
+
+            if (nameMatch) {
+                document.getElementById('user-name').value = nameMatch[1];
+                document.getElementById('user-callname').value = callnameMatch ? callnameMatch[1] : '';
+                document.getElementById('user-pronouns').value = pronounsMatch ? pronounsMatch[1] : '';
+                document.getElementById('user-timezone').value = timezoneMatch ? timezoneMatch[1] : '';
+                document.getElementById('user-notes').value = notesMatch ? notesMatch[1] : '';
+                document.getElementById('user-context').value = contextMatch ? contextMatch[1].trim() : '';
+                updateStatus('user', true, callnameMatch ? callnameMatch[1] : nameMatch[1]);
+            }
+        }
+
+        function setDefaultTools() {
+            document.getElementById('tools-content').value = `# TOOLS.md - Local Notes
+
+Skills define *how* tools work. This file is for *your* specifics — the stuff that's unique to your setup.
+
+## Add Your Configuration Here
+
+Examples:
+- Camera names and locations
+- SSH hosts and aliases
+- Preferred voices for TTS
+- Device nicknames
+`;
+        }
+
+        async function loadPreviews() {
+            try {
+                const llmResp = await fetch(`${API_BASE}/config/LLM_CONFIG.md`);
+                const identityResp = await fetch(`${API_BASE}/config/IDENTITY.md`);
+                const userResp = await fetch(`${API_BASE}/config/USER.md`);
+
+                if (llmResp.ok) {
+                    const data = await llmResp.json();
+                    document.getElementById('preview-llm').textContent = data.exists ? data.content : 'Not configured yet';
+                }
+
+                if (identityResp.ok) {
+                    const data = await identityResp.json();
+                    document.getElementById('preview-identity').textContent = data.exists ? data.content : 'Not configured yet';
+                }
+
+                if (userResp.ok) {
+                    const data = await userResp.json();
+                    document.getElementById('preview-user').textContent = data.exists ? data.content : 'Not configured yet';
+                }
+            } catch (error) {
+                const llmMd = localStorage.getItem('openclaw_llm_md') || 'Not configured yet';
+                const identityMd = localStorage.getItem('openclaw_identity_md') || 'Not configured yet';
+                const userMd = localStorage.getItem('openclaw_user_md') || 'Not configured yet';
+
+                document.getElementById('preview-llm').textContent = llmMd;
+                document.getElementById('preview-identity').textContent = identityMd;
+                document.getElementById('preview-user').textContent = userMd;
+            }
+        }
+
+        // Initialize on load
+        loadCurrentConfig();
+    </script>
+</body>
+</html>
