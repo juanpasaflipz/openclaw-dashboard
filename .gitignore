@@ -1,6 +1,7 @@
 # Sensitive Configuration Files (NEVER COMMIT THESE!)
 LLM_CONFIG.md
 USER.md
+SECURITY.md
 
 # Python
 __pycache__/

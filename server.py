@@ -25,7 +25,7 @@ def get_config(filename):
     """Read a configuration file"""
     try:
         # Only allow specific files for security
-        allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md']
+        allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md', 'SECURITY.md']
 
         if filename not in allowed_files:
             return jsonify({'error': 'File not allowed'}), 403
@@ -47,7 +47,7 @@ def save_config(filename):
     """Save a configuration file"""
     try:
         # Only allow specific files for security
-        allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md']
+        allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md', 'SECURITY.md']
 
         if filename not in allowed_files:
             return jsonify({'error': 'File not allowed'}), 403

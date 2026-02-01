@@ -541,6 +541,7 @@
                 <button class="tab" data-tab="user">User Info</button>
                 <button class="tab" data-tab="soul">Soul & Behavior</button>
                 <button class="tab" data-tab="tools">Tools</button>
+                <button class="tab" data-tab="security">🔒 Security</button>
                 <button class="tab" data-tab="export">Export</button>
             </div>
 
@@ -807,6 +808,170 @@
                 <div class="button-group">
                     <button class="btn btn-primary" onclick="saveTools()">Save Tools</button>
                     <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Security Tab -->
+            <div class="tab-content" id="security">
+                <h2>Security & Safety</h2>
+
+                <div id="security-alert" class="alert"></div>
+
+                <div class="info-box">
+                    <p>Configure optional safety guardrails to protect your privacy and prevent unintended actions. These settings help ensure your AI agent operates within safe boundaries.</p>
+                </div>
+
+                <h3>Session & Privacy Settings</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label for="dm-scope">DM Session Scope</label>
+                        <select id="dm-scope">
+                            <option value="shared">Shared Session (Default) - All DMs in one session</option>
+                            <option value="per-channel-peer">Per Channel/Peer - Separate session per contact</option>
+                            <option value="per-account-channel-peer">Per Account+Channel - Maximum isolation</option>
+                        </select>
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            ⚠️ Shared sessions may leak context between different conversations. Use per-peer isolation for sensitive communications.
+                        </p>
+                    </div>
+                </div>
+
+                <h3>External Actions</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="require-confirmation-emails" checked>
+                            Require confirmation before sending emails
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="require-confirmation-posts" checked>
+                            Require confirmation before posting to social media
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="require-confirmation-messages" checked>
+                            Require confirmation before sending messages
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="require-confirmation-external" checked>
+                            Ask before any external action (tweets, emails, API calls)
+                        </label>
+                    </div>
+                </div>
+
+                <h3>Tool Restrictions</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="restrict-web-browsing">
+                            Restrict web browsing and external requests
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="restrict-file-operations">
+                            Restrict file deletion and destructive operations
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="restrict-code-execution">
+                            Restrict arbitrary code execution
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="sandbox-mode" checked>
+                            Enable sandboxing for untrusted operations
+                        </label>
+                    </div>
+                </div>
+
+                <h3>Data & Privacy</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="no-external-logging" checked>
+                            Prevent logging of sensitive data to external services
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="no-api-key-exposure" checked>
+                            Never expose API keys or credentials in responses
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="local-memory-only">
+                            Store memory files locally only (no cloud sync)
+                        </label>
+                    </div>
+                </div>
+
+                <h3>Model Safety</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label for="min-model-size">Minimum Model Size (parameters)</label>
+                        <select id="min-model-size">
+                            <option value="none">No Restriction</option>
+                            <option value="300b">300B+ (Small models with sandboxing)</option>
+                            <option value="1t" selected>1T+ (Recommended for web tools)</option>
+                            <option value="7b">7B+ (Larger models only)</option>
+                        </select>
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            ⚠️ Small models (<300B) should use sandboxing when web/browser tools are enabled.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="warn-small-models" checked>
+                            Warn when using small models without sandboxing
+                        </label>
+                    </div>
+                </div>
+
+                <h3>Group Chat Safety</h3>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="no-private-data-groups" checked>
+                            Never share private data in group chats
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="ask-before-group-actions" checked>
+                            Ask before performing actions in group contexts
+                        </label>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="saveSecurity()">Save Security Settings</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+                    <button class="btn btn-secondary" onclick="restoreDefaultSecurity()">Restore Defaults</button>
                 </div>
             </div>
 
@@ -1183,6 +1348,121 @@ The more you know, the better you can help. But remember — you're learning abo
             }
         }
 
+        // Save Security Settings
+        async function saveSecurity() {
+            const dmScope = document.getElementById('dm-scope').value;
+            const requireConfirmationEmails = document.getElementById('require-confirmation-emails').checked;
+            const requireConfirmationPosts = document.getElementById('require-confirmation-posts').checked;
+            const requireConfirmationMessages = document.getElementById('require-confirmation-messages').checked;
+            const requireConfirmationExternal = document.getElementById('require-confirmation-external').checked;
+            const restrictWebBrowsing = document.getElementById('restrict-web-browsing').checked;
+            const restrictFileOperations = document.getElementById('restrict-file-operations').checked;
+            const restrictCodeExecution = document.getElementById('restrict-code-execution').checked;
+            const sandboxMode = document.getElementById('sandbox-mode').checked;
+            const noExternalLogging = document.getElementById('no-external-logging').checked;
+            const noApiKeyExposure = document.getElementById('no-api-key-exposure').checked;
+            const localMemoryOnly = document.getElementById('local-memory-only').checked;
+            const minModelSize = document.getElementById('min-model-size').value;
+            const warnSmallModels = document.getElementById('warn-small-models').checked;
+            const noPrivateDataGroups = document.getElementById('no-private-data-groups').checked;
+            const askBeforeGroupActions = document.getElementById('ask-before-group-actions').checked;
+
+            const content = `# SECURITY.md - Security & Safety Configuration
+
+## Session & Privacy Settings
+
+- **DM Session Scope:** ${dmScope}
+
+## External Actions
+
+- **Require Confirmation for Emails:** ${requireConfirmationEmails ? 'Yes' : 'No'}
+- **Require Confirmation for Social Posts:** ${requireConfirmationPosts ? 'Yes' : 'No'}
+- **Require Confirmation for Messages:** ${requireConfirmationMessages ? 'Yes' : 'No'}
+- **Require Confirmation for External Actions:** ${requireConfirmationExternal ? 'Yes' : 'No'}
+
+## Tool Restrictions
+
+- **Restrict Web Browsing:** ${restrictWebBrowsing ? 'Yes' : 'No'}
+- **Restrict File Operations:** ${restrictFileOperations ? 'Yes' : 'No'}
+- **Restrict Code Execution:** ${restrictCodeExecution ? 'Yes' : 'No'}
+- **Sandbox Mode:** ${sandboxMode ? 'Enabled' : 'Disabled'}
+
+## Data & Privacy
+
+- **No External Logging:** ${noExternalLogging ? 'Yes' : 'No'}
+- **No API Key Exposure:** ${noApiKeyExposure ? 'Yes' : 'No'}
+- **Local Memory Only:** ${localMemoryOnly ? 'Yes' : 'No'}
+
+## Model Safety
+
+- **Minimum Model Size:** ${minModelSize}
+- **Warn About Small Models:** ${warnSmallModels ? 'Yes' : 'No'}
+
+## Group Chat Safety
+
+- **No Private Data in Groups:** ${noPrivateDataGroups ? 'Yes' : 'No'}
+- **Ask Before Group Actions:** ${askBeforeGroupActions ? 'Yes' : 'No'}
+
+---
+
+These settings help protect your privacy and prevent unintended actions.
+Adjust based on your trust level and use case.
+`;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/SECURITY.md`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('openclaw_security', JSON.stringify({
+                        dmScope, requireConfirmationEmails, requireConfirmationPosts,
+                        requireConfirmationMessages, requireConfirmationExternal,
+                        restrictWebBrowsing, restrictFileOperations, restrictCodeExecution,
+                        sandboxMode, noExternalLogging, noApiKeyExposure, localMemoryOnly,
+                        minModelSize, warnSmallModels, noPrivateDataGroups, askBeforeGroupActions
+                    }));
+                    showAlert('security', 'success', 'Security settings saved! 🔒');
+                } else {
+                    showAlert('security', 'error', result.error || 'Failed to save');
+                }
+            } catch (error) {
+                localStorage.setItem('openclaw_security', JSON.stringify({
+                    dmScope, requireConfirmationEmails, requireConfirmationPosts,
+                    requireConfirmationMessages, requireConfirmationExternal,
+                    restrictWebBrowsing, restrictFileOperations, restrictCodeExecution,
+                    sandboxMode, noExternalLogging, noApiKeyExposure, localMemoryOnly,
+                    minModelSize, warnSmallModels, noPrivateDataGroups, askBeforeGroupActions
+                }));
+                showAlert('security', 'success', 'Security settings saved to browser storage (server not running)');
+            }
+        }
+
+        // Restore Default Security Settings
+        function restoreDefaultSecurity() {
+            document.getElementById('dm-scope').value = 'shared';
+            document.getElementById('require-confirmation-emails').checked = true;
+            document.getElementById('require-confirmation-posts').checked = true;
+            document.getElementById('require-confirmation-messages').checked = true;
+            document.getElementById('require-confirmation-external').checked = true;
+            document.getElementById('restrict-web-browsing').checked = false;
+            document.getElementById('restrict-file-operations').checked = false;
+            document.getElementById('restrict-code-execution').checked = false;
+            document.getElementById('sandbox-mode').checked = true;
+            document.getElementById('no-external-logging').checked = true;
+            document.getElementById('no-api-key-exposure').checked = true;
+            document.getElementById('local-memory-only').checked = false;
+            document.getElementById('min-model-size').value = '1t';
+            document.getElementById('warn-small-models').checked = true;
+            document.getElementById('no-private-data-groups').checked = true;
+            document.getElementById('ask-before-group-actions').checked = true;
+            showAlert('security', 'success', 'Default security settings restored!');
+        }
+
         // Restore default soul
         function restoreDefaultSoul() {
             const defaultSoul = `# SOUL.md - Who You Are
@@ -1285,6 +1565,17 @@ If you change this file, tell the user — it's your soul, and they should know.
                     setDefaultTools();
                 }
             }
+
+            // Load Security
+            const securityResp = await fetch(`${API_BASE}/config/SECURITY.md`);
+            if (securityResp.ok) {
+                const data = await securityResp.json();
+                if (data.exists && data.content) {
+                    parseSecurityConfig(data.content);
+                } else {
+                    restoreDefaultSecurity();
+                }
+            }
         }
 
         function loadFromLocalStorage() {
@@ -1341,6 +1632,72 @@ If you change this file, tell the user — it's your soul, and they should know.
             } else {
                 setDefaultTools();
             }
+
+            // Load Security
+            const security = JSON.parse(localStorage.getItem('openclaw_security') || '{}');
+            if (security.dmScope) {
+                document.getElementById('dm-scope').value = security.dmScope || 'shared';
+                document.getElementById('require-confirmation-emails').checked = security.requireConfirmationEmails !== false;
+                document.getElementById('require-confirmation-posts').checked = security.requireConfirmationPosts !== false;
+                document.getElementById('require-confirmation-messages').checked = security.requireConfirmationMessages !== false;
+                document.getElementById('require-confirmation-external').checked = security.requireConfirmationExternal !== false;
+                document.getElementById('restrict-web-browsing').checked = security.restrictWebBrowsing || false;
+                document.getElementById('restrict-file-operations').checked = security.restrictFileOperations || false;
+                document.getElementById('restrict-code-execution').checked = security.restrictCodeExecution || false;
+                document.getElementById('sandbox-mode').checked = security.sandboxMode !== false;
+                document.getElementById('no-external-logging').checked = security.noExternalLogging !== false;
+                document.getElementById('no-api-key-exposure').checked = security.noApiKeyExposure !== false;
+                document.getElementById('local-memory-only').checked = security.localMemoryOnly || false;
+                document.getElementById('min-model-size').value = security.minModelSize || '1t';
+                document.getElementById('warn-small-models').checked = security.warnSmallModels !== false;
+                document.getElementById('no-private-data-groups').checked = security.noPrivateDataGroups !== false;
+                document.getElementById('ask-before-group-actions').checked = security.askBeforeGroupActions !== false;
+            } else {
+                restoreDefaultSecurity();
+            }
+        }
+
+        function parseSecurityConfig(content) {
+            const dmScopeMatch = content.match(/- \*\*DM Session Scope:\*\* (.+)/);
+            const reqEmailMatch = content.match(/- \*\*Require Confirmation for Emails:\*\* (.+)/);
+            const reqPostsMatch = content.match(/- \*\*Require Confirmation for Social Posts:\*\* (.+)/);
+            const reqMessagesMatch = content.match(/- \*\*Require Confirmation for Messages:\*\* (.+)/);
+            const reqExternalMatch = content.match(/- \*\*Require Confirmation for External Actions:\*\* (.+)/);
+            const restrictWebMatch = content.match(/- \*\*Restrict Web Browsing:\*\* (.+)/);
+            const restrictFileMatch = content.match(/- \*\*Restrict File Operations:\*\* (.+)/);
+            const restrictCodeMatch = content.match(/- \*\*Restrict Code Execution:\*\* (.+)/);
+            const sandboxMatch = content.match(/- \*\*Sandbox Mode:\*\* (.+)/);
+            const noLoggingMatch = content.match(/- \*\*No External Logging:\*\* (.+)/);
+            const noApiKeyMatch = content.match(/- \*\*No API Key Exposure:\*\* (.+)/);
+            const localMemoryMatch = content.match(/- \*\*Local Memory Only:\*\* (.+)/);
+            const minModelMatch = content.match(/- \*\*Minimum Model Size:\*\* (.+)/);
+            const warnModelsMatch = content.match(/- \*\*Warn About Small Models:\*\* (.+)/);
+            const noPrivateMatch = content.match(/- \*\*No Private Data in Groups:\*\* (.+)/);
+            const askGroupMatch = content.match(/- \*\*Ask Before Group Actions:\*\* (.+)/);
+
+            if (dmScopeMatch) {
+                document.getElementById('dm-scope').value = dmScopeMatch[1];
+            }
+
+            document.getElementById('require-confirmation-emails').checked = reqEmailMatch && reqEmailMatch[1] === 'Yes';
+            document.getElementById('require-confirmation-posts').checked = reqPostsMatch && reqPostsMatch[1] === 'Yes';
+            document.getElementById('require-confirmation-messages').checked = reqMessagesMatch && reqMessagesMatch[1] === 'Yes';
+            document.getElementById('require-confirmation-external').checked = reqExternalMatch && reqExternalMatch[1] === 'Yes';
+            document.getElementById('restrict-web-browsing').checked = restrictWebMatch && restrictWebMatch[1] === 'Yes';
+            document.getElementById('restrict-file-operations').checked = restrictFileMatch && restrictFileMatch[1] === 'Yes';
+            document.getElementById('restrict-code-execution').checked = restrictCodeMatch && restrictCodeMatch[1] === 'Yes';
+            document.getElementById('sandbox-mode').checked = sandboxMatch && sandboxMatch[1] === 'Enabled';
+            document.getElementById('no-external-logging').checked = noLoggingMatch && noLoggingMatch[1] === 'Yes';
+            document.getElementById('no-api-key-exposure').checked = noApiKeyMatch && noApiKeyMatch[1] === 'Yes';
+            document.getElementById('local-memory-only').checked = localMemoryMatch && localMemoryMatch[1] === 'Yes';
+
+            if (minModelMatch) {
+                document.getElementById('min-model-size').value = minModelMatch[1];
+            }
+
+            document.getElementById('warn-small-models').checked = warnModelsMatch && warnModelsMatch[1] === 'Yes';
+            document.getElementById('no-private-data-groups').checked = noPrivateMatch && noPrivateMatch[1] === 'Yes';
+            document.getElementById('ask-before-group-actions').checked = askGroupMatch && askGroupMatch[1] === 'Yes';
         }
 
         function parseLLMConfig(content) {

@@ -1,0 +1,48 @@
+# SECURITY.md - Security & Safety Configuration
+
+*This is a template file. Copy it to SECURITY.md and customize your safety settings.*
+
+## Session & Privacy Settings
+
+- **DM Session Scope:** shared | per-channel-peer | per-account-channel-peer
+
+## External Actions
+
+- **Require Confirmation for Emails:** Yes | No
+- **Require Confirmation for Social Posts:** Yes | No
+- **Require Confirmation for Messages:** Yes | No
+- **Require Confirmation for External Actions:** Yes | No
+
+## Tool Restrictions
+
+- **Restrict Web Browsing:** Yes | No
+- **Restrict File Operations:** Yes | No
+- **Restrict Code Execution:** Yes | No
+- **Sandbox Mode:** Enabled | Disabled
+
+## Data & Privacy
+
+- **No External Logging:** Yes | No
+- **No API Key Exposure:** Yes | No
+- **Local Memory Only:** Yes | No
+
+## Model Safety
+
+- **Minimum Model Size:** none | 300b | 1t | 7b
+- **Warn About Small Models:** Yes | No
+
+## Group Chat Safety
+
+- **No Private Data in Groups:** Yes | No
+- **Ask Before Group Actions:** Yes | No
+
+---
+
+These settings help protect your privacy and prevent unintended actions.
+Adjust based on your trust level and use case.
+
+**Recommended defaults:**
+- Enable confirmation for all external actions
+- Enable sandboxing
+- Use per-peer session isolation for sensitive communications
+- Minimum model size of 1T+ when using web tools

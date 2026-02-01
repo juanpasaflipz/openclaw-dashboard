@@ -12,6 +12,7 @@ A beautiful, modern web dashboard for configuring your personalized AI agent. Op
 - 👤 **User Profile Management** - Store information about yourself for personalized interactions
 - 💜 **Soul & Behavior** - Customize core behavioral guidelines
 - 🛠️ **Tools Setup** - Configure environment-specific settings
+- 🔒 **Security & Safety** - Optional guardrails for privacy protection and action confirmations
 - 💾 **Auto-Save** - All configurations saved to markdown files
 - 📱 **Responsive** - Works on desktop, tablet, and mobile
 
@@ -95,6 +96,16 @@ Add environment-specific notes:
 - Preferred TTS voices
 - Device nicknames
 
+### 6. Set Security & Safety Guardrails
+
+Configure optional safety settings to protect your privacy:
+- **Session Isolation** - Separate sessions per contact to prevent context leakage
+- **Action Confirmations** - Require approval before sending emails, posts, or messages
+- **Tool Restrictions** - Limit web browsing, file operations, or code execution
+- **Data Privacy** - Prevent external logging and API key exposure
+- **Model Safety** - Set minimum model sizes and enable sandboxing
+- **Group Chat Safety** - Protect private data in group contexts
+
 ## 📁 Configuration Files
 
 All settings are saved as markdown files in your directory:
@@ -104,6 +115,7 @@ All settings are saved as markdown files in your directory:
 - `USER.md` - Your information and preferences
 - `SOUL.md` - Behavioral guidelines
 - `TOOLS.md` - Environment-specific settings
+- `SECURITY.md` - Safety guardrails and privacy settings
 
 ## 🔒 Security
 
@@ -113,6 +125,18 @@ The `.gitignore` file excludes:
 - `LLM_CONFIG.md` (contains API keys)
 - `USER.md` (personal information)
 - Any `*.env` files
+
+### Security Features
+
+The dashboard includes optional safety guardrails:
+
+- **Session Isolation** - Prevent context leakage between different conversations
+- **External Action Confirmations** - Require approval before emails, posts, or API calls
+- **Tool Restrictions** - Sandbox or disable potentially risky operations
+- **Privacy Protection** - Prevent logging and credential exposure
+- **Model Safety Warnings** - Alert when using small models without sandboxing
+
+Based on [OpenClaw security best practices](https://docs.openclaw.ai/cli/security)
 
 Always keep your API keys secure and never share them publicly.
 
