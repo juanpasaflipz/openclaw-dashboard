@@ -555,6 +555,68 @@ def moltbook_post():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
+@app.route('/api/admin/init-db', methods=['POST'])
+def initialize_database():
+    """
+    One-time endpoint to initialize database on Vercel
+    Requires admin password for security
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        # Simple password protection (change this in production!)
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        # Create all tables
+        db.create_all()
+
+        # Check if credit packages already exist
+        if CreditPackage.query.first() is None:
+            # Seed default credit packages
+            packages = [
+                CreditPackage(
+                    name="Starter Pack",
+                    credits=10,
+                    price_cents=500,
+                    stripe_price_id="price_starter_10"
+                ),
+                CreditPackage(
+                    name="Growth Pack",
+                    credits=20,
+                    price_cents=800,
+                    stripe_price_id="price_growth_20"
+                ),
+                CreditPackage(
+                    name="Pro Pack",
+                    credits=35,
+                    price_cents=1000,
+                    stripe_price_id="price_pro_35"
+                ),
+            ]
+
+            for package in packages:
+                db.session.add(package)
+
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'message': 'Database initialized successfully',
+                'packages': [f"{p.name}: {p.credits} credits for ${p.price_dollars:.2f}" for p in packages]
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': 'Database already initialized',
+                'note': 'Credit packages already exist'
+            })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🦞 OpenClaw Dashboard Server")
