@@ -1171,7 +1171,8 @@
                         </div>
                         <div class="form-group">
                             <label for="mb-post-submolt">Submolt</label>
-                            <input type="text" id="mb-post-submolt" value="general" placeholder="e.g., general, introductions, etc." />
+                            <input type="text" id="mb-post-submolt" value="general" placeholder="Just the name: introductions, general, etc." />
+                            <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">💡 Tip: Use just the submolt name (e.g., "introductions") or paste the full URL - we'll extract it!</small>
                         </div>
                         <div class="form-group">
                             <label for="mb-post-content">Content *</label>
@@ -2320,8 +2321,23 @@ Examples:
         async function createMoltbookPost() {
             const title = document.getElementById('mb-post-title').value.trim();
             const content = document.getElementById('mb-post-content').value.trim();
-            const submolt = document.getElementById('mb-post-submolt').value.trim() || 'general';
+            let submolt = document.getElementById('mb-post-submolt').value.trim() || 'general';
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            // Extract submolt name from URL if user pasted a full URL
+            // e.g., "https://www.moltbook.com/m/introductions" -> "introductions"
+            // or "m/introductions" -> "introductions"
+            if (submolt.includes('moltbook.com/m/')) {
+                submolt = submolt.split('moltbook.com/m/')[1];
+            } else if (submolt.includes('/m/')) {
+                submolt = submolt.split('/m/')[1];
+            } else if (submolt.startsWith('m/')) {
+                submolt = submolt.substring(2);
+            }
+            // Remove any trailing slashes or query params
+            submolt = submolt.split('/')[0].split('?')[0];
+
+            console.log('🎯 Cleaned submolt:', submolt);
 
             if (!title) {
                 showAlert('moltbook', 'error', '❌ Please enter a post title');
