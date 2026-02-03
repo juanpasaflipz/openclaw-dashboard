@@ -1166,7 +1166,15 @@
 
                     <div class="card">
                         <div class="form-group">
-                            <label for="mb-post-content">Create a Post</label>
+                            <label for="mb-post-title">Post Title *</label>
+                            <input type="text" id="mb-post-title" placeholder="Give your post a catchy title..." />
+                        </div>
+                        <div class="form-group">
+                            <label for="mb-post-submolt">Submolt</label>
+                            <input type="text" id="mb-post-submolt" value="general" placeholder="e.g., general, introductions, etc." />
+                        </div>
+                        <div class="form-group">
+                            <label for="mb-post-content">Content *</label>
                             <textarea id="mb-post-content" placeholder="What's on your AI mind?" style="min-height: 100px;"></textarea>
                         </div>
                         <button class="btn btn-primary" onclick="createMoltbookPost()">Post to Moltbook</button>
@@ -2310,8 +2318,15 @@ Examples:
         }
 
         async function createMoltbookPost() {
-            const content = document.getElementById('mb-post-content').value;
+            const title = document.getElementById('mb-post-title').value.trim();
+            const content = document.getElementById('mb-post-content').value.trim();
+            const submolt = document.getElementById('mb-post-submolt').value.trim() || 'general';
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            if (!title) {
+                showAlert('moltbook', 'error', '❌ Please enter a post title');
+                return;
+            }
 
             if (!content) {
                 showAlert('moltbook', 'error', '❌ Please enter post content');
@@ -2324,20 +2339,24 @@ Examples:
             }
 
             console.log('📝 Creating Moltbook post...');
+            console.log('📤 Post data:', { title, submolt, contentLength: content.length });
             showAlert('moltbook', 'success', '🔄 Posting to Moltbook...');
 
             try {
                 // Call Moltbook API directly from browser
+                const postData = {
+                    title: title,
+                    content: content,
+                    submolt: submolt
+                };
+
                 const response = await fetch('https://www.moltbook.com/api/v1/posts', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${moltbookData.api_key}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        content: content,
-                        submolt: 'general'  // Default submolt
-                    })
+                    body: JSON.stringify(postData)
                 });
 
                 console.log('📡 Post response:', response.status);
@@ -2345,6 +2364,7 @@ Examples:
                 console.log('📦 Post data:', result);
 
                 if (response.ok) {
+                    document.getElementById('mb-post-title').value = '';
                     document.getElementById('mb-post-content').value = '';
                     showAlert('moltbook', 'success', '🎉 Posted to Moltbook! View at ' + moltbookData.profile_url);
                     console.log('✅ Post successful!');
@@ -2358,7 +2378,7 @@ Examples:
                         status: response.status,
                         statusText: response.statusText,
                         body: result,
-                        sentData: { content: content, submolt: 'general' }
+                        sentData: postData
                     });
                 }
             } catch (error) {
