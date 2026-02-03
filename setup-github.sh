@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🦅 OpenClaw Dashboard - GitHub Setup"
+echo "🦞 OpenClaw Dashboard - GitHub Setup"
 echo "======================================"
 echo ""
 

@@ -3,7 +3,7 @@
 # OpenClaw Dashboard Launcher
 # This script starts the configuration dashboard
 
-echo "🦅 Starting OpenClaw Dashboard..."
+echo "🦞 Starting OpenClaw Dashboard..."
 echo ""
 
 # Check if Flask is installed

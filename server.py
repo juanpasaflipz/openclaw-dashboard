@@ -4,14 +4,38 @@ OpenClaw Dashboard Server
 A simple Flask server to manage OpenClaw configuration files
 """
 
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, session
 from flask_cors import CORS
 import os
 from pathlib import Path
 import requests
+from datetime import datetime
+import secrets
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
+
+# Secret key for sessions (generate a secure one for production)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    f'sqlite:///{Path(__file__).parent}/openclaw.db'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Import and initialize database
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage
+db.init_app(app)
+
+# Register authentication routes
+from auth_routes import register_auth_routes
+register_auth_routes(app)
+
+# Register Stripe/payment routes
+from stripe_routes import register_stripe_routes
+register_stripe_routes(app)
 
 # Base directory for OpenClaw files
 BASE_DIR = Path(__file__).parent

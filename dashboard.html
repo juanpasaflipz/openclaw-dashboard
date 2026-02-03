@@ -577,6 +577,35 @@
         <div class="header">
             <h1><span class="lobster-logo">🦞</span> OpenClaw Dashboard</h1>
             <p>Configure your personalized AI agent</p>
+
+            <!-- Auth & Credits Bar -->
+            <div id="auth-bar" style="margin-top: 24px; display: flex; justify-content: center; gap: 16px; align-items: center;">
+                <!-- Show when not logged in -->
+                <button id="login-btn" class="btn btn-glass" onclick="showLoginModal()" style="display:none;">
+                    🔐 Login / Sign Up
+                </button>
+
+                <!-- Show when logged in -->
+                <div id="user-info" style="display:none; background: rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 12px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px);">
+                    <div style="text-align: left;">
+                        <div style="font-size: 12px; opacity: 0.9;">Logged in as</div>
+                        <div id="user-email" style="font-weight: 600;"></div>
+                    </div>
+                    <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.3);"></div>
+                    <div style="text-align: left;">
+                        <div style="font-size: 12px; opacity: 0.9;">Post Credits</div>
+                        <div style="font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                            <span id="credit-balance">0</span>
+                            <button onclick="showBuyCreditsModal()" style="background: rgba(16,185,129,0.2); border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: white;">
+                                + Buy More
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="btn btn-sm" style="background: rgba(239,68,68,0.2); padding: 8px 16px; font-size: 13px;">
+                        Logout
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="dashboard">
@@ -2339,6 +2368,20 @@ Examples:
 
             console.log('🎯 Cleaned submolt:', submolt);
 
+            // Check if user is logged in
+            if (!currentUser) {
+                showAlert('moltbook', 'error', '❌ Please login to post');
+                showLoginModal();
+                return;
+            }
+
+            // Check if user has credits
+            if (currentUser.credit_balance < 1) {
+                showAlert('moltbook', 'error', '❌ Insufficient credits. Purchase more to continue posting.');
+                showBuyCreditsModal();
+                return;
+            }
+
             if (!title) {
                 showAlert('moltbook', 'error', '❌ Please enter a post title');
                 return;
@@ -2356,10 +2399,39 @@ Examples:
 
             console.log('📝 Creating Moltbook post...');
             console.log('📤 Post data:', { title, submolt, contentLength: content.length });
-            showAlert('moltbook', 'success', '🔄 Posting to Moltbook...');
+            showAlert('moltbook', 'success', '🔄 Deducting credit and posting...');
 
             try {
-                // Call Moltbook API directly from browser
+                // Step 1: Deduct credit from backend
+                const deductResponse = await fetch('/api/moltbook/post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        submolt: submolt,
+                        api_key: moltbookData.api_key
+                    })
+                });
+
+                const deductResult = await deductResponse.json();
+
+                if (deductResponse.status === 402) {
+                    // Insufficient credits
+                    showAlert('moltbook', 'error', '❌ ' + deductResult.error);
+                    showBuyCreditsModal();
+                    return;
+                }
+
+                if (!deductResponse.ok) {
+                    showAlert('moltbook', 'error', '❌ ' + (deductResult.error || 'Failed to process payment'));
+                    return;
+                }
+
+                console.log('✅ Credit deducted! New balance:', deductResult.new_balance);
+
+                // Step 2: Make the actual post to Moltbook
                 const postData = {
                     title: title,
                     content: content,
@@ -2382,7 +2454,12 @@ Examples:
                 if (response.ok) {
                     document.getElementById('mb-post-title').value = '';
                     document.getElementById('mb-post-content').value = '';
-                    showAlert('moltbook', 'success', '🎉 Posted to Moltbook! View at ' + moltbookData.profile_url);
+
+                    // Update UI with new balance
+                    currentUser.credit_balance = deductResult.new_balance;
+                    document.getElementById('credit-balance').textContent = currentUser.credit_balance;
+
+                    showAlert('moltbook', 'success', `🎉 Posted to Moltbook! (${currentUser.credit_balance} credits remaining)`);
                     console.log('✅ Post successful!');
 
                     // Refresh profile to update post count
@@ -2396,6 +2473,8 @@ Examples:
                         body: result,
                         sentData: postData
                     });
+
+                    // TODO: Refund credit if post failed? (implement refund endpoint if needed)
                 }
             } catch (error) {
                 console.error('❌ Post error:', error);
@@ -2607,6 +2686,403 @@ Examples:
 
         // Initialize on load
         loadCurrentConfig();
+        checkAuthStatus(); // Check if user is logged in
+    </script>
+
+    <!-- Login/Signup Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="modal-close" onclick="closeModal('login-modal')">&times;</span>
+            <h2 style="margin-bottom: 8px;">🦞 Welcome to OpenClaw</h2>
+            <p style="color: #666; margin-bottom: 24px;">Enter your email to sign in or create an account</p>
+
+            <div id="login-form">
+                <div class="form-group">
+                    <label for="auth-email">Email Address</label>
+                    <input type="email" id="auth-email" placeholder="you@example.com" />
+                </div>
+
+                <div class="info-box" style="font-size: 14px; padding: 12px; margin-bottom: 16px;">
+                    ✨ New users get <strong>5 free post credits</strong>!
+                </div>
+
+                <button class="btn btn-primary" onclick="requestMagicLink()" style="width: 100%;">
+                    Send Magic Link
+                </button>
+
+                <p style="font-size: 13px; color: #666; margin-top: 16px; text-align: center;">
+                    We'll send a magic link to your email. No password needed!
+                </p>
+            </div>
+
+            <div id="login-success" style="display: none; text-align: center; padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📧</div>
+                <h3>Check your email!</h3>
+                <p style="color: #666; margin-top: 8px;">We've sent a magic link to your email. Click it to sign in.</p>
+                <div id="magic-link-dev" style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 8px; font-size: 13px; display: none;">
+                    <strong>Development Mode:</strong><br>
+                    <a id="dev-magic-link" href="#" target="_blank" style="word-break: break-all;"></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buy Credits Modal -->
+    <div id="buy-credits-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="modal-close" onclick="closeModal('buy-credits-modal')">&times;</span>
+            <h2 style="margin-bottom: 8px;">💳 Buy Post Credits</h2>
+            <p style="color: #666; margin-bottom: 24px;">Each credit lets you make one post to Moltbook</p>
+
+            <div id="credit-packages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+                <!-- Packages loaded dynamically -->
+            </div>
+
+            <div style="margin-top: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px; font-size: 14px;">
+                <strong>💡 How it works:</strong>
+                <ul style="margin: 8px 0 0 20px; color: #666;">
+                    <li>Select a package above</li>
+                    <li>Complete payment via Stripe</li>
+                    <li>Credits added instantly to your account</li>
+                    <li>Each post to Moltbook uses 1 credit</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Processing Overlay -->
+    <div id="payment-processing" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 40px; border-radius: 16px; text-align: center;">
+            <div class="spinner" style="margin: 0 auto 20px;"></div>
+            <h3>Processing payment...</h3>
+            <p style="color: #666; margin-top: 8px;">Please wait</p>
+        </div>
+    </div>
+
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 500px;
+            position: relative;
+            animation: slideUp 0.3s ease-out;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            font-weight: 300;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .btn-glass {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .credit-package {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .credit-package:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.2);
+        }
+
+        .credit-package.popular {
+            border-color: var(--primary);
+            background: rgba(99,102,241,0.05);
+        }
+
+        .credit-package.popular::before {
+            content: "⭐ Popular";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+
+    <script>
+        // ==================== AUTH & CREDITS SYSTEM ====================
+
+        let currentUser = null;
+        let creditPackages = [];
+
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated) {
+                        currentUser = data.user;
+                        updateAuthUI(true);
+                        console.log('✅ User logged in:', currentUser.email);
+                    } else {
+                        updateAuthUI(false);
+                    }
+                } else {
+                    updateAuthUI(false);
+                }
+            } catch (error) {
+                console.error('Error checking auth:', error);
+                updateAuthUI(false);
+            }
+        }
+
+        // Update UI based on auth status
+        function updateAuthUI(isLoggedIn) {
+            const loginBtn = document.getElementById('login-btn');
+            const userInfo = document.getElementById('user-info');
+
+            if (isLoggedIn && currentUser) {
+                loginBtn.style.display = 'none';
+                userInfo.style.display = 'flex';
+                document.getElementById('user-email').textContent = currentUser.email;
+                document.getElementById('credit-balance').textContent = currentUser.credit_balance;
+            } else {
+                loginBtn.style.display = 'inline-block';
+                userInfo.style.display = 'none';
+            }
+        }
+
+        // Show/hide modals
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'block';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('login-success').style.display = 'none';
+        }
+
+        async function showBuyCreditsModal() {
+            document.getElementById('buy-credits-modal').style.display = 'block';
+            await loadCreditPackages();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Request magic link
+        async function requestMagicLink() {
+            const email = document.getElementById('auth-email').value.trim();
+
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/request-magic-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('login-success').style.display = 'block';
+
+                    // Show dev link if available
+                    if (data.dev_link) {
+                        document.getElementById('magic-link-dev').style.display = 'block';
+                        const linkEl = document.getElementById('dev-magic-link');
+                        linkEl.href = data.dev_link;
+                        linkEl.textContent = data.dev_link;
+                    }
+
+                    console.log('✅ Magic link sent to:', email);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to send magic link'));
+                }
+            } catch (error) {
+                console.error('Error requesting magic link:', error);
+                alert('Failed to send magic link. Please try again.');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                currentUser = null;
+                updateAuthUI(false);
+                console.log('✅ Logged out');
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+
+        // Load credit packages
+        async function loadCreditPackages() {
+            try {
+                const response = await fetch('/api/credits/packages');
+                const data = await response.json();
+
+                creditPackages = data.packages;
+                renderCreditPackages();
+            } catch (error) {
+                console.error('Error loading packages:', error);
+            }
+        }
+
+        // Render credit packages
+        function renderCreditPackages() {
+            const container = document.getElementById('credit-packages');
+            container.innerHTML = '';
+
+            creditPackages.forEach((pkg, index) => {
+                const isPopular = index === 1; // Middle package is popular
+                const packageEl = document.createElement('div');
+                packageEl.className = 'credit-package' + (isPopular ? ' popular' : '');
+                packageEl.innerHTML = `
+                    <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                    <div style="font-weight: 700; font-size: 20px; margin-bottom: 4px;">${pkg.credits} Credits</div>
+                    <div style="font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">$${pkg.price.toFixed(2)}</div>
+                    <div style="font-size: 13px; color: #666; margin-bottom: 12px;">$${pkg.price_per_credit.toFixed(3)} per post</div>
+                    <button class="btn btn-primary" style="width: 100%; padding: 10px;" onclick="purchaseCredits(${pkg.id})">
+                        Buy Now
+                    </button>
+                `;
+                container.appendChild(packageEl);
+            });
+        }
+
+        // Purchase credits
+        async function purchaseCredits(packageId) {
+            if (!currentUser) {
+                closeModal('buy-credits-modal');
+                showLoginModal();
+                alert('Please log in first to purchase credits');
+                return;
+            }
+
+            try {
+                document.getElementById('payment-processing').style.display = 'flex';
+
+                const response = await fetch('/api/credits/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ package_id: packageId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.checkout_url) {
+                    // Redirect to Stripe Checkout
+                    window.location.href = data.checkout_url;
+                } else {
+                    document.getElementById('payment-processing').style.display = 'none';
+                    alert('Error: ' + (data.error || 'Failed to create checkout'));
+                }
+            } catch (error) {
+                document.getElementById('payment-processing').style.display = 'none';
+                console.error('Error purchasing credits:', error);
+                alert('Failed to start checkout. Please try again.');
+            }
+        }
+
+        // Check for payment status in URL (after Stripe redirect)
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentStatus = urlParams.get('payment');
+
+            if (paymentStatus === 'success') {
+                alert('🎉 Payment successful! Your credits have been added.');
+                // Refresh auth to get updated balance
+                checkAuthStatus();
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (paymentStatus === 'cancelled') {
+                alert('Payment was cancelled');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
     </script>
 </body>
 </html>
