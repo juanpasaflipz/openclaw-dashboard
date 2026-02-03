@@ -2314,59 +2314,101 @@ Examples:
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
 
             if (!content) {
-                showAlert('moltbook', 'error', 'Please enter post content');
+                showAlert('moltbook', 'error', '❌ Please enter post content');
                 return;
             }
 
-            if (!moltbookData.agent_id) {
-                showAlert('moltbook', 'error', 'No agent registered');
+            if (!moltbookData.api_key) {
+                showAlert('moltbook', 'error', '❌ No agent connected');
                 return;
             }
+
+            console.log('📝 Creating Moltbook post...');
+            showAlert('moltbook', 'success', '🔄 Posting to Moltbook...');
 
             try {
-                const response = await fetch(`${API_BASE}/moltbook/post`, {
+                // Call Moltbook API directly from browser
+                const response = await fetch('https://www.moltbook.com/api/v1/posts', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Authorization': `Bearer ${moltbookData.api_key}`,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({
-                        agent_id: moltbookData.agent_id,
-                        content: content
+                        content: content,
+                        submolt: 'general'  // Default submolt
                     })
                 });
 
+                console.log('📡 Post response:', response.status);
                 const result = await response.json();
+                console.log('📦 Post data:', result);
 
-                if (response.ok && result.success) {
+                if (response.ok) {
                     document.getElementById('mb-post-content').value = '';
-                    showAlert('moltbook', 'success', '🎉 Posted to Moltbook!');
-                    refreshProfile();
+                    showAlert('moltbook', 'success', '🎉 Posted to Moltbook! View at ' + moltbookData.profile_url);
+                    console.log('✅ Post successful!');
+
+                    // Refresh profile to update post count
+                    setTimeout(() => refreshProfile(), 1000);
                 } else {
-                    showAlert('moltbook', 'error', result.message || 'Post failed');
+                    const errorMsg = result.error || result.message || 'Post failed';
+                    showAlert('moltbook', 'error', `❌ Post failed: ${errorMsg}`);
+                    console.error('❌ Post error:', result);
                 }
             } catch (error) {
-                showAlert('moltbook', 'error', `Failed to post: ${error.message}`);
+                console.error('❌ Post error:', error);
+                showAlert('moltbook', 'error', `❌ Failed to post: ${error.message}`);
             }
         }
 
         async function refreshProfile() {
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
 
-            if (!moltbookData.agent_id) {
-                showAlert('moltbook', 'error', 'No agent registered');
+            if (!moltbookData.api_key) {
+                showAlert('moltbook', 'error', '❌ No agent connected');
                 return;
             }
 
+            console.log('🔄 Refreshing profile...');
+            showAlert('moltbook', 'success', '🔄 Refreshing...');
+
             try {
-                const response = await fetch(`${API_BASE}/moltbook/profile?agent_id=${moltbookData.agent_id}`);
+                // Call Moltbook API directly from browser
+                const response = await fetch('https://www.moltbook.com/api/v1/agents/me', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${moltbookData.api_key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('📡 Refresh response:', response.status);
                 const result = await response.json();
 
-                if (response.ok && result.success) {
-                    updateMoltbookProfile(result.data);
-                    showAlert('moltbook', 'success', 'Profile refreshed!');
+                if (response.ok) {
+                    const agentData = result.agent || result;
+
+                    // Update stored data
+                    const updatedData = {
+                        ...moltbookData,
+                        karma: agentData.karma || 0,
+                        followers_count: agentData.follower_count || 0,
+                        following_count: agentData.following_count || 0,
+                        posts_count: (agentData.stats && agentData.stats.posts) || 0
+                    };
+
+                    localStorage.setItem('openclaw_moltbook', JSON.stringify(updatedData));
+                    updateMoltbookProfile(updatedData);
+
+                    showAlert('moltbook', 'success', `✅ Refreshed! Karma: ${updatedData.karma} | Posts: ${updatedData.posts_count}`);
+                    console.log('✅ Profile refreshed');
                 } else {
-                    showAlert('moltbook', 'error', result.message || 'Refresh failed');
+                    showAlert('moltbook', 'error', '❌ Refresh failed');
                 }
             } catch (error) {
-                showAlert('moltbook', 'error', `Failed to refresh: ${error.message}`);
+                console.error('❌ Refresh error:', error);
+                showAlert('moltbook', 'error', `❌ Failed to refresh: ${error.message}`);
             }
         }
 
@@ -2387,7 +2429,7 @@ Examples:
         function openMoltbookProfile() {
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
             if (moltbookData.agent_name) {
-                window.open(`https://moltbook.com/agent/${moltbookData.agent_name}`, '_blank');
+                window.open(`https://www.moltbook.com/u/${moltbookData.agent_name}`, '_blank');
             }
         }
 
