@@ -4,6 +4,12 @@ USER.md
 SECURITY.md
 MOLTBOOK_CONFIG.md
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+openclaw.db
+
 # Python
 __pycache__/
 *.py[cod]
