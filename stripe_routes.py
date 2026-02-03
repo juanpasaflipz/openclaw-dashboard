@@ -2,7 +2,8 @@
 Stripe integration routes for credit purchases
 """
 from flask import jsonify, request, session
-from models import db, User, CreditPackage, CreditTransaction
+from models import db, User, CreditPackage, CreditTransaction, PostHistory
+from datetime import datetime, timedelta
 import stripe
 import os
 
@@ -194,6 +195,18 @@ def register_stripe_routes(app):
         try:
             user_id = session.get('user_id')
             user = User.query.get(user_id)
+
+            # Check rate limit: 30 minutes between posts
+            last_post = PostHistory.query.filter_by(user_id=user.id).order_by(PostHistory.created_at.desc()).first()
+            if last_post:
+                time_since_last_post = datetime.utcnow() - last_post.created_at
+                if time_since_last_post < timedelta(minutes=30):
+                    minutes_remaining = 30 - int(time_since_last_post.total_seconds() / 60)
+                    return jsonify({
+                        'error': 'Rate limit exceeded',
+                        'message': f'Please wait {minutes_remaining} more minutes before posting again',
+                        'cooldown_minutes': minutes_remaining
+                    }), 429  # Too Many Requests
 
             # Check if user has credits
             if not user.has_credits(1):

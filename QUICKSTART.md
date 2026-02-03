@@ -51,9 +51,9 @@ You should see:
 ```
 ✅ Database tables created successfully!
 ✅ Seeded default credit packages:
-   - Starter Pack: 50 credits for $5.00
-   - Growth Pack: 150 credits for $12.00
-   - Pro Pack: 500 credits for $35.00
+   - Starter Pack: 10 credits for $5.00
+   - Growth Pack: 20 credits for $8.00
+   - Pro Pack: 35 credits for $10.00
 ```
 
 ## Step 5: Start Server

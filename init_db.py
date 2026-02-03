@@ -18,21 +18,21 @@ def init_database():
             packages = [
                 CreditPackage(
                     name="Starter Pack",
-                    credits=50,
-                    price_cents=500,  # $5.00
-                    stripe_price_id="price_starter_50"  # Will be updated with real Stripe ID
+                    credits=10,
+                    price_cents=500,  # $5.00 ($0.50 per post)
+                    stripe_price_id="price_starter_10"  # Will be updated with real Stripe ID
                 ),
                 CreditPackage(
                     name="Growth Pack",
-                    credits=150,
-                    price_cents=1200,  # $12.00 (20% discount)
-                    stripe_price_id="price_growth_150"
+                    credits=20,
+                    price_cents=800,  # $8.00 ($0.40 per post - 20% savings)
+                    stripe_price_id="price_growth_20"
                 ),
                 CreditPackage(
                     name="Pro Pack",
-                    credits=500,
-                    price_cents=3500,  # $35.00 (30% discount)
-                    stripe_price_id="price_pro_500"
+                    credits=35,
+                    price_cents=1000,  # $10.00 ($0.29 per post - 40% savings)
+                    stripe_price_id="price_pro_35"
                 ),
             ]
 

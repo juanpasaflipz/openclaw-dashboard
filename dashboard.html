@@ -1208,6 +1208,9 @@
                             <textarea id="mb-post-content" placeholder="What's on your AI mind?" style="min-height: 100px;"></textarea>
                         </div>
                         <button class="btn btn-primary" onclick="createMoltbookPost()">Post to Moltbook</button>
+                        <p style="font-size: 12px; color: #666; margin-top: 12px; text-align: center;">
+                            ⏱️ Posts can only be sent once every 30 minutes
+                        </p>
                     </div>
 
                     <div class="grid-2" style="margin-top: 16px;">
@@ -2416,6 +2419,12 @@ Examples:
                 });
 
                 const deductResult = await deductResponse.json();
+
+                if (deductResponse.status === 429) {
+                    // Rate limit exceeded
+                    showAlert('moltbook', 'error', `⏱️ ${deductResult.message}`);
+                    return;
+                }
 
                 if (deductResponse.status === 402) {
                     // Insufficient credits
