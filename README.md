@@ -1,4 +1,4 @@
-# 🦅 OpenClaw Dashboard
+# 🦞 OpenClaw Dashboard
 
 A beautiful, modern web dashboard for configuring your personalized AI agent. OpenClaw is a framework for creating AI agents with persistent memory, customized behavior, and LLM connectivity.
 
@@ -13,6 +13,7 @@ A beautiful, modern web dashboard for configuring your personalized AI agent. Op
 - 💜 **Soul & Behavior** - Customize core behavioral guidelines
 - 🛠️ **Tools Setup** - Configure environment-specific settings
 - 🔒 **Security & Safety** - Optional guardrails for privacy protection and action confirmations
+- 🦞 **Moltbook Integration** - Connect your agent to the social network for AI agents
 - 💾 **Auto-Save** - All configurations saved to markdown files
 - 📱 **Responsive** - Works on desktop, tablet, and mobile
 
@@ -106,6 +107,14 @@ Configure optional safety settings to protect your privacy:
 - **Model Safety** - Set minimum model sizes and enable sandboxing
 - **Group Chat Safety** - Protect private data in group contexts
 
+### 7. Connect to Moltbook (Optional)
+
+Join the social network for AI agents:
+- **Register Your Agent** - Create a unique profile on Moltbook
+- **Verify Ownership** - Claim your agent with a verification code
+- **Start Socializing** - Post updates, follow other agents, and build karma
+- **Build Reputation** - Engage with the AI agent community
+
 ## 📁 Configuration Files
 
 All settings are saved as markdown files in your directory:
@@ -116,6 +125,7 @@ All settings are saved as markdown files in your directory:
 - `SOUL.md` - Behavioral guidelines
 - `TOOLS.md` - Environment-specific settings
 - `SECURITY.md` - Safety guardrails and privacy settings
+- `MOLTBOOK_CONFIG.md` - Moltbook agent credentials (optional)
 
 ## 🔒 Security
 
@@ -124,6 +134,8 @@ All settings are saved as markdown files in your directory:
 The `.gitignore` file excludes:
 - `LLM_CONFIG.md` (contains API keys)
 - `USER.md` (personal information)
+- `SECURITY.md` (privacy settings)
+- `MOLTBOOK_CONFIG.md` (agent credentials)
 - Any `*.env` files
 
 ### Security Features
@@ -165,6 +177,12 @@ openclaw-dashboard/
 - `GET /` - Serve dashboard
 - `GET /api/config/<filename>` - Read configuration file
 - `POST /api/config/<filename>` - Save configuration file
+- `GET /api/status` - Get configuration status
+- `POST /api/test-connection` - Test LLM connection
+- `POST /api/moltbook/register` - Register agent with Moltbook
+- `GET /api/moltbook/status` - Check agent claim status
+- `GET /api/moltbook/profile` - Get agent profile
+- `POST /api/moltbook/post` - Create a Moltbook post
 
 ### Customization
 
@@ -202,7 +220,8 @@ If you encounter any issues or have questions:
 
 ## 🗺️ Roadmap
 
-- [ ] Live connection testing for LLM providers
+- [x] Live connection testing for LLM providers
+- [x] Moltbook social network integration
 - [ ] Dark mode toggle
 - [ ] Export/import configuration bundles
 - [ ] Chat interface for testing your configured agent

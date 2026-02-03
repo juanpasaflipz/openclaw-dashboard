@@ -55,6 +55,24 @@
             margin-bottom: 12px;
             text-shadow: 0 4px 20px rgba(0,0,0,0.3);
             letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .lobster-logo {
+            font-size: 64px;
+            filter: contrast(1.2);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            animation: lobsterWave 2s ease-in-out infinite;
+        }
+
+        @keyframes lobsterWave {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
         }
 
         .header p {
@@ -529,7 +547,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🦅 OpenClaw</h1>
+            <h1><span class="lobster-logo">🦞</span> OpenClaw Dashboard</h1>
             <p>Configure your personalized AI agent</p>
         </div>
 
@@ -542,6 +560,7 @@
                 <button class="tab" data-tab="soul">Soul & Behavior</button>
                 <button class="tab" data-tab="tools">Tools</button>
                 <button class="tab" data-tab="security">🔒 Security</button>
+                <button class="tab" data-tab="moltbook">🦞 Moltbook</button>
                 <button class="tab" data-tab="export">Export</button>
             </div>
 
@@ -631,8 +650,8 @@
                 </div>
 
                 <div id="llm-config-form" style="display: none;">
-                    <div class="form-group">
-                        <label for="llm-api-key">API Key *</label>
+                    <div class="form-group" id="api-key-group">
+                        <label for="llm-api-key" id="api-key-label">API Key *</label>
                         <div class="input-wrapper">
                             <input type="password" id="llm-api-key" placeholder="sk-...">
                             <span class="toggle-password" onclick="togglePassword('llm-api-key')">👁️</span>
@@ -642,9 +661,9 @@
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="llm-model">Model</label>
-                            <select id="llm-model">
-                                <option value="">Select a model...</option>
-                            </select>
+                            <input type="text" id="llm-model" list="model-suggestions" placeholder="Type or select a model...">
+                            <datalist id="model-suggestions">
+                            </datalist>
                         </div>
 
                         <div class="form-group">
@@ -975,6 +994,111 @@
                 </div>
             </div>
 
+            <!-- Moltbook Tab -->
+            <div class="tab-content" id="moltbook">
+                <h2>🦞 Moltbook - Social Network for AI Agents</h2>
+
+                <div id="moltbook-alert" class="alert"></div>
+
+                <div class="info-box">
+                    <p>Connect your AI agent to Moltbook, a social network where AI agents can post, follow each other, and build reputation (karma). Register your agent, verify ownership, and start socializing!</p>
+                </div>
+
+                <!-- Registration Section -->
+                <div id="registration-section">
+                    <h3>Register Your Agent</h3>
+
+                    <div class="form-group">
+                        <label for="mb-agent-name">Agent Name *</label>
+                        <input type="text" id="mb-agent-name" placeholder="e.g., MyAwesomeAgent">
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            Choose a unique name for your agent on Moltbook
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mb-agent-bio">Agent Bio *</label>
+                        <textarea id="mb-agent-bio" placeholder="Tell the Moltbook community about your agent..." style="min-height: 120px;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mb-avatar-url">Avatar URL (optional)</label>
+                        <input type="text" id="mb-avatar-url" placeholder="https://example.com/avatar.png">
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="registerMoltbookAgent()">Register Agent</button>
+                    </div>
+                </div>
+
+                <!-- Claim Section (shown after registration) -->
+                <div id="claim-section" style="display: none;">
+                    <h3>Verify Your Agent</h3>
+
+                    <div class="card">
+                        <h4 style="margin-bottom: 16px;">🔗 Claim URL</h4>
+                        <input type="text" id="mb-claim-url" readonly style="background: #f9fafb; font-family: monospace;">
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            Visit this URL to verify ownership of your agent
+                        </p>
+                        <button class="btn btn-secondary" onclick="copyClaimUrl()" style="margin-top: 12px;">Copy URL</button>
+                    </div>
+
+                    <div class="card">
+                        <h4 style="margin-bottom: 16px;">🔑 Verification Code</h4>
+                        <input type="text" id="mb-verification-code" readonly style="background: #f9fafb; font-family: monospace; font-size: 18px; font-weight: 600;">
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            Enter this code on the claim page to verify your agent
+                        </p>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="checkClaimStatus()">Check Claim Status</button>
+                        <button class="btn btn-secondary" onclick="openClaimUrl()">Open Claim Page</button>
+                    </div>
+                </div>
+
+                <!-- Profile Section (shown after claiming) -->
+                <div id="profile-section" style="display: none;">
+                    <h3>Your Agent Profile</h3>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h4>Agent Info</h4>
+                            <div style="margin-top: 16px;">
+                                <p><strong>Name:</strong> <span id="mb-profile-name">-</span></p>
+                                <p><strong>Bio:</strong> <span id="mb-profile-bio">-</span></p>
+                                <p><strong>Karma:</strong> <span id="mb-profile-karma">0</span></p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4>Community Stats</h4>
+                            <div style="margin-top: 16px;">
+                                <p><strong>Followers:</strong> <span id="mb-profile-followers">0</span></p>
+                                <p><strong>Following:</strong> <span id="mb-profile-following">0</span></p>
+                                <p><strong>Posts:</strong> <span id="mb-profile-posts">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 32px;">Quick Actions</h3>
+
+                    <div class="card">
+                        <div class="form-group">
+                            <label for="mb-post-content">Create a Post</label>
+                            <textarea id="mb-post-content" placeholder="What's on your AI mind?" style="min-height: 100px;"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="createMoltbookPost()">Post to Moltbook</button>
+                    </div>
+
+                    <div class="grid-2" style="margin-top: 16px;">
+                        <button class="btn btn-secondary" onclick="refreshProfile()">Refresh Profile</button>
+                        <button class="btn btn-secondary" onclick="openMoltbookProfile()">View on Moltbook</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Export Tab -->
             <div class="tab-content" id="export">
                 <h2>Export Configuration</h2>
@@ -1063,6 +1187,10 @@
             if (tabName === 'export') {
                 loadPreviews();
             }
+
+            if (tabName === 'moltbook') {
+                loadMoltbookState();
+            }
         }
 
         // LLM Provider Selection
@@ -1076,14 +1204,37 @@
                 document.getElementById('llm-config-form').style.display = 'block';
                 document.getElementById('test-btn').style.display = 'inline-flex';
 
-                // Update model dropdown
-                const modelSelect = document.getElementById('llm-model');
-                modelSelect.innerHTML = '<option value="">Select a model...</option>';
+                // Update API key field based on provider
+                const apiKeyGroup = document.getElementById('api-key-group');
+                const apiKeyLabel = document.getElementById('api-key-label');
+                const apiKeyInput = document.getElementById('llm-api-key');
+                const baseUrlInput = document.getElementById('llm-base-url');
+
+                if (provider === 'ollama') {
+                    // Ollama doesn't need API key
+                    apiKeyGroup.style.display = 'none';
+                    baseUrlInput.placeholder = 'http://localhost:11434 (default)';
+                } else {
+                    // Other providers need API key
+                    apiKeyGroup.style.display = 'block';
+                    apiKeyLabel.textContent = 'API Key *';
+                    apiKeyInput.placeholder = 'sk-...';
+                    baseUrlInput.placeholder = 'https://api.example.com/v1';
+                }
+
+                // Update model input and suggestions
+                const modelInput = document.getElementById('llm-model');
+                const modelSuggestions = document.getElementById('model-suggestions');
+
+                // Clear previous value and suggestions
+                modelInput.value = '';
+                modelSuggestions.innerHTML = '';
+
+                // Add model suggestions to datalist
                 PROVIDER_MODELS[provider].forEach(model => {
                     const option = document.createElement('option');
                     option.value = model;
-                    option.textContent = model;
-                    modelSelect.appendChild(option);
+                    modelSuggestions.appendChild(option);
                 });
             });
         });
@@ -1140,28 +1291,41 @@
             const temperature = document.getElementById('llm-temperature').value;
             const maxTokens = document.getElementById('llm-max-tokens').value;
 
-            if (!provider || !apiKey) {
-                showAlert('llm', 'error', 'Please select a provider and enter an API key');
+            // Validate provider
+            if (!provider) {
+                showAlert('llm', 'error', 'Please select a provider');
                 return;
             }
 
-            const content = `# LLM_CONFIG.md - Language Model Configuration
+            // API key is optional for Ollama (local models)
+            if (provider !== 'ollama' && !apiKey) {
+                showAlert('llm', 'error', 'Please enter an API key');
+                return;
+            }
 
-- **Provider:** ${provider}
-- **Model:** ${model || 'Default'}
-- **Base URL:** ${baseUrl || 'Default'}
-- **Temperature:** ${temperature}
-- **Max Tokens:** ${maxTokens}
-
+            const apiKeySection = apiKey ? `
 ## API Key
 \`\`\`
 ${apiKey}
 \`\`\`
 
+Keep your API key secure and never share it publicly.
+` : `
+## API Key
+Not required for local models.
+`;
+
+            const content = `# LLM_CONFIG.md - Language Model Configuration
+
+- **Provider:** ${provider}
+- **Model:** ${model || 'Default'}
+- **Base URL:** ${baseUrl || (provider === 'ollama' ? 'http://localhost:11434' : 'Default')}
+- **Temperature:** ${temperature}
+- **Max Tokens:** ${maxTokens}
+${apiKeySection}
 ---
 
 This configuration connects your OpenClaw agent to the AI language model.
-Keep your API key secure and never share it publicly.
 `;
 
             try {
@@ -1189,7 +1353,41 @@ Keep your API key secure and never share it publicly.
 
         // Test Connection
         async function testConnection() {
-            showAlert('llm', 'success', 'Connection test coming soon! For now, make sure your API key is valid.');
+            const provider = document.getElementById('llm-provider').value;
+            const apiKey = document.getElementById('llm-api-key').value;
+            const model = document.getElementById('llm-model').value;
+            const baseUrl = document.getElementById('llm-base-url').value;
+
+            if (!provider) {
+                showAlert('llm', 'error', 'Please select a provider first');
+                return;
+            }
+
+            // Show testing message
+            showAlert('llm', 'success', '🔄 Testing connection...');
+
+            try {
+                const response = await fetch(`${API_BASE}/test-connection`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        provider,
+                        apiKey,
+                        model,
+                        baseUrl
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('llm', 'success', result.message);
+                } else {
+                    showAlert('llm', 'error', result.message);
+                }
+            } catch (error) {
+                showAlert('llm', 'error', `❌ Connection test failed: ${error.message}`);
+            }
         }
 
         // Save Identity
@@ -1804,6 +2002,203 @@ Examples:
                 document.getElementById('preview-llm').textContent = llmMd;
                 document.getElementById('preview-identity').textContent = identityMd;
                 document.getElementById('preview-user').textContent = userMd;
+            }
+        }
+
+        // Moltbook Functions
+        async function registerMoltbookAgent() {
+            const agentName = document.getElementById('mb-agent-name').value;
+            const bio = document.getElementById('mb-agent-bio').value;
+            const avatarUrl = document.getElementById('mb-avatar-url').value;
+
+            if (!agentName || !bio) {
+                showAlert('moltbook', 'error', 'Please fill in agent name and bio');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/moltbook/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        agent_name: agentName,
+                        bio: bio,
+                        avatar_url: avatarUrl
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Store the agent data
+                    localStorage.setItem('openclaw_moltbook', JSON.stringify(result.data));
+
+                    // Show claim section
+                    document.getElementById('registration-section').style.display = 'none';
+                    document.getElementById('claim-section').style.display = 'block';
+
+                    // Populate claim info
+                    document.getElementById('mb-claim-url').value = result.data.claim_url;
+                    document.getElementById('mb-verification-code').value = result.data.verification_code;
+
+                    showAlert('moltbook', 'success', '🎉 Agent registered! Now verify ownership at the claim URL.');
+                } else {
+                    showAlert('moltbook', 'error', result.message || 'Registration failed');
+                }
+            } catch (error) {
+                showAlert('moltbook', 'error', `Failed to register: ${error.message}`);
+            }
+        }
+
+        async function checkClaimStatus() {
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            if (!moltbookData.agent_id) {
+                showAlert('moltbook', 'error', 'No agent registered yet');
+                return;
+            }
+
+            showAlert('moltbook', 'success', '🔄 Checking claim status...');
+
+            try {
+                const response = await fetch(`${API_BASE}/moltbook/status?agent_id=${moltbookData.agent_id}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (result.data.is_claimed) {
+                        // Agent is claimed! Show profile section
+                        document.getElementById('claim-section').style.display = 'none';
+                        document.getElementById('profile-section').style.display = 'block';
+
+                        // Update profile data
+                        updateMoltbookProfile(result.data);
+
+                        showAlert('moltbook', 'success', '✅ Agent verified and claimed!');
+                    } else {
+                        showAlert('moltbook', 'error', '⏳ Agent not yet claimed. Visit the claim URL to verify.');
+                    }
+                } else {
+                    showAlert('moltbook', 'error', result.message || 'Status check failed');
+                }
+            } catch (error) {
+                showAlert('moltbook', 'error', `Failed to check status: ${error.message}`);
+            }
+        }
+
+        function updateMoltbookProfile(data) {
+            document.getElementById('mb-profile-name').textContent = data.agent_name || '-';
+            document.getElementById('mb-profile-bio').textContent = data.bio || '-';
+            document.getElementById('mb-profile-karma').textContent = data.karma || 0;
+            document.getElementById('mb-profile-followers').textContent = data.followers_count || 0;
+            document.getElementById('mb-profile-following').textContent = data.following_count || 0;
+            document.getElementById('mb-profile-posts').textContent = data.posts_count || 0;
+        }
+
+        async function createMoltbookPost() {
+            const content = document.getElementById('mb-post-content').value;
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            if (!content) {
+                showAlert('moltbook', 'error', 'Please enter post content');
+                return;
+            }
+
+            if (!moltbookData.agent_id) {
+                showAlert('moltbook', 'error', 'No agent registered');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/moltbook/post`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        agent_id: moltbookData.agent_id,
+                        content: content
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    document.getElementById('mb-post-content').value = '';
+                    showAlert('moltbook', 'success', '🎉 Posted to Moltbook!');
+                    refreshProfile();
+                } else {
+                    showAlert('moltbook', 'error', result.message || 'Post failed');
+                }
+            } catch (error) {
+                showAlert('moltbook', 'error', `Failed to post: ${error.message}`);
+            }
+        }
+
+        async function refreshProfile() {
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            if (!moltbookData.agent_id) {
+                showAlert('moltbook', 'error', 'No agent registered');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/moltbook/profile?agent_id=${moltbookData.agent_id}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    updateMoltbookProfile(result.data);
+                    showAlert('moltbook', 'success', 'Profile refreshed!');
+                } else {
+                    showAlert('moltbook', 'error', result.message || 'Refresh failed');
+                }
+            } catch (error) {
+                showAlert('moltbook', 'error', `Failed to refresh: ${error.message}`);
+            }
+        }
+
+        function copyClaimUrl() {
+            const claimUrl = document.getElementById('mb-claim-url').value;
+            navigator.clipboard.writeText(claimUrl).then(() => {
+                showAlert('moltbook', 'success', 'Claim URL copied to clipboard!');
+            });
+        }
+
+        function openClaimUrl() {
+            const claimUrl = document.getElementById('mb-claim-url').value;
+            if (claimUrl) {
+                window.open(claimUrl, '_blank');
+            }
+        }
+
+        function openMoltbookProfile() {
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+            if (moltbookData.agent_name) {
+                window.open(`https://moltbook.com/agent/${moltbookData.agent_name}`, '_blank');
+            }
+        }
+
+        // Load Moltbook state on tab switch
+        function loadMoltbookState() {
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+
+            if (moltbookData.agent_id) {
+                // Agent is registered
+                document.getElementById('mb-agent-name').value = moltbookData.agent_name || '';
+                document.getElementById('mb-agent-bio').value = moltbookData.bio || '';
+                document.getElementById('mb-avatar-url').value = moltbookData.avatar_url || '';
+
+                if (moltbookData.is_claimed) {
+                    // Show profile section
+                    document.getElementById('registration-section').style.display = 'none';
+                    document.getElementById('claim-section').style.display = 'none';
+                    document.getElementById('profile-section').style.display = 'block';
+                    updateMoltbookProfile(moltbookData);
+                } else {
+                    // Show claim section
+                    document.getElementById('registration-section').style.display = 'none';
+                    document.getElementById('claim-section').style.display = 'block';
+                    document.getElementById('mb-claim-url').value = moltbookData.claim_url || '';
+                    document.getElementById('mb-verification-code').value = moltbookData.verification_code || '';
+                }
             }
         }
 
