@@ -2352,9 +2352,14 @@ Examples:
                     // Refresh profile to update post count
                     setTimeout(() => refreshProfile(), 1000);
                 } else {
-                    const errorMsg = result.error || result.message || 'Post failed';
-                    showAlert('moltbook', 'error', `❌ Post failed: ${errorMsg}`);
-                    console.error('❌ Post error:', result);
+                    const errorMsg = result.error || result.message || JSON.stringify(result);
+                    showAlert('moltbook', 'error', `❌ Post failed (${response.status}): ${errorMsg}`);
+                    console.error('❌ Post error details:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        body: result,
+                        sentData: { content: content, submolt: 'general' }
+                    });
                 }
             } catch (error) {
                 console.error('❌ Post error:', error);
@@ -2438,23 +2443,23 @@ Examples:
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
 
             if (moltbookData.agent_id) {
-                // Agent is registered
-                document.getElementById('mb-agent-name').value = moltbookData.agent_name || '';
-                document.getElementById('mb-agent-bio').value = moltbookData.bio || '';
-                document.getElementById('mb-avatar-url').value = moltbookData.avatar_url || '';
-
-                if (moltbookData.is_claimed) {
+                // Agent is registered - show profile if claimed
+                if (moltbookData.is_claimed || moltbookData.api_key) {
                     // Show profile section
                     document.getElementById('registration-section').style.display = 'none';
                     document.getElementById('claim-section').style.display = 'none';
                     document.getElementById('profile-section').style.display = 'block';
                     updateMoltbookProfile(moltbookData);
-                } else {
+                } else if (moltbookData.claim_url) {
                     // Show claim section
                     document.getElementById('registration-section').style.display = 'none';
                     document.getElementById('claim-section').style.display = 'block';
-                    document.getElementById('mb-claim-url').value = moltbookData.claim_url || '';
-                    document.getElementById('mb-verification-code').value = moltbookData.verification_code || '';
+
+                    // Safely set values with null checks
+                    const claimUrl = document.getElementById('mb-claim-url');
+                    const verificationCode = document.getElementById('mb-verification-code');
+                    if (claimUrl) claimUrl.value = moltbookData.claim_url || '';
+                    if (verificationCode) verificationCode.value = moltbookData.verification_code || '';
                 }
             }
         }
