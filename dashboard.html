@@ -1006,26 +1006,12 @@
 
                 <!-- Registration Section -->
                 <div id="registration-section">
-                    <h3>Register Your Agent</h3>
+                    <h3>Register Your Agent on Moltbook</h3>
 
-                    <div class="info-box" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%); border-left-color: #f59e0b;">
-                        <p style="color: #92400e;">⚠️ <strong>First:</strong> Get your Moltbook API key from <a href="https://www.moltbook.com/developers" target="_blank" style="color: #d97706; text-decoration: underline;">moltbook.com/developers</a></p>
-                    </div>
-
-                    <div class="info-box" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%); border-left-color: #ef4444;">
-                        <p style="color: #991b1b;"><strong>🔒 SECURITY:</strong> Your API key should ONLY be sent to <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">www.moltbook.com/api/v1/*</code><br>
-                        Never share it with third parties, "verification" services, or other domains. Your API key is your identity.</p>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="mb-api-key">Moltbook API Key *</label>
-                        <div class="input-wrapper">
-                            <input type="password" id="mb-api-key" placeholder="Your Moltbook API key">
-                            <span class="toggle-password" onclick="togglePassword('mb-api-key')">👁️</span>
-                        </div>
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
-                            Get your API key from <a href="https://www.moltbook.com/developers" target="_blank" style="color: var(--primary);">moltbook.com/developers</a>
-                        </p>
+                    <div class="info-box">
+                        <p><strong>Step 1:</strong> Register your agent<br>
+                        <strong>Step 2:</strong> Save your API key<br>
+                        <strong>Step 3:</strong> Claim via Twitter</p>
                     </div>
 
                     <div class="form-group">
@@ -1042,34 +1028,45 @@
                     </div>
 
                     <div class="button-group">
-                        <button class="btn btn-primary" onclick="registerMoltbookAgent()">Register Agent</button>
+                        <button class="btn btn-primary" onclick="registerMoltbookAgent()">Register Agent on Moltbook</button>
                     </div>
                 </div>
 
                 <!-- Claim Section (shown after registration) -->
                 <div id="claim-section" style="display: none;">
-                    <h3>Verify Your Agent</h3>
+                    <h3>🎉 Agent Registered! Now Claim It</h3>
+
+                    <div class="info-box" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%); border-left-color: #ef4444;">
+                        <p style="color: #991b1b;"><strong>🔒 CRITICAL:</strong> Save your API key NOW! You cannot retrieve it later.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4 style="margin-bottom: 16px;">🔑 API Key (Save This!)</h4>
+                        <div class="input-wrapper">
+                            <input type="text" id="mb-api-key-display" readonly style="background: #f9fafb; font-family: monospace; font-size: 13px;">
+                            <span class="toggle-password" onclick="togglePassword('mb-api-key-display')">👁️</span>
+                        </div>
+                        <button class="btn btn-secondary" onclick="copyApiKey()" style="margin-top: 12px;">Copy API Key</button>
+                    </div>
 
                     <div class="card">
                         <h4 style="margin-bottom: 16px;">🔗 Claim URL</h4>
-                        <input type="text" id="mb-claim-url" readonly style="background: #f9fafb; font-family: monospace;">
+                        <input type="text" id="mb-claim-url" readonly style="background: #f9fafb; font-family: monospace; font-size: 13px;">
                         <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
-                            Visit this URL to verify ownership of your agent
+                            Visit this URL and post a tweet to claim your agent
                         </p>
                         <button class="btn btn-secondary" onclick="copyClaimUrl()" style="margin-top: 12px;">Copy URL</button>
+                        <button class="btn btn-primary" onclick="openClaimUrl()" style="margin-top: 12px; margin-left: 8px;">Open Claim Page</button>
                     </div>
 
                     <div class="card">
-                        <h4 style="margin-bottom: 16px;">🔑 Verification Code</h4>
-                        <input type="text" id="mb-verification-code" readonly style="background: #f9fafb; font-family: monospace; font-size: 18px; font-weight: 600;">
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
-                            Enter this code on the claim page to verify your agent
-                        </p>
+                        <h4 style="margin-bottom: 16px;">🐦 Tweet Template</h4>
+                        <textarea id="mb-tweet-template" readonly style="background: #f9fafb; min-height: 80px;"></textarea>
+                        <button class="btn btn-secondary" onclick="copyTweetTemplate()" style="margin-top: 12px;">Copy Tweet</button>
                     </div>
 
                     <div class="button-group">
-                        <button class="btn btn-primary" onclick="checkClaimStatus()">Check Claim Status</button>
-                        <button class="btn btn-secondary" onclick="openClaimUrl()">Open Claim Page</button>
+                        <button class="btn btn-success" onclick="checkClaimStatus()">Check Claim Status</button>
                     </div>
                 </div>
 
@@ -2022,28 +2019,21 @@ Examples:
 
         // Moltbook Functions
         async function registerMoltbookAgent() {
-            const apiKey = document.getElementById('mb-api-key').value;
             const agentName = document.getElementById('mb-agent-name').value;
             const bio = document.getElementById('mb-agent-bio').value;
-
-            if (!apiKey) {
-                showAlert('moltbook', 'error', 'Please enter your Moltbook API key');
-                return;
-            }
 
             if (!agentName || !bio) {
                 showAlert('moltbook', 'error', 'Please fill in agent name and description');
                 return;
             }
 
-            showAlert('moltbook', 'success', '🔄 Registering agent...');
+            showAlert('moltbook', 'success', '🔄 Registering agent on Moltbook...');
 
             try {
                 const response = await fetch(`${API_BASE}/moltbook/register`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        api_key: apiKey,
                         agent_name: agentName,
                         bio: bio
                     })
@@ -2055,21 +2045,36 @@ Examples:
                     // Store the agent data
                     localStorage.setItem('openclaw_moltbook', JSON.stringify(result.data));
 
-                    // Show profile section directly (Moltbook registers agents immediately)
+                    // Show claim section with API key and claim info
                     document.getElementById('registration-section').style.display = 'none';
-                    document.getElementById('claim-section').style.display = 'none';
-                    document.getElementById('profile-section').style.display = 'block';
+                    document.getElementById('claim-section').style.display = 'block';
 
-                    // Update profile display
-                    updateMoltbookProfile(result.data);
+                    // Populate claim info
+                    document.getElementById('mb-api-key-display').value = result.data.api_key;
+                    document.getElementById('mb-claim-url').value = result.data.claim_url;
+                    document.getElementById('mb-tweet-template').value = result.data.tweet_template || `I'm claiming my AI agent "${agentName}" on @moltbook 🦞\n\nVerification: ${result.data.verification_code}`;
 
-                    showAlert('moltbook', 'success', result.message || '🎉 Agent registered successfully!');
+                    showAlert('moltbook', 'success', result.message || '🎉 Agent registered! Now claim it via Twitter.');
                 } else {
                     showAlert('moltbook', 'error', result.message || 'Registration failed');
                 }
             } catch (error) {
                 showAlert('moltbook', 'error', `Failed to register: ${error.message}`);
             }
+        }
+
+        function copyApiKey() {
+            const apiKey = document.getElementById('mb-api-key-display').value;
+            navigator.clipboard.writeText(apiKey).then(() => {
+                showAlert('moltbook', 'success', '🔑 API key copied to clipboard!');
+            });
+        }
+
+        function copyTweetTemplate() {
+            const tweet = document.getElementById('mb-tweet-template').value;
+            navigator.clipboard.writeText(tweet).then(() => {
+                showAlert('moltbook', 'success', '🐦 Tweet template copied to clipboard!');
+            });
         }
 
         async function checkClaimStatus() {

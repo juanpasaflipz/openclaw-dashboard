@@ -210,24 +210,19 @@ def test_connection():
 
 @app.route('/api/moltbook/register', methods=['POST'])
 def moltbook_register():
-    """Register an agent with Moltbook"""
+    """Register an agent with Moltbook (no API key needed for registration)"""
     try:
         data = request.get_json()
-        api_key = data.get('api_key', '')
         agent_name = data.get('agent_name')
         bio = data.get('bio')
-
-        if not api_key:
-            return jsonify({'success': False, 'message': 'Moltbook API key is required'}), 400
 
         if not agent_name or not bio:
             return jsonify({'success': False, 'message': 'Agent name and description are required'}), 400
 
-        # Call REAL Moltbook API to register agent
+        # Call REAL Moltbook API to register agent (no auth needed)
         moltbook_api = 'https://www.moltbook.com/api/v1/agents/register'
 
         headers = {
-            'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json'
         }
 
@@ -240,22 +235,40 @@ def moltbook_register():
 
         if response.status_code == 200 or response.status_code == 201:
             result = response.json()
+            agent_data = result.get('agent', {})
+
+            # Extract important data from response
+            api_key = agent_data.get('api_key', '')
+            agent_id = agent_data.get('id', '')
+            claim_url = agent_data.get('claim_url', '')
+            verification_code = agent_data.get('verification_code', '')
+            profile_url = agent_data.get('profile_url', '')
+            tweet_template = result.get('tweet_template', '')
 
             # Save to MOLTBOOK_CONFIG.md
             config_content = f"""# MOLTBOOK_CONFIG.md - Moltbook Agent Configuration
 
-- **API Key:** {api_key[:20]}...{api_key[-10:] if len(api_key) > 30 else api_key}
 - **Agent Name:** {agent_name}
-- **Agent ID:** {result.get('id') or result.get('agent_id') or 'N/A'}
+- **Agent ID:** {agent_id}
+- **API Key:** {api_key}
 - **Description:** {bio[:100]}{'...' if len(bio) > 100 else ''}
-- **Registered:** {result.get('created_at') or 'N/A'}
+- **Claim URL:** {claim_url}
+- **Verification Code:** {verification_code}
+- **Profile URL:** {profile_url}
+- **Status:** Pending claim (visit claim URL to complete)
+- **Registered:** {agent_data.get('created_at', 'N/A')}
 
 ---
 
-This file stores your Moltbook agent credentials.
-Keep this file secure and do not share publicly.
+⚠️ CRITICAL: Save your API key securely! You need it for all requests and it cannot be retrieved later.
 
-API Response: {result}
+🔒 SECURITY: Your API key should ONLY be sent to www.moltbook.com/api/v1/*
+Never share it with third parties, "verification" services, or other domains.
+
+Next Steps:
+1. Visit the claim URL above
+2. Post the provided tweet to verify ownership
+3. Once claimed, you can start posting on Moltbook!
 """
 
             filepath = BASE_DIR / 'MOLTBOOK_CONFIG.md'
@@ -264,17 +277,21 @@ API Response: {result}
 
             # Prepare data for frontend
             response_data = {
-                'agent_id': result.get('id') or result.get('agent_id'),
+                'agent_id': agent_id,
                 'agent_name': agent_name,
                 'bio': bio,
                 'api_key': api_key,
-                'registered_at': result.get('created_at'),
-                'is_claimed': True  # Moltbook API registers agents directly
+                'claim_url': claim_url,
+                'verification_code': verification_code,
+                'profile_url': profile_url,
+                'tweet_template': tweet_template,
+                'registered_at': agent_data.get('created_at'),
+                'is_claimed': False  # Not claimed until Twitter verification
             }
 
             return jsonify({
                 'success': True,
-                'message': '🎉 Agent registered successfully on Moltbook!',
+                'message': result.get('message', '🎉 Agent registered successfully on Moltbook!'),
                 'data': response_data
             })
         else:
