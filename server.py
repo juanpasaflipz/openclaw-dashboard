@@ -213,23 +213,30 @@ def moltbook_register():
     """Register an agent with Moltbook"""
     try:
         data = request.get_json()
+        api_key = data.get('api_key', '')
         agent_name = data.get('agent_name')
         bio = data.get('bio')
-        avatar_url = data.get('avatar_url', '')
+
+        if not api_key:
+            return jsonify({'success': False, 'message': 'Moltbook API key is required'}), 400
 
         if not agent_name or not bio:
-            return jsonify({'success': False, 'message': 'Agent name and bio are required'}), 400
+            return jsonify({'success': False, 'message': 'Agent name and description are required'}), 400
 
-        # Call Moltbook API to register agent
-        moltbook_api = 'https://api.moltbook.com/v1/agents/register'
+        # Call REAL Moltbook API to register agent
+        moltbook_api = 'https://www.moltbook.com/api/v1/agents/register'
 
-        payload = {
-            'agent_name': agent_name,
-            'bio': bio,
-            'avatar_url': avatar_url
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
         }
 
-        response = requests.post(moltbook_api, json=payload, timeout=10)
+        payload = {
+            'name': agent_name,
+            'description': bio
+        }
+
+        response = requests.post(moltbook_api, json=payload, headers=headers, timeout=10)
 
         if response.status_code == 200 or response.status_code == 201:
             result = response.json()
@@ -237,33 +244,50 @@ def moltbook_register():
             # Save to MOLTBOOK_CONFIG.md
             config_content = f"""# MOLTBOOK_CONFIG.md - Moltbook Agent Configuration
 
+- **API Key:** {api_key[:20]}...{api_key[-10:] if len(api_key) > 30 else api_key}
 - **Agent Name:** {agent_name}
-- **Agent ID:** {result.get('agent_id')}
-- **Bio:** {bio}
-- **Avatar URL:** {avatar_url or 'None'}
-- **Claim URL:** {result.get('claim_url')}
-- **Verification Code:** {result.get('verification_code')}
-- **Is Claimed:** {result.get('is_claimed', False)}
+- **Agent ID:** {result.get('id') or result.get('agent_id') or 'N/A'}
+- **Description:** {bio[:100]}{'...' if len(bio) > 100 else ''}
+- **Registered:** {result.get('created_at') or 'N/A'}
 
 ---
 
 This file stores your Moltbook agent credentials.
 Keep this file secure and do not share publicly.
+
+API Response: {result}
 """
 
             filepath = BASE_DIR / 'MOLTBOOK_CONFIG.md'
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(config_content)
 
+            # Prepare data for frontend
+            response_data = {
+                'agent_id': result.get('id') or result.get('agent_id'),
+                'agent_name': agent_name,
+                'bio': bio,
+                'api_key': api_key,
+                'registered_at': result.get('created_at'),
+                'is_claimed': True  # Moltbook API registers agents directly
+            }
+
             return jsonify({
                 'success': True,
-                'message': 'Agent registered successfully!',
-                'data': result
+                'message': '🎉 Agent registered successfully on Moltbook!',
+                'data': response_data
             })
         else:
+            error_msg = f'Moltbook API error ({response.status_code})'
+            try:
+                error_detail = response.json()
+                error_msg = f"{error_msg}: {error_detail.get('error') or error_detail.get('message') or str(error_detail)}"
+            except:
+                error_msg = f"{error_msg}: {response.text[:200]}"
+
             return jsonify({
                 'success': False,
-                'message': f'Moltbook API error: {response.status_code}'
+                'message': error_msg
             }), response.status_code
 
     except requests.exceptions.ConnectionError:

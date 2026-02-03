@@ -1008,22 +1008,32 @@
                 <div id="registration-section">
                     <h3>Register Your Agent</h3>
 
+                    <div class="info-box" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%); border-left-color: #f59e0b;">
+                        <p style="color: #92400e;">⚠️ <strong>First:</strong> Get your Moltbook API key from <a href="https://www.moltbook.com/developers" target="_blank" style="color: #d97706; text-decoration: underline;">moltbook.com/developers</a></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mb-api-key">Moltbook API Key *</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="mb-api-key" placeholder="Your Moltbook API key">
+                            <span class="toggle-password" onclick="togglePassword('mb-api-key')">👁️</span>
+                        </div>
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            Get your API key from <a href="https://www.moltbook.com/developers" target="_blank" style="color: var(--primary);">moltbook.com/developers</a>
+                        </p>
+                    </div>
+
                     <div class="form-group">
                         <label for="mb-agent-name">Agent Name *</label>
-                        <input type="text" id="mb-agent-name" placeholder="e.g., MyAwesomeAgent">
+                        <input type="text" id="mb-agent-name" placeholder="e.g., TheConductor">
                         <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
                             Choose a unique name for your agent on Moltbook
                         </p>
                     </div>
 
                     <div class="form-group">
-                        <label for="mb-agent-bio">Agent Bio *</label>
-                        <textarea id="mb-agent-bio" placeholder="Tell the Moltbook community about your agent..." style="min-height: 120px;"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="mb-avatar-url">Avatar URL (optional)</label>
-                        <input type="text" id="mb-avatar-url" placeholder="https://example.com/avatar.png">
+                        <label for="mb-agent-bio">Agent Description *</label>
+                        <textarea id="mb-agent-bio" placeholder="Describe your agent's role and capabilities..." style="min-height: 120px;"></textarea>
                     </div>
 
                     <div class="button-group">
@@ -2007,23 +2017,30 @@ Examples:
 
         // Moltbook Functions
         async function registerMoltbookAgent() {
+            const apiKey = document.getElementById('mb-api-key').value;
             const agentName = document.getElementById('mb-agent-name').value;
             const bio = document.getElementById('mb-agent-bio').value;
-            const avatarUrl = document.getElementById('mb-avatar-url').value;
 
-            if (!agentName || !bio) {
-                showAlert('moltbook', 'error', 'Please fill in agent name and bio');
+            if (!apiKey) {
+                showAlert('moltbook', 'error', 'Please enter your Moltbook API key');
                 return;
             }
+
+            if (!agentName || !bio) {
+                showAlert('moltbook', 'error', 'Please fill in agent name and description');
+                return;
+            }
+
+            showAlert('moltbook', 'success', '🔄 Registering agent...');
 
             try {
                 const response = await fetch(`${API_BASE}/moltbook/register`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
+                        api_key: apiKey,
                         agent_name: agentName,
-                        bio: bio,
-                        avatar_url: avatarUrl
+                        bio: bio
                     })
                 });
 
@@ -2033,15 +2050,15 @@ Examples:
                     // Store the agent data
                     localStorage.setItem('openclaw_moltbook', JSON.stringify(result.data));
 
-                    // Show claim section
+                    // Show profile section directly (Moltbook registers agents immediately)
                     document.getElementById('registration-section').style.display = 'none';
-                    document.getElementById('claim-section').style.display = 'block';
+                    document.getElementById('claim-section').style.display = 'none';
+                    document.getElementById('profile-section').style.display = 'block';
 
-                    // Populate claim info
-                    document.getElementById('mb-claim-url').value = result.data.claim_url;
-                    document.getElementById('mb-verification-code').value = result.data.verification_code;
+                    // Update profile display
+                    updateMoltbookProfile(result.data);
 
-                    showAlert('moltbook', 'success', '🎉 Agent registered! Now verify ownership at the claim URL.');
+                    showAlert('moltbook', 'success', result.message || '🎉 Agent registered successfully!');
                 } else {
                     showAlert('moltbook', 'error', result.message || 'Registration failed');
                 }
