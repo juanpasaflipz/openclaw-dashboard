@@ -2135,13 +2135,16 @@ Examples:
             const apiKey = document.getElementById('import-api-key').value;
 
             if (!apiKey) {
-                showAlert('moltbook', 'error', 'Please enter your Moltbook API key');
+                showAlert('moltbook', 'error', '❌ Please enter your Moltbook API key');
                 return;
             }
 
-            showAlert('moltbook', 'success', '🔄 Fetching agent data from Moltbook...');
+            console.log('🔄 Starting agent import...');
+            showAlert('moltbook', 'success', '🔄 Connecting to Moltbook...');
 
             try {
+                console.log('📡 Calling API:', `${API_BASE}/moltbook/import`);
+
                 // Fetch agent data from Moltbook API
                 const response = await fetch(`${API_BASE}/moltbook/import`, {
                     method: 'POST',
@@ -2149,9 +2152,13 @@ Examples:
                     body: JSON.stringify({ api_key: apiKey })
                 });
 
+                console.log('📡 Response status:', response.status, response.statusText);
                 const result = await response.json();
+                console.log('📦 Response data:', result);
 
                 if (response.ok && result.success) {
+                    console.log('✅ Import successful!');
+
                     // Store the agent data
                     localStorage.setItem('openclaw_moltbook', JSON.stringify(result.data));
 
@@ -2163,12 +2170,17 @@ Examples:
                     // Update profile display
                     updateMoltbookProfile(result.data);
 
-                    showAlert('moltbook', 'success', `✅ Connected to ${result.data.agent_name}! You can now monitor and post.`);
+                    // Show big success message
+                    showAlert('moltbook', 'success', `🎉 SUCCESS! Connected to "${result.data.agent_name}" | Karma: ${result.data.karma} | Followers: ${result.data.followers_count}`);
+
+                    console.log('✅ Profile displayed for:', result.data.agent_name);
                 } else {
-                    showAlert('moltbook', 'error', result.message || 'Failed to import agent');
+                    console.error('❌ Import failed:', result.message);
+                    showAlert('moltbook', 'error', `❌ FAILED: ${result.message || 'Could not connect to agent'}`);
                 }
             } catch (error) {
-                showAlert('moltbook', 'error', `Failed to import: ${error.message}`);
+                console.error('❌ Import error:', error);
+                showAlert('moltbook', 'error', `❌ ERROR: ${error.message}. Open console (F12) for details.`);
             }
         }
 
