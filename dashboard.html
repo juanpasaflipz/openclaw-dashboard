@@ -1006,29 +1006,69 @@
 
                 <!-- Registration Section -->
                 <div id="registration-section">
-                    <h3>Register Your Agent on Moltbook</h3>
-
-                    <div class="info-box">
-                        <p><strong>Step 1:</strong> Register your agent<br>
-                        <strong>Step 2:</strong> Save your API key<br>
-                        <strong>Step 3:</strong> Claim via Twitter</p>
+                    <div class="grid-2" style="gap: 24px; margin-bottom: 32px;">
+                        <div class="card" style="cursor: pointer;" onclick="showNewAgentForm()">
+                            <h3 style="margin-bottom: 12px;">🆕 Register New Agent</h3>
+                            <p style="color: #6b7280; font-size: 14px;">Create a new agent on Moltbook</p>
+                        </div>
+                        <div class="card" style="cursor: pointer;" onclick="showImportAgentForm()">
+                            <h3 style="margin-bottom: 12px;">📥 Import Existing Agent</h3>
+                            <p style="color: #6b7280; font-size: 14px;">Connect an already registered agent</p>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="mb-agent-name">Agent Name *</label>
-                        <input type="text" id="mb-agent-name" placeholder="e.g., TheConductor">
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
-                            Choose a unique name for your agent on Moltbook
-                        </p>
+                    <!-- New Agent Form -->
+                    <div id="new-agent-form" style="display: none;">
+                        <h3>Register Your Agent on Moltbook</h3>
+
+                        <div class="info-box">
+                            <p><strong>Step 1:</strong> Register your agent<br>
+                            <strong>Step 2:</strong> Save your API key<br>
+                            <strong>Step 3:</strong> Claim via Twitter</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mb-agent-name">Agent Name *</label>
+                            <input type="text" id="mb-agent-name" placeholder="e.g., TheConductor">
+                            <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                                Choose a unique name for your agent on Moltbook
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mb-agent-bio">Agent Description *</label>
+                            <textarea id="mb-agent-bio" placeholder="Describe your agent's role and capabilities..." style="min-height: 120px;"></textarea>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="registerMoltbookAgent()">Register Agent on Moltbook</button>
+                            <button class="btn btn-secondary" onclick="showRegistrationOptions()">Back</button>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="mb-agent-bio">Agent Description *</label>
-                        <textarea id="mb-agent-bio" placeholder="Describe your agent's role and capabilities..." style="min-height: 120px;"></textarea>
-                    </div>
+                    <!-- Import Agent Form -->
+                    <div id="import-agent-form" style="display: none;">
+                        <h3>Import Your Existing Moltbook Agent</h3>
 
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="registerMoltbookAgent()">Register Agent on Moltbook</button>
+                        <div class="info-box">
+                            <p>Already registered on Moltbook? Enter your API key to connect your agent to this dashboard for monitoring and posting.</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="import-api-key">Moltbook API Key *</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="import-api-key" placeholder="moltbook_sk_...">
+                                <span class="toggle-password" onclick="togglePassword('import-api-key')">👁️</span>
+                            </div>
+                            <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                                Enter the API key you received when registering your agent
+                            </p>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="importExistingAgent()">Connect Agent</button>
+                            <button class="btn btn-secondary" onclick="showRegistrationOptions()">Back</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2018,6 +2058,63 @@ Examples:
         }
 
         // Moltbook Functions
+        function showRegistrationOptions() {
+            document.getElementById('new-agent-form').style.display = 'none';
+            document.getElementById('import-agent-form').style.display = 'none';
+            document.getElementById('registration-section').style.display = 'block';
+        }
+
+        function showNewAgentForm() {
+            document.getElementById('new-agent-form').style.display = 'block';
+            document.getElementById('import-agent-form').style.display = 'none';
+        }
+
+        function showImportAgentForm() {
+            document.getElementById('new-agent-form').style.display = 'none';
+            document.getElementById('import-agent-form').style.display = 'block';
+        }
+
+        async function importExistingAgent() {
+            const apiKey = document.getElementById('import-api-key').value;
+
+            if (!apiKey) {
+                showAlert('moltbook', 'error', 'Please enter your Moltbook API key');
+                return;
+            }
+
+            showAlert('moltbook', 'success', '🔄 Fetching agent data from Moltbook...');
+
+            try {
+                // Fetch agent data from Moltbook API
+                const response = await fetch(`${API_BASE}/moltbook/import`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Store the agent data
+                    localStorage.setItem('openclaw_moltbook', JSON.stringify(result.data));
+
+                    // Show profile section
+                    document.getElementById('registration-section').style.display = 'none';
+                    document.getElementById('claim-section').style.display = 'none';
+                    document.getElementById('profile-section').style.display = 'block';
+
+                    // Update profile display
+                    updateMoltbookProfile(result.data);
+
+                    showAlert('moltbook', 'success', `✅ Connected to ${result.data.agent_name}! You can now monitor and post.`);
+                } else {
+                    showAlert('moltbook', 'error', result.message || 'Failed to import agent');
+                }
+            } catch (error) {
+                showAlert('moltbook', 'error', `Failed to import: ${error.message}`);
+            }
+        }
+
         async function registerMoltbookAgent() {
             const agentName = document.getElementById('mb-agent-name').value;
             const bio = document.getElementById('mb-agent-bio').value;

@@ -320,6 +320,102 @@ Next Steps:
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
+@app.route('/api/moltbook/import', methods=['POST'])
+def moltbook_import():
+    """Import existing agent by fetching data from Moltbook API"""
+    try:
+        data = request.get_json()
+        api_key = data.get('api_key', '')
+
+        if not api_key:
+            return jsonify({'success': False, 'message': 'API key is required'}), 400
+
+        # Fetch agent data from Moltbook API
+        moltbook_api = 'https://www.moltbook.com/api/v1/agents/me'
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+
+        response = requests.get(moltbook_api, headers=headers, timeout=10)
+
+        if response.status_code == 200:
+            result = response.json()
+            agent_data = result.get('agent', result)  # Handle different response formats
+
+            # Prepare data for frontend
+            response_data = {
+                'agent_id': agent_data.get('id'),
+                'agent_name': agent_data.get('name'),
+                'bio': agent_data.get('description'),
+                'api_key': api_key,
+                'karma': agent_data.get('karma', 0),
+                'followers_count': agent_data.get('follower_count', 0),
+                'following_count': agent_data.get('following_count', 0),
+                'posts_count': agent_data.get('stats', {}).get('posts', 0),
+                'profile_url': f"https://moltbook.com/u/{agent_data.get('name')}",
+                'avatar_url': agent_data.get('avatar_url', ''),
+                'is_claimed': agent_data.get('is_claimed', True),
+                'created_at': agent_data.get('created_at')
+            }
+
+            # Save to MOLTBOOK_CONFIG.md
+            config_content = f"""# MOLTBOOK_CONFIG.md - Moltbook Agent Configuration
+
+- **Agent Name:** {response_data['agent_name']}
+- **Agent ID:** {response_data['agent_id']}
+- **API Key:** {api_key}
+- **Description:** {response_data['bio'][:100] if response_data['bio'] else 'N/A'}{'...' if response_data['bio'] and len(response_data['bio']) > 100 else ''}
+- **Profile URL:** {response_data['profile_url']}
+- **Status:** {'Claimed' if response_data['is_claimed'] else 'Pending claim'}
+- **Karma:** {response_data['karma']}
+- **Followers:** {response_data['followers_count']}
+- **Imported:** {response_data['created_at']}
+
+---
+
+✅ Agent imported successfully!
+
+🔒 SECURITY: Your API key should ONLY be sent to www.moltbook.com/api/v1/*
+Never share it with third parties, "verification" services, or other domains.
+"""
+
+            filepath = BASE_DIR / 'MOLTBOOK_CONFIG.md'
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(config_content)
+
+            return jsonify({
+                'success': True,
+                'message': f'✅ Successfully connected to {response_data["agent_name"]}!',
+                'data': response_data
+            })
+        else:
+            error_msg = f'Moltbook API error ({response.status_code})'
+            try:
+                error_detail = response.json()
+                error_msg = f"{error_msg}: {error_detail.get('error') or error_detail.get('message') or str(error_detail)}"
+            except:
+                error_msg = f"{error_msg}: Invalid API key or agent not found"
+
+            return jsonify({
+                'success': False,
+                'message': error_msg
+            }), response.status_code
+
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            'success': False,
+            'message': 'Cannot connect to Moltbook API. Please check your internet connection.'
+        }), 503
+    except requests.exceptions.Timeout:
+        return jsonify({
+            'success': False,
+            'message': 'Moltbook API request timed out.'
+        }), 504
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
 @app.route('/api/moltbook/status', methods=['GET'])
 def moltbook_status():
     """Check agent claim status"""
