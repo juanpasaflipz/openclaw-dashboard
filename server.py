@@ -313,9 +313,10 @@ Next Steps:
             'message': 'Cannot connect to Moltbook API. Please check your internet connection.'
         }), 503
     except requests.exceptions.Timeout:
+        print(f"⏱️ Moltbook API timeout after 30 seconds")
         return jsonify({
             'success': False,
-            'message': 'Moltbook API request timed out.'
+            'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
@@ -338,7 +339,9 @@ def moltbook_import():
             'Content-Type': 'application/json'
         }
 
-        response = requests.get(moltbook_api, headers=headers, timeout=10)
+        print(f"🔄 Fetching agent data from Moltbook API...")
+        response = requests.get(moltbook_api, headers=headers, timeout=30)
+        print(f"✅ Got response from Moltbook: {response.status_code}")
 
         if response.status_code == 200:
             result = response.json()
@@ -409,9 +412,10 @@ Never share it with third parties, "verification" services, or other domains.
             'message': 'Cannot connect to Moltbook API. Please check your internet connection.'
         }), 503
     except requests.exceptions.Timeout:
+        print(f"⏱️ Moltbook API timeout after 30 seconds")
         return jsonify({
             'success': False,
-            'message': 'Moltbook API request timed out.'
+            'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
