@@ -275,6 +275,34 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            position: relative;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn.loading {
+            opacity: 0.8;
+            cursor: wait;
+            padding-right: 48px;
+        }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            right: 16px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .btn-primary {
@@ -1309,11 +1337,40 @@
         // Alert helper
         function showAlert(tabName, type, message) {
             const alert = document.getElementById(`${tabName}-alert`);
+            if (!alert) return;
             alert.className = `alert ${type} show`;
             alert.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
             setTimeout(() => {
                 alert.classList.remove('show');
-            }, 4000);
+            }, 5000);
+        }
+
+        // Button loading state helpers
+        function setButtonLoading(button, loading, originalText) {
+            if (loading) {
+                button.classList.add('loading');
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.textContent = originalText || 'Loading...';
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+                if (button.dataset.originalText) {
+                    button.textContent = button.dataset.originalText;
+                }
+            }
+        }
+
+        function withLoading(button, asyncFn) {
+            return async function(...args) {
+                setButtonLoading(button, true);
+                try {
+                    const result = await asyncFn(...args);
+                    return result;
+                } finally {
+                    setButtonLoading(button, false);
+                }
+            };
         }
 
         // Update status indicator
@@ -2325,6 +2382,111 @@ Examples:
                 }
             }
         }
+
+        // Auto-add loading states to all async button clicks
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add click feedback to all buttons
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    // Visual click feedback
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+            });
+
+            // Override onclick handlers to add loading states
+            const originalImport = window.importExistingAgent;
+            window.importExistingAgent = async function() {
+                const btn = document.querySelector('#import-agent-form .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Connecting...');
+                try {
+                    await originalImport();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalRegister = window.registerMoltbookAgent;
+            window.registerMoltbookAgent = async function() {
+                const btn = document.querySelector('#new-agent-form .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Registering...');
+                try {
+                    await originalRegister();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalTestConnection = window.testConnection;
+            window.testConnection = async function() {
+                const btn = document.getElementById('test-btn');
+                if (btn) setButtonLoading(btn, true, 'Testing...');
+                try {
+                    await originalTestConnection();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalSaveLLM = window.saveLLMConfig;
+            window.saveLLMConfig = async function() {
+                const btn = event?.target || document.querySelector('#llm .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Saving...');
+                try {
+                    await originalSaveLLM();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalSaveIdentity = window.saveIdentity;
+            window.saveIdentity = async function() {
+                const btn = event?.target || document.querySelector('#identity .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Saving...');
+                try {
+                    await originalSaveIdentity();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalSaveUser = window.saveUser;
+            window.saveUser = async function() {
+                const btn = event?.target || document.querySelector('#user .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Saving...');
+                try {
+                    await originalSaveUser();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalSaveSoul = window.saveSoul;
+            window.saveSoul = async function() {
+                const btn = event?.target || document.querySelector('#soul .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Saving...');
+                try {
+                    await originalSaveSoul();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            const originalSaveSecurity = window.saveSecurity;
+            window.saveSecurity = async function() {
+                const btn = event?.target || document.querySelector('#security .btn-primary');
+                if (btn) setButtonLoading(btn, true, 'Saving...');
+                try {
+                    await originalSaveSecurity();
+                } finally {
+                    if (btn) setButtonLoading(btn, false);
+                }
+            };
+
+            console.log('✅ OpenClaw Dashboard loaded with button feedback system');
+        });
 
         // Initialize on load
         loadCurrentConfig();
