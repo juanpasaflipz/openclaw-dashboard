@@ -659,9 +659,10 @@ def initialize_database():
         # Create all tables
         db.create_all()
 
-        # Check if credit packages already exist
+        messages = []
+
+        # Seed credit packages if needed
         if CreditPackage.query.first() is None:
-            # Seed default credit packages
             packages = [
                 CreditPackage(
                     name="Starter Pack",
@@ -687,18 +688,64 @@ def initialize_database():
                 db.session.add(package)
 
             db.session.commit()
-
-            return jsonify({
-                'success': True,
-                'message': 'Database initialized successfully',
-                'packages': [f"{p.name}: {p.credits} credits for ${p.price_dollars:.2f}" for p in packages]
-            })
+            messages.append('✅ Seeded credit packages')
         else:
-            return jsonify({
-                'success': True,
-                'message': 'Database already initialized',
-                'note': 'Credit packages already exist'
-            })
+            messages.append('ℹ️  Credit packages already exist')
+
+        # Seed subscription plans if needed
+        if SubscriptionPlan.query.first() is None:
+            plans = [
+                SubscriptionPlan(
+                    tier='starter',
+                    name='Starter Plan',
+                    price_monthly_cents=900,  # $9/month
+                    unlimited_posts=False,
+                    max_agents=3,
+                    scheduled_posting=True,
+                    analytics=True,
+                    api_access=False,
+                    team_members=1,
+                    priority_support=False
+                ),
+                SubscriptionPlan(
+                    tier='pro',
+                    name='Pro Plan',
+                    price_monthly_cents=2900,  # $29/month
+                    unlimited_posts=True,  # UNLIMITED POSTS!
+                    max_agents=5,
+                    scheduled_posting=True,
+                    analytics=True,
+                    api_access=True,
+                    team_members=1,
+                    priority_support=True
+                ),
+                SubscriptionPlan(
+                    tier='team',
+                    name='Team Plan',
+                    price_monthly_cents=7900,  # $79/month
+                    unlimited_posts=True,
+                    max_agents=999,  # Unlimited
+                    scheduled_posting=True,
+                    analytics=True,
+                    api_access=True,
+                    team_members=5,
+                    priority_support=True
+                )
+            ]
+
+            for plan in plans:
+                db.session.add(plan)
+
+            db.session.commit()
+            messages.append('✅ Seeded subscription plans')
+        else:
+            messages.append('ℹ️  Subscription plans already exist')
+
+        return jsonify({
+            'success': True,
+            'message': 'Database initialization complete',
+            'details': messages
+        })
 
     except Exception as e:
         db.session.rollback()
