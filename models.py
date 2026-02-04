@@ -24,6 +24,13 @@ class User(db.Model):
     # Stripe integration
     stripe_customer_id = db.Column(db.String(255), unique=True, index=True)
 
+    # Subscription tier: 'free', 'starter', 'pro', 'team'
+    subscription_tier = db.Column(db.String(50), default='free', index=True)
+    subscription_status = db.Column(db.String(50), default='inactive')  # 'active', 'inactive', 'cancelled', 'past_due'
+    stripe_subscription_id = db.Column(db.String(255), unique=True, index=True)
+    subscription_expires_at = db.Column(db.DateTime)  # For tracking expiry
+    subscription_started_at = db.Column(db.DateTime)
+
     # Relationships
     transactions = db.relationship('CreditTransaction', backref='user', lazy='dynamic')
     magic_links = db.relationship('MagicLink', backref='user', lazy='dynamic')
@@ -62,6 +69,32 @@ class User(db.Model):
             stripe_payment_id=stripe_payment_id
         )
         db.session.add(transaction)
+
+    def has_active_subscription(self):
+        """Check if user has an active subscription"""
+        if self.subscription_status != 'active':
+            return False
+        if self.subscription_expires_at and datetime.utcnow() > self.subscription_expires_at:
+            return False
+        return True
+
+    def is_premium(self):
+        """Check if user has premium features (any paid tier)"""
+        return self.has_active_subscription() and self.subscription_tier in ['starter', 'pro', 'team']
+
+    def has_unlimited_posts(self):
+        """Check if user has unlimited posting (no rate limit)"""
+        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+
+    def get_max_agents(self):
+        """Get max number of agents user can have"""
+        if self.subscription_tier == 'team':
+            return 999  # Unlimited
+        elif self.subscription_tier == 'pro':
+            return 5
+        elif self.subscription_tier == 'starter':
+            return 3
+        return 1  # Free tier
 
 
 class MagicLink(db.Model):
@@ -168,6 +201,38 @@ class CreditPackage(db.Model):
     def price_dollars(self):
         """Get price in dollars"""
         return self.price_cents / 100
+
+
+class SubscriptionPlan(db.Model):
+    """Available subscription plans/tiers"""
+    __tablename__ = 'subscription_plans'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tier = db.Column(db.String(50), unique=True, nullable=False)  # 'starter', 'pro', 'team'
+    name = db.Column(db.String(100), nullable=False)
+    price_monthly_cents = db.Column(db.Integer, nullable=False)
+    stripe_price_id = db.Column(db.String(255), unique=True, index=True)
+    stripe_product_id = db.Column(db.String(255), index=True)
+
+    # Features
+    unlimited_posts = db.Column(db.Boolean, default=False)
+    max_agents = db.Column(db.Integer, default=1)
+    scheduled_posting = db.Column(db.Boolean, default=False)
+    analytics = db.Column(db.Boolean, default=False)
+    api_access = db.Column(db.Boolean, default=False)
+    team_members = db.Column(db.Integer, default=1)
+    priority_support = db.Column(db.Boolean, default=False)
+
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<SubscriptionPlan {self.name} - ${self.price_monthly_cents/100:.2f}/month>'
+
+    @property
+    def price_monthly_dollars(self):
+        """Get monthly price in dollars"""
+        return self.price_monthly_cents / 100
 
 
 class ConfigFile(db.Model):
