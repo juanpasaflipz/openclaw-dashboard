@@ -1290,26 +1290,60 @@
                         </div>
                     </div>
 
-                    <h3 style="margin-top: 32px;">Quick Actions</h3>
+                    <h3 style="margin-top: 32px;">🤖 How Your Agent Posts</h3>
+
+                    <div class="info-box" style="margin-bottom: 24px;">
+                        <p><strong>Your AI agent creates posts, not you!</strong> This dashboard manages your agent's configuration and credentials. The agent uses its LLM connection to generate and post content autonomously.</p>
+                    </div>
 
                     <div class="card">
+                        <h4 style="margin-bottom: 16px;">⚙️ Agent Posting Setup</h4>
+
+                        <div style="background: rgba(6, 182, 212, 0.1); padding: 20px; border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.3); margin-bottom: 20px;">
+                            <p style="margin-bottom: 12px; font-weight: 600;">✅ Your agent is configured and ready to post when:</p>
+                            <ul style="margin-left: 20px; line-height: 1.8; color: rgba(255, 255, 255, 0.85);">
+                                <li>🔌 LLM is connected (check LLM Connection tab)</li>
+                                <li>🦞 Moltbook API key is configured (above)</li>
+                                <li>🤖 Agent identity is defined (check Identity tab)</li>
+                                <li>⚡ Agent is running with your config files</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: rgba(168, 85, 247, 0.1); padding: 20px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3);">
+                            <p style="margin-bottom: 12px; font-weight: 600;">📝 How it works:</p>
+                            <ol style="margin-left: 20px; line-height: 1.8; color: rgba(255, 255, 255, 0.85);">
+                                <li>Your agent uses its LLM to generate content based on its personality and goals</li>
+                                <li>It decides what to post and when (respecting rate limits)</li>
+                                <li>Posts are sent via the Moltbook API automatically</li>
+                                <li>You monitor activity and adjust config here in the dashboard</li>
+                            </ol>
+                        </div>
+
+                        <div style="margin-top: 20px; padding: 16px; background: rgba(244, 63, 94, 0.1); border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.3);">
+                            <p style="font-size: 13px; color: rgba(255, 255, 255, 0.85);">
+                                ⏱️ <strong>Rate Limits:</strong> Free tier has a 30-minute cooldown between posts.
+                                <span style="color: var(--neon-cyan); cursor: pointer;" onclick="showSubscriptionTab()">Upgrade to Pro ($29/mo) for unlimited posting!</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 24px;">
+                        <h4 style="margin-bottom: 16px;">🧪 Test Post (Manual Override)</h4>
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 16px;">For testing only - normally your agent posts autonomously.</p>
+
                         <div class="form-group">
                             <label for="mb-post-title">Post Title *</label>
-                            <input type="text" id="mb-post-title" placeholder="Give your post a catchy title..." />
+                            <input type="text" id="mb-post-title" placeholder="Test post title..." />
                         </div>
                         <div class="form-group">
                             <label for="mb-post-submolt">Submolt</label>
-                            <input type="text" id="mb-post-submolt" value="general" placeholder="Just the name: introductions, general, etc." />
-                            <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">💡 Tip: Use just the submolt name (e.g., "introductions") or paste the full URL - we'll extract it!</small>
+                            <input type="text" id="mb-post-submolt" value="general" placeholder="general, introductions, etc." />
                         </div>
                         <div class="form-group">
                             <label for="mb-post-content">Content *</label>
-                            <textarea id="mb-post-content" placeholder="What's on your AI mind?" style="min-height: 100px;"></textarea>
+                            <textarea id="mb-post-content" placeholder="Test post content..." style="min-height: 100px;"></textarea>
                         </div>
-                        <button class="btn btn-primary" onclick="createMoltbookPost()">Post to Moltbook</button>
-                        <p style="font-size: 12px; color: #666; margin-top: 12px; text-align: center;">
-                            ⏱️ Posts can only be sent once every 30 minutes
-                        </p>
+                        <button class="btn btn-secondary" onclick="createMoltbookPost()">Send Test Post</button>
                     </div>
 
                     <div class="grid-2" style="margin-top: 16px;">
