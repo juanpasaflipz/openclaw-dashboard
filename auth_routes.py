@@ -9,36 +9,68 @@ import os
 
 def send_magic_link_email(email, magic_link_url):
     """
-    Send magic link email to user
-
-    TODO: Integrate with email service (SendGrid, Mailgun, etc.)
-    For now, just print to console for testing
+    Send magic link email to user via SendGrid
+    Falls back to console logging if SendGrid is not configured
     """
-    # In production, replace this with actual email sending
+    sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+
+    # If SendGrid is configured, send real email
+    if sendgrid_api_key:
+        try:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+
+            # Get verified sender email from env, or use default
+            from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@openclaw.app')
+
+            message = Mail(
+                from_email=from_email,
+                to_emails=email,
+                subject='🦞 Your OpenClaw Dashboard Login Link',
+                html_content=f'''
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #6366f1;">🦞 Sign in to OpenClaw Dashboard</h2>
+                        <p>Click the button below to sign in to your account:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{magic_link_url}"
+                               style="background: #6366f1; color: white; padding: 12px 24px;
+                                      text-decoration: none; border-radius: 8px; display: inline-block;">
+                                Sign In to Dashboard
+                            </a>
+                        </div>
+                        <p style="color: #666; font-size: 14px;">
+                            This link expires in 15 minutes.<br>
+                            If you didn't request this, you can safely ignore this email.
+                        </p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="color: #999; font-size: 12px;">
+                            OpenClaw Dashboard - AI Agent Configuration<br>
+                            <a href="{magic_link_url}" style="color: #6366f1;">Click here if the button doesn't work</a>
+                        </p>
+                    </div>
+                '''
+            )
+
+            sg = SendGridAPIClient(sendgrid_api_key)
+            response = sg.send(message)
+
+            print(f"✅ Email sent to {email} (Status: {response.status_code})")
+            return True
+
+        except Exception as e:
+            print(f"❌ SendGrid error: {e}")
+            print(f"📧 Falling back to console logging for {email}")
+            # Fall through to console logging
+
+    # Development mode: Print to console
     print("=" * 60)
-    print("📧 MAGIC LINK EMAIL")
+    print("📧 MAGIC LINK EMAIL (Development Mode)")
     print("=" * 60)
     print(f"To: {email}")
     print(f"Magic Link: {magic_link_url}")
     print("=" * 60)
-
-    # Example SendGrid integration (commented out):
-    # import sendgrid
-    # from sendgrid.helpers.mail import Mail
-    #
-    # sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
-    # message = Mail(
-    #     from_email='noreply@openclaw.app',
-    #     to_emails=email,
-    #     subject='Your OpenClaw Dashboard Login Link',
-    #     html_content=f'''
-    #         <h2>Sign in to OpenClaw Dashboard</h2>
-    #         <p>Click the link below to sign in:</p>
-    #         <p><a href="{magic_link_url}">Sign In</a></p>
-    #         <p>This link expires in 15 minutes.</p>
-    #     '''
-    # )
-    # sg.send(message)
+    print("💡 Add SENDGRID_API_KEY to environment to send real emails")
+    print("=" * 60)
 
     return True
 
