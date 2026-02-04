@@ -2695,7 +2695,6 @@ Examples:
 
         // Initialize on load
         loadCurrentConfig();
-        checkAuthStatus(); // Check if user is logged in
     </script>
 
     <!-- Login/Signup Modal -->
@@ -3076,15 +3075,17 @@ Examples:
             }
         }
 
-        // Check for payment status in URL (after Stripe redirect)
+        // Check auth status and handle payment redirects on load
         window.addEventListener('load', () => {
+            // Always check authentication status
+            checkAuthStatus();
+
+            // Check for payment status in URL (after Stripe redirect)
             const urlParams = new URLSearchParams(window.location.search);
             const paymentStatus = urlParams.get('payment');
 
             if (paymentStatus === 'success') {
                 alert('🎉 Payment successful! Your credits have been added.');
-                // Refresh auth to get updated balance
-                checkAuthStatus();
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             } else if (paymentStatus === 'cancelled') {
