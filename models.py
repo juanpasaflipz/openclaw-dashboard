@@ -168,3 +168,21 @@ class CreditPackage(db.Model):
     def price_dollars(self):
         """Get price in dollars"""
         return self.price_cents / 100
+
+
+class ConfigFile(db.Model):
+    """Store configuration files in database (for serverless compatibility)"""
+    __tablename__ = 'config_files'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    filename = db.Column(db.String(100), nullable=False)  # e.g., 'LLM_CONFIG.md'
+    content = db.Column(db.Text, default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Unique constraint: one config file per user per filename
+    __table_args__ = (db.UniqueConstraint('user_id', 'filename', name='_user_filename_uc'),)
+
+    def __repr__(self):
+        return f'<ConfigFile user_id={self.user_id} filename={self.filename}>'

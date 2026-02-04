@@ -26,7 +26,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile
 db.init_app(app)
 
 # Register authentication routes
@@ -47,7 +47,7 @@ def index():
 
 @app.route('/api/config/<filename>', methods=['GET'])
 def get_config(filename):
-    """Read a configuration file"""
+    """Read a configuration file from database"""
     try:
         # Only allow specific files for security
         allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md', 'SECURITY.md', 'MOLTBOOK_CONFIG.md']
@@ -55,21 +55,32 @@ def get_config(filename):
         if filename not in allowed_files:
             return jsonify({'error': 'File not allowed'}), 403
 
-        filepath = BASE_DIR / filename
+        # Get user_id from session (or use default user for backward compatibility)
+        user_id = session.get('user_id', 1)  # Default to user 1 if not logged in
 
+        # Try to get from database first
+        config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
+
+        if config:
+            return jsonify({'content': config.content, 'exists': True})
+
+        # Fallback: try to read from filesystem (for local development / migration)
+        filepath = BASE_DIR / filename
         if filepath.exists():
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             return jsonify({'content': content, 'exists': True})
-        else:
-            return jsonify({'content': '', 'exists': False})
+
+        # File doesn't exist in DB or filesystem
+        return jsonify({'content': '', 'exists': False})
 
     except Exception as e:
+        print(f"❌ Error in get_config: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/config/<filename>', methods=['POST'])
 def save_config(filename):
-    """Save a configuration file"""
+    """Save a configuration file to database"""
     try:
         # Only allow specific files for security
         allowed_files = ['IDENTITY.md', 'USER.md', 'SOUL.md', 'TOOLS.md', 'HEARTBEAT.md', 'LLM_CONFIG.md', 'SECURITY.md', 'MOLTBOOK_CONFIG.md']
@@ -80,14 +91,37 @@ def save_config(filename):
         data = request.get_json()
         content = data.get('content', '')
 
-        filepath = BASE_DIR / filename
+        # Get user_id from session (or use default user)
+        user_id = session.get('user_id')
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
+        if not user_id:
+            # If not logged in, create a default user or return error
+            # For now, create/use default user with ID 1
+            user = User.query.get(1)
+            if not user:
+                user = User(id=1, email='default@openclaw.local', credit_balance=0)
+                db.session.add(user)
+                db.session.commit()
+            user_id = 1
 
+        # Find existing config or create new one
+        config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
+
+        if config:
+            config.content = content
+            config.updated_at = datetime.utcnow()
+        else:
+            config = ConfigFile(user_id=user_id, filename=filename, content=content)
+            db.session.add(config)
+
+        db.session.commit()
+
+        print(f"✅ Saved {filename} to database for user {user_id}")
         return jsonify({'success': True, 'message': f'{filename} saved successfully'})
 
     except Exception as e:
+        print(f"❌ Error in save_config: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/status', methods=['GET'])
