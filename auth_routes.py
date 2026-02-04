@@ -203,7 +203,10 @@ def register_auth_routes(app):
                     'email': user.email,
                     'credit_balance': user.credit_balance,
                     'created_at': user.created_at.isoformat(),
-                    'stripe_customer_id': user.stripe_customer_id
+                    'stripe_customer_id': user.stripe_customer_id,
+                    'subscription_tier': user.subscription_tier,
+                    'subscription_status': user.subscription_status,
+                    'subscription_expires_at': user.subscription_expires_at.isoformat() if user.subscription_expires_at else None
                 }
             })
 

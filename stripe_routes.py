@@ -1,8 +1,8 @@
 """
-Stripe integration routes for credit purchases
+Stripe integration routes for credit purchases and subscriptions
 """
 from flask import jsonify, request, session
-from models import db, User, CreditPackage, CreditTransaction, PostHistory
+from models import db, User, CreditPackage, CreditTransaction, PostHistory, SubscriptionPlan
 from datetime import datetime, timedelta
 import stripe
 import os
@@ -129,40 +129,191 @@ def register_stripe_routes(app):
             session_data = event['data']['object']
 
             try:
-                # Extract metadata
-                user_id = int(session_data['metadata']['user_id'])
-                package_id = int(session_data['metadata']['package_id'])
-                credits = int(session_data['metadata']['credits'])
+                # Check if this is a subscription or one-time payment
+                if session_data.get('mode') == 'subscription':
+                    # Handle subscription checkout
+                    user_id = int(session_data['metadata']['user_id'])
+                    plan_id = int(session_data['metadata']['plan_id'])
+                    tier = session_data['metadata']['tier']
 
-                # Get user and package
-                user = User.query.get(user_id)
-                package = CreditPackage.query.get(package_id)
+                    user = User.query.get(user_id)
+                    plan = SubscriptionPlan.query.get(plan_id)
 
-                if user and package:
-                    # Add credits to user
-                    user.add_credits(
-                        amount=credits,
-                        reason=f'Purchased {package.name}',
-                        stripe_payment_id=session_data['payment_intent']
-                    )
+                    if user and plan:
+                        # Subscription will be activated by customer.subscription.created event
+                        print(f"✅ Subscription checkout completed for user {user.email}, tier: {tier}")
+                    else:
+                        print(f"❌ User or plan not found: user_id={user_id}, plan_id={plan_id}")
 
-                    # Record the checkout session ID
-                    transaction = CreditTransaction.query.filter_by(
-                        user_id=user_id,
-                        stripe_payment_id=session_data['payment_intent']
-                    ).first()
-
-                    if transaction:
-                        transaction.stripe_checkout_session_id = session_data['id']
-
-                    db.session.commit()
-
-                    print(f"✅ Added {credits} credits to user {user.email}")
                 else:
-                    print(f"❌ User or package not found: user_id={user_id}, package_id={package_id}")
+                    # Handle one-time credit purchase
+                    user_id = int(session_data['metadata']['user_id'])
+                    package_id = int(session_data['metadata']['package_id'])
+                    credits = int(session_data['metadata']['credits'])
+
+                    # Get user and package
+                    user = User.query.get(user_id)
+                    package = CreditPackage.query.get(package_id)
+
+                    if user and package:
+                        # Add credits to user
+                        user.add_credits(
+                            amount=credits,
+                            reason=f'Purchased {package.name}',
+                            stripe_payment_id=session_data['payment_intent']
+                        )
+
+                        # Record the checkout session ID
+                        transaction = CreditTransaction.query.filter_by(
+                            user_id=user_id,
+                            stripe_payment_id=session_data['payment_intent']
+                        ).first()
+
+                        if transaction:
+                            transaction.stripe_checkout_session_id = session_data['id']
+
+                        db.session.commit()
+
+                        print(f"✅ Added {credits} credits to user {user.email}")
+                    else:
+                        print(f"❌ User or package not found: user_id={user_id}, package_id={package_id}")
 
             except Exception as e:
-                print(f"❌ Error processing webhook: {e}")
+                print(f"❌ Error processing checkout.session.completed: {e}")
+                db.session.rollback()
+
+        # Handle subscription created
+        elif event['type'] == 'customer.subscription.created':
+            subscription = event['data']['object']
+            try:
+                # Find user by Stripe customer ID
+                customer_id = subscription['customer']
+                user = User.query.filter_by(stripe_customer_id=customer_id).first()
+
+                if user:
+                    # Get plan tier from metadata or subscription items
+                    subscription_id = subscription['id']
+                    tier = subscription.get('metadata', {}).get('tier', 'starter')
+
+                    # Activate subscription
+                    user.stripe_subscription_id = subscription_id
+                    user.subscription_tier = tier
+                    user.subscription_status = 'active'
+                    user.subscription_started_at = datetime.fromtimestamp(subscription['current_period_start'])
+                    user.subscription_expires_at = datetime.fromtimestamp(subscription['current_period_end'])
+
+                    db.session.commit()
+                    print(f"✅ Activated {tier} subscription for user {user.email}")
+                else:
+                    print(f"❌ User not found for customer_id: {customer_id}")
+
+            except Exception as e:
+                print(f"❌ Error processing customer.subscription.created: {e}")
+                db.session.rollback()
+
+        # Handle subscription updated
+        elif event['type'] == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            try:
+                # Find user by subscription ID
+                subscription_id = subscription['id']
+                user = User.query.filter_by(stripe_subscription_id=subscription_id).first()
+
+                if user:
+                    # Update subscription status
+                    status_map = {
+                        'active': 'active',
+                        'past_due': 'past_due',
+                        'canceled': 'cancelled',
+                        'unpaid': 'inactive',
+                        'incomplete': 'inactive',
+                        'incomplete_expired': 'inactive',
+                        'trialing': 'active',
+                        'paused': 'inactive'
+                    }
+
+                    stripe_status = subscription['status']
+                    user.subscription_status = status_map.get(stripe_status, 'inactive')
+                    user.subscription_expires_at = datetime.fromtimestamp(subscription['current_period_end'])
+
+                    # Handle tier changes (if metadata was updated)
+                    if 'tier' in subscription.get('metadata', {}):
+                        user.subscription_tier = subscription['metadata']['tier']
+
+                    db.session.commit()
+                    print(f"✅ Updated subscription for user {user.email}: status={user.subscription_status}")
+                else:
+                    print(f"❌ User not found for subscription_id: {subscription_id}")
+
+            except Exception as e:
+                print(f"❌ Error processing customer.subscription.updated: {e}")
+                db.session.rollback()
+
+        # Handle subscription deleted (cancelled)
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            try:
+                # Find user by subscription ID
+                subscription_id = subscription['id']
+                user = User.query.filter_by(stripe_subscription_id=subscription_id).first()
+
+                if user:
+                    # Cancel subscription
+                    user.subscription_status = 'cancelled'
+                    user.subscription_tier = 'free'
+                    user.subscription_expires_at = datetime.utcnow()
+
+                    db.session.commit()
+                    print(f"✅ Cancelled subscription for user {user.email}")
+                else:
+                    print(f"❌ User not found for subscription_id: {subscription_id}")
+
+            except Exception as e:
+                print(f"❌ Error processing customer.subscription.deleted: {e}")
+                db.session.rollback()
+
+        # Handle successful payment (subscription renewal)
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            try:
+                # Only process subscription invoices (not one-time payments)
+                if invoice.get('subscription'):
+                    subscription_id = invoice['subscription']
+                    user = User.query.filter_by(stripe_subscription_id=subscription_id).first()
+
+                    if user:
+                        # Renew subscription
+                        user.subscription_status = 'active'
+                        user.subscription_expires_at = datetime.fromtimestamp(invoice['period_end'])
+
+                        db.session.commit()
+                        print(f"✅ Renewed subscription for user {user.email}")
+                    else:
+                        print(f"❌ User not found for subscription_id: {subscription_id}")
+
+            except Exception as e:
+                print(f"❌ Error processing invoice.payment_succeeded: {e}")
+                db.session.rollback()
+
+        # Handle failed payment
+        elif event['type'] == 'invoice.payment_failed':
+            invoice = event['data']['object']
+            try:
+                if invoice.get('subscription'):
+                    subscription_id = invoice['subscription']
+                    user = User.query.filter_by(stripe_subscription_id=subscription_id).first()
+
+                    if user:
+                        # Mark subscription as past_due
+                        user.subscription_status = 'past_due'
+
+                        db.session.commit()
+                        print(f"⚠️ Payment failed for user {user.email}, marked as past_due")
+                    else:
+                        print(f"❌ User not found for subscription_id: {subscription_id}")
+
+            except Exception as e:
+                print(f"❌ Error processing invoice.payment_failed: {e}")
                 db.session.rollback()
 
         return jsonify({'success': True})
@@ -255,4 +406,121 @@ def register_stripe_routes(app):
         except Exception as e:
             print(f"❌ Error in create_moltbook_post_paid: {e}")
             db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+
+    # ==================== SUBSCRIPTION ENDPOINTS ====================
+
+    @app.route('/api/subscriptions/plans', methods=['GET'])
+    def get_subscription_plans():
+        """Get available subscription plans"""
+        try:
+            plans = SubscriptionPlan.query.filter_by(is_active=True).all()
+            return jsonify({
+                'plans': [{
+                    'id': plan.id,
+                    'tier': plan.tier,
+                    'name': plan.name,
+                    'price': plan.price_monthly_dollars,
+                    'features': {
+                        'unlimited_posts': plan.unlimited_posts,
+                        'max_agents': plan.max_agents,
+                        'scheduled_posting': plan.scheduled_posting,
+                        'analytics': plan.analytics,
+                        'api_access': plan.api_access,
+                        'team_members': plan.team_members,
+                        'priority_support': plan.priority_support
+                    }
+                } for plan in plans]
+            })
+        except Exception as e:
+            print(f"❌ Error in get_subscription_plans: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/subscriptions/create-checkout', methods=['POST'])
+    @require_auth
+    def create_subscription_checkout():
+        """Create a Stripe Checkout session for subscription"""
+        try:
+            data = request.get_json()
+            plan_id = data.get('plan_id')
+
+            if not plan_id:
+                return jsonify({'error': 'Plan ID is required'}), 400
+
+            # Get plan
+            plan = SubscriptionPlan.query.get(plan_id)
+            if not plan or not plan.is_active:
+                return jsonify({'error': 'Invalid plan'}), 404
+
+            # Get current user
+            user_id = session.get('user_id')
+            user = User.query.get(user_id)
+
+            # Create or get Stripe customer
+            if not user.stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    metadata={'user_id': user.id}
+                )
+                user.stripe_customer_id = customer.id
+                db.session.commit()
+
+            # Create Checkout Session for subscription
+            base_url = os.environ.get('BASE_URL', 'http://localhost:5000')
+            checkout_session = stripe.checkout.Session.create(
+                customer=user.stripe_customer_id,
+                line_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'unit_amount': plan.price_monthly_cents,
+                        'recurring': {
+                            'interval': 'month'
+                        },
+                        'product_data': {
+                            'name': f'{plan.name}',
+                            'description': f'OpenClaw Dashboard - {plan.tier.title()} Tier',
+                        },
+                    },
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=f'{base_url}/?subscription=success',
+                cancel_url=f'{base_url}/?subscription=cancelled',
+                metadata={
+                    'user_id': user.id,
+                    'plan_id': plan.id,
+                    'tier': plan.tier
+                }
+            )
+
+            return jsonify({
+                'checkout_url': checkout_session.url,
+                'session_id': checkout_session.id
+            })
+
+        except Exception as e:
+            print(f"❌ Error in create_subscription_checkout: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/subscriptions/portal', methods=['POST'])
+    @require_auth
+    def create_customer_portal():
+        """Create Stripe Customer Portal session for managing subscription"""
+        try:
+            user_id = session.get('user_id')
+            user = User.query.get(user_id)
+
+            if not user.stripe_customer_id:
+                return jsonify({'error': 'No subscription to manage'}), 404
+
+            base_url = os.environ.get('BASE_URL', 'http://localhost:5000')
+            portal_session = stripe.billing_portal.Session.create(
+                customer=user.stripe_customer_id,
+                return_url=f'{base_url}/',
+            )
+
+            return jsonify({'portal_url': portal_session.url})
+
+        except Exception as e:
+            print(f"❌ Error in create_customer_portal: {e}")
             return jsonify({'error': str(e)}), 500

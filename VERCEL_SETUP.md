@@ -19,7 +19,13 @@
 2. Click **Add endpoint**
 3. For **Endpoint URL**, enter: `https://your-app-name.vercel.app/api/stripe/webhook`
    - (You'll update this after deploying to Vercel)
-4. Click **Select events** and choose: `checkout.session.completed`
+4. Click **Select events** and choose these events:
+   - `checkout.session.completed` (for credit purchases and subscriptions)
+   - `customer.subscription.created` (when subscription starts)
+   - `customer.subscription.updated` (when subscription changes)
+   - `customer.subscription.deleted` (when subscription is cancelled)
+   - `invoice.payment_succeeded` (when subscription payment succeeds)
+   - `invoice.payment_failed` (when subscription payment fails)
 5. Click **Add endpoint**
 6. Click on the webhook you just created
 7. Copy the **Signing secret** (starts with `whsec_...`)

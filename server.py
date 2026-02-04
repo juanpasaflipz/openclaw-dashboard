@@ -19,11 +19,44 @@ CORS(app, supports_credentials=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL',
-    f'sqlite:///{Path(__file__).parent}/openclaw.db'
-)
+database_url = os.environ.get('DATABASE_URL', f'sqlite:///{Path(__file__).parent}/openclaw.db')
+
+# Fix Heroku/Vercel's postgres:// scheme (should be postgresql://)
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+# Fix for Neon PostgreSQL SSL issues
+if database_url and database_url.startswith('postgresql://'):
+    # Add SSL parameters for Neon
+    if '?' not in database_url:
+        database_url += '?sslmode=require'
+    elif 'sslmode' not in database_url:
+        database_url += '&sslmode=require'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# PostgreSQL-specific connection pool settings
+if database_url and database_url.startswith('postgresql://'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 5,
+        'max_overflow': 10,
+        'pool_recycle': 300,  # Recycle connections after 5 minutes
+        'pool_pre_ping': True,  # Test connections before using them (fixes SSL drops)
+        'pool_timeout': 30,
+        'connect_args': {
+            'connect_timeout': 10,
+            'keepalives': 1,
+            'keepalives_idle': 30,
+            'keepalives_interval': 10,
+            'keepalives_count': 5
+        }
+    }
+else:
+    # SQLite settings (for local dev)
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True
+    }
 
 # Import and initialize database
 from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan
@@ -44,6 +77,26 @@ BASE_DIR = Path(__file__).parent
 def index():
     """Serve the dashboard"""
     return send_file('dashboard.html')
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint to verify database connection"""
+    try:
+        # Test database connection
+        db.session.execute(db.text('SELECT 1'))
+        db.session.commit()
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'database': 'disconnected',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 503
 
 @app.route('/api/config/<filename>', methods=['GET'])
 def get_config(filename):
