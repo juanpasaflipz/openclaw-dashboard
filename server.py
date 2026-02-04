@@ -722,13 +722,13 @@ def initialize_database():
                 SubscriptionPlan(
                     tier='team',
                     name='Team Plan',
-                    price_monthly_cents=7900,  # $79/month
+                    price_monthly_cents=4900,  # $49/month
                     unlimited_posts=True,
-                    max_agents=999,  # Unlimited
+                    max_agents=10,  # 10 agents for $49
                     scheduled_posting=True,
                     analytics=True,
                     api_access=True,
-                    team_members=5,
+                    team_members=3,  # 3 team members
                     priority_support=True
                 )
             ]
@@ -811,6 +811,45 @@ def migrate_subscription_columns():
             'message': 'Subscription columns added successfully',
             'note': 'Users table has been migrated with subscription fields'
         })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/update-pricing', methods=['POST'])
+def update_pricing():
+    """
+    Update subscription plan pricing in database
+    Use this when changing pricing tiers
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        # Update Team plan pricing from $79 to $49
+        team_plan = SubscriptionPlan.query.filter_by(tier='team').first()
+        if team_plan:
+            team_plan.price_monthly_cents = 4900  # $49/month
+            team_plan.max_agents = 10
+            team_plan.team_members = 3
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'message': 'Pricing updated successfully',
+                'updated': {
+                    'tier': 'team',
+                    'old_price': '$79/month',
+                    'new_price': '$49/month',
+                    'max_agents': 10,
+                    'team_members': 3
+                }
+            })
+        else:
+            return jsonify({'error': 'Team plan not found'}), 404
 
     except Exception as e:
         db.session.rollback()

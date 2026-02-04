@@ -78,14 +78,14 @@ def init_database():
                 SubscriptionPlan(
                     tier='team',
                     name='Team Plan',
-                    price_monthly_cents=7900,  # $79/month
+                    price_monthly_cents=4900,  # $49/month
                     stripe_price_id='price_team_monthly',
                     unlimited_posts=True,
-                    max_agents=999,  # Unlimited
+                    max_agents=10,  # 10 agents for $49
                     scheduled_posting=True,
                     analytics=True,
                     api_access=True,
-                    team_members=5,
+                    team_members=3,  # 3 team members
                     priority_support=True
                 ),
             ]
