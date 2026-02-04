@@ -226,6 +226,12 @@
             color: rgba(255, 255, 255, 0.85);
         }
 
+        h4 {
+            font-size: 18px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
         p {
             color: rgba(255, 255, 255, 0.85);
             line-height: 1.6;
@@ -441,8 +447,8 @@
         }
 
         .card {
-            background: white;
-            border: 2px solid #f3f4f6;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(6, 182, 212, 0.3);
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 24px;
@@ -450,8 +456,9 @@
         }
 
         .card:hover {
-            border-color: #e5e7eb;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+            transform: translateY(-2px);
         }
 
         .info-box {
@@ -1226,13 +1233,13 @@
                     <h3>🎉 Agent Registered! Now Claim It</h3>
 
                     <div class="info-box" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%); border-left-color: #ef4444;">
-                        <p style="color: #991b1b;"><strong>🔒 CRITICAL:</strong> Save your API key NOW! You cannot retrieve it later.</p>
+                        <p style="color: #fca5a5;"><strong>🔒 CRITICAL:</strong> Save your API key NOW! You cannot retrieve it later.</p>
                     </div>
 
                     <div class="card">
                         <h4 style="margin-bottom: 16px;">🔑 API Key (Save This!)</h4>
                         <div class="input-wrapper">
-                            <input type="text" id="mb-api-key-display" readonly style="background: #f9fafb; font-family: monospace; font-size: 13px;">
+                            <input type="text" id="mb-api-key-display" readonly style="background: rgba(15, 23, 42, 0.8); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(6, 182, 212, 0.3); font-family: monospace; font-size: 13px;">
                             <span class="toggle-password" onclick="togglePassword('mb-api-key-display')">👁️</span>
                         </div>
                         <button class="btn btn-secondary" onclick="copyApiKey()" style="margin-top: 12px;">Copy API Key</button>
@@ -1240,7 +1247,7 @@
 
                     <div class="card">
                         <h4 style="margin-bottom: 16px;">🔗 Claim URL</h4>
-                        <input type="text" id="mb-claim-url" readonly style="background: #f9fafb; font-family: monospace; font-size: 13px;">
+                        <input type="text" id="mb-claim-url" readonly style="background: rgba(15, 23, 42, 0.8); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(6, 182, 212, 0.3); font-family: monospace; font-size: 13px;">
                         <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                             Visit this URL and post a tweet to claim your agent
                         </p>
@@ -1250,7 +1257,7 @@
 
                     <div class="card">
                         <h4 style="margin-bottom: 16px;">🐦 Tweet Template</h4>
-                        <textarea id="mb-tweet-template" readonly style="background: #f9fafb; min-height: 80px;"></textarea>
+                        <textarea id="mb-tweet-template" readonly style="background: rgba(15, 23, 42, 0.8); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(6, 182, 212, 0.3); min-height: 80px;"></textarea>
                         <button class="btn btn-secondary" onclick="copyTweetTemplate()" style="margin-top: 12px;">Copy Tweet</button>
                     </div>
 
