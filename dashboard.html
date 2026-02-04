@@ -38,7 +38,7 @@
             background-attachment: fixed;
             min-height: 100vh;
             padding: 20px;
-            color: #1f2937;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .container {
@@ -220,6 +220,15 @@
             color: rgba(255, 255, 255, 0.85);
         }
 
+        p {
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.6;
+        }
+
+        strong {
+            color: rgba(255, 255, 255, 0.95);
+        }
+
         .form-group {
             margin-bottom: 28px;
         }
@@ -371,12 +380,14 @@
         }
 
         .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
+            background: rgba(6, 182, 212, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(6, 182, 212, 0.3);
         }
 
         .btn-secondary:hover {
-            background: #e5e7eb;
+            background: rgba(6, 182, 212, 0.25);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
         }
 
         .btn-success {
@@ -560,13 +571,13 @@
 
         .provider-card .name {
             font-weight: 600;
-            color: #111827;
+            color: rgba(255, 255, 255, 0.95);
             margin-bottom: 4px;
         }
 
         .provider-card .desc {
             font-size: 12px;
-            color: #6b7280;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         .connection-status {
@@ -586,7 +597,7 @@
 
         .connection-status.disconnected {
             background: rgba(107, 114, 128, 0.1);
-            color: #6b7280;
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .toggle-password {
@@ -595,8 +606,12 @@
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
-            color: #6b7280;
+            color: rgba(255, 255, 255, 0.6);
             font-size: 20px;
+        }
+
+        .toggle-password:hover {
+            color: var(--neon-cyan);
         }
 
         .input-wrapper {
@@ -977,7 +992,7 @@
                             <option value="per-channel-peer">Per Channel/Peer - Separate session per contact</option>
                             <option value="per-account-channel-peer">Per Account+Channel - Maximum isolation</option>
                         </select>
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                             ⚠️ Shared sessions may leak context between different conversations. Use per-peer isolation for sensitive communications.
                         </p>
                     </div>
@@ -1083,7 +1098,7 @@
                             <option value="1t" selected>1T+ (Recommended for web tools)</option>
                             <option value="7b">7B+ (Larger models only)</option>
                         </select>
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                             ⚠️ Small models (<300B) should use sandboxing when web/browser tools are enabled.
                         </p>
                     </div>
@@ -1136,11 +1151,11 @@
                     <div class="grid-2" style="gap: 24px; margin-bottom: 32px;">
                         <div class="card" style="cursor: pointer;" onclick="showNewAgentForm()">
                             <h3 style="margin-bottom: 12px;">🆕 Register New Agent</h3>
-                            <p style="color: #6b7280; font-size: 14px;">Create a new agent on Moltbook</p>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px;">Create a new agent on Moltbook</p>
                         </div>
                         <div class="card" style="cursor: pointer;" onclick="showImportAgentForm()">
                             <h3 style="margin-bottom: 12px;">📥 Import Existing Agent</h3>
-                            <p style="color: #6b7280; font-size: 14px;">Connect an already registered agent</p>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px;">Connect an already registered agent</p>
                         </div>
                     </div>
 
@@ -1157,7 +1172,7 @@
                         <div class="form-group">
                             <label for="mb-agent-name">Agent Name *</label>
                             <input type="text" id="mb-agent-name" placeholder="e.g., TheConductor">
-                            <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                                 Choose a unique name for your agent on Moltbook
                             </p>
                         </div>
@@ -1187,7 +1202,7 @@
                                 <input type="password" id="import-api-key" placeholder="moltbook_sk_...">
                                 <span class="toggle-password" onclick="togglePassword('import-api-key')">👁️</span>
                             </div>
-                            <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                                 Enter the API key you received when registering your agent
                             </p>
                         </div>
@@ -1219,7 +1234,7 @@
                     <div class="card">
                         <h4 style="margin-bottom: 16px;">🔗 Claim URL</h4>
                         <input type="text" id="mb-claim-url" readonly style="background: #f9fafb; font-family: monospace; font-size: 13px;">
-                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
                             Visit this URL and post a tweet to claim your agent
                         </p>
                         <button class="btn btn-secondary" onclick="copyClaimUrl()" style="margin-top: 12px;">Copy URL</button>
@@ -1341,7 +1356,7 @@
 
                 <div class="card" style="margin-top: 32px;">
                     <h3>✅ Next Steps</h3>
-                    <p style="line-height: 1.8; color: #6b7280;">
+                    <p style="line-height: 1.8; color: rgba(255, 255, 255, 0.7);">
                         All your configuration files are saved in your folder<br>
                         You can now integrate these with your AI platform<br>
                         Check the original documentation for platform-specific integration steps
