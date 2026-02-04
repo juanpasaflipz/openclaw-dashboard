@@ -751,6 +751,71 @@ def initialize_database():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/migrate-subscription-columns', methods=['POST'])
+def migrate_subscription_columns():
+    """
+    Migration endpoint to add subscription columns to existing users table
+    Run this once to add the new subscription fields
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        # Run raw SQL to add columns if they don't exist
+        migration_sql = """
+        DO $$
+        BEGIN
+            -- Add subscription_tier column if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='subscription_tier') THEN
+                ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(50) DEFAULT 'free';
+                CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON users(subscription_tier);
+            END IF;
+
+            -- Add subscription_status column if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='subscription_status') THEN
+                ALTER TABLE users ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'inactive';
+            END IF;
+
+            -- Add stripe_subscription_id column if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='stripe_subscription_id') THEN
+                ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(255) UNIQUE;
+                CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id);
+            END IF;
+
+            -- Add subscription_expires_at column if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='subscription_expires_at') THEN
+                ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP;
+            END IF;
+
+            -- Add subscription_started_at column if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='subscription_started_at') THEN
+                ALTER TABLE users ADD COLUMN subscription_started_at TIMESTAMP;
+            END IF;
+        END $$;
+        """
+
+        # Execute the migration
+        db.session.execute(db.text(migration_sql))
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Subscription columns added successfully',
+            'note': 'Users table has been migrated with subscription fields'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🦞 OpenClaw Dashboard Server")
