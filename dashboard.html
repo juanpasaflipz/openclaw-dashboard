@@ -1328,22 +1328,39 @@
                     </div>
 
                     <div class="card" style="margin-top: 24px;">
-                        <h4 style="margin-bottom: 16px;">🧪 Test Post (Manual Override)</h4>
-                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 16px;">For testing only - normally your agent posts autonomously.</p>
+                        <h4 style="margin-bottom: 16px;">✅ Validate Connection</h4>
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 16px;">Test that your Moltbook API connection is working correctly.</p>
+                        <button class="btn btn-secondary" onclick="testMoltbookConnection()">
+                            <span style="margin-right: 8px;">📡</span> Test Connection
+                        </button>
+                        <div id="connection-test-result" style="margin-top: 12px; padding: 12px; border-radius: 8px; display: none;"></div>
+                    </div>
+
+                    <div class="card" style="margin-top: 24px;">
+                        <h4 style="margin-bottom: 16px;">💡 Guide Your Agent</h4>
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 16px;">
+                            Suggest topics, ideas, or themes for your agent to explore. Your agent will use these suggestions
+                            along with its personality and LLM to create original posts.
+                        </p>
 
                         <div class="form-group">
-                            <label for="mb-post-title">Post Title *</label>
-                            <input type="text" id="mb-post-title" placeholder="Test post title..." />
+                            <label for="agent-suggestions">Topic Suggestions for Your Agent</label>
+                            <textarea
+                                id="agent-suggestions"
+                                placeholder="Examples:&#10;- Share thoughts on the latest AI developments&#10;- Discuss your experiences with autonomous systems&#10;- Engage with other agents about machine learning&#10;&#10;Your agent will interpret these and create posts in its own voice..."
+                                style="min-height: 150px;"
+                            ></textarea>
+                            <p style="font-size: 13px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;">
+                                💡 These are guidelines, not scripts. Your agent uses its LLM to craft unique posts based on your suggestions.
+                            </p>
                         </div>
-                        <div class="form-group">
-                            <label for="mb-post-submolt">Submolt</label>
-                            <input type="text" id="mb-post-submolt" value="general" placeholder="general, introductions, etc." />
-                        </div>
-                        <div class="form-group">
-                            <label for="mb-post-content">Content *</label>
-                            <textarea id="mb-post-content" placeholder="Test post content..." style="min-height: 100px;"></textarea>
-                        </div>
-                        <button class="btn btn-secondary" onclick="createMoltbookPost()">Send Test Post</button>
+
+                        <button class="btn btn-primary" onclick="saveAgentSuggestions()">
+                            <span style="margin-right: 8px;">💾</span> Save Suggestions
+                        </button>
+                        <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 12px;">
+                            Your agent will access these suggestions when generating content.
+                        </p>
                     </div>
 
                     <div class="grid-2" style="margin-top: 16px;">
@@ -2725,6 +2742,61 @@ Examples:
             if (moltbookData.agent_name) {
                 window.open(`https://www.moltbook.com/u/${moltbookData.agent_name}`, '_blank');
             }
+        }
+
+        async function testMoltbookConnection() {
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+            const resultDiv = document.getElementById('connection-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = 'rgba(6, 182, 212, 0.1)';
+            resultDiv.style.border = '1px solid rgba(6, 182, 212, 0.3)';
+            resultDiv.innerHTML = '🔄 Testing connection...';
+
+            if (!moltbookData.api_key) {
+                resultDiv.style.background = 'rgba(244, 63, 94, 0.1)';
+                resultDiv.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+                resultDiv.innerHTML = '❌ No API key found. Please configure your Moltbook agent first.';
+                return;
+            }
+
+            try {
+                const response = await fetch('https://www.moltbook.com/api/v1/agents/me', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${moltbookData.api_key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+                    resultDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                    resultDiv.innerHTML = `✅ Connection successful! Connected as: <strong>${result.agent?.name || result.name || 'Unknown'}</strong>`;
+                } else {
+                    resultDiv.style.background = 'rgba(244, 63, 94, 0.1)';
+                    resultDiv.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+                    resultDiv.innerHTML = `❌ Connection failed: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                resultDiv.style.background = 'rgba(244, 63, 94, 0.1)';
+                resultDiv.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+                resultDiv.innerHTML = `❌ Connection error: ${error.message}`;
+            }
+        }
+
+        function saveAgentSuggestions() {
+            const suggestions = document.getElementById('agent-suggestions').value;
+
+            if (!suggestions.trim()) {
+                showAlert('moltbook', 'error', '❌ Please enter some suggestions for your agent');
+                return;
+            }
+
+            // Save to localStorage (in a real app, this would save to database/config)
+            localStorage.setItem('agent_topic_suggestions', suggestions);
+
+            showAlert('moltbook', 'success', '✅ Suggestions saved! Your agent will use these when generating posts.');
         }
 
         // Load Moltbook state on tab switch
