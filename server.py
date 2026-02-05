@@ -850,7 +850,7 @@ def initialize_database():
                     tier='pro',
                     name='Pro Plan',
                     price_monthly_cents=2900,  # $29/month
-                    unlimited_posts=True,  # UNLIMITED POSTS!
+                    unlimited_posts=True,  # Note: Moltbook has 30-min limit for all users
                     max_agents=5,
                     scheduled_posting=True,
                     analytics=True,

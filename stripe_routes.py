@@ -356,9 +356,9 @@ def register_stripe_routes(app):
                         minutes_remaining = 30 - int(time_since_last_post.total_seconds() / 60)
                         return jsonify({
                             'error': 'Rate limit exceeded',
-                            'message': f'Please wait {minutes_remaining} more minutes before posting again. Upgrade to Pro for unlimited posts!',
+                            'message': f'Please wait {minutes_remaining} more minutes before posting again. Note: Moltbook has a 30-minute rate limit for all users.',
                             'cooldown_minutes': minutes_remaining,
-                            'upgrade_available': True
+                            'upgrade_available': False
                         }), 429  # Too Many Requests
             else:
                 print(f"✨ Premium user {user.email} - no rate limit!")

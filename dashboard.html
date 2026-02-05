@@ -3000,30 +3000,66 @@ Examples:
         let currentPreviewPost = null;
 
         async function generatePostPreview() {
-            const suggestions = document.getElementById('agent-suggestions').value.trim();
+            console.log('🎨 Generate Post Preview clicked!');
 
-            if (!suggestions) {
-                showAlert('moltbook', 'error', '❌ Please enter some topic suggestions first');
-                return;
-            }
+            try {
+                const suggestionsField = document.getElementById('agent-suggestions');
+                if (!suggestionsField) {
+                    console.error('❌ agent-suggestions field not found!');
+                    return;
+                }
 
-            // Get LLM configuration
-            const llmData = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
-            const identityData = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
+                const suggestions = suggestionsField.value.trim();
+                console.log('📝 Suggestions:', suggestions);
 
-            if (!llmData.provider || !llmData.apiKey) {
-                showInlineAlert('post-preview-section', 'error', '❌ Please configure your LLM connection first (LLM Connection tab)', true);
+                if (!suggestions) {
+                    console.log('⚠️ No suggestions entered');
+                    showAlert('moltbook', 'error', '❌ Please enter some topic suggestions first');
+                    return;
+                }
+
+                // Get LLM configuration
+                const llmData = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
+                const identityData = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
+                console.log('⚙️ LLM Config:', { provider: llmData.provider, hasApiKey: !!llmData.apiKey });
+
+                if (!llmData.provider || !llmData.apiKey) {
+                    console.log('❌ LLM not configured');
+                    showInlineAlert('post-preview-section', 'error', '❌ Please configure your LLM connection first (LLM Connection tab)', true);
+                    return;
+                }
+            } catch (err) {
+                console.error('❌ Error in preview initialization:', err);
+                showAlert('moltbook', 'error', `❌ Error: ${err.message}`);
                 return;
             }
 
             // Show preview section and loading state
-            document.getElementById('post-preview-section').style.display = 'block';
-            document.getElementById('preview-loading').style.display = 'block';
-            document.getElementById('preview-content').style.display = 'none';
+            console.log('📺 Showing preview section...');
+            const previewSection = document.getElementById('post-preview-section');
+            const previewLoading = document.getElementById('preview-loading');
+            const previewContent = document.getElementById('preview-content');
+
+            if (!previewSection || !previewLoading || !previewContent) {
+                console.error('❌ Preview elements not found!');
+                showAlert('moltbook', 'error', '❌ Preview UI elements missing');
+                return;
+            }
+
+            previewSection.style.display = 'block';
+            previewLoading.style.display = 'block';
+            previewContent.style.display = 'none';
+
+            // Get suggestions from the previous scope
+            const suggestions = document.getElementById('agent-suggestions').value.trim();
+            const llmData = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
+            const identityData = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
 
             try {
+                console.log('🚀 Calling LLM to generate post...');
                 // Generate post using LLM
                 const generatedPost = await callLLMToGeneratePost(suggestions, llmData, identityData);
+                console.log('✅ Post generated:', generatedPost);
 
                 // Store for later posting
                 currentPreviewPost = generatedPost;
@@ -3163,7 +3199,7 @@ Examples:
                     },
                     body: JSON.stringify({
                         title: currentPreviewPost.title,
-                        body: currentPreviewPost.body,
+                        content: currentPreviewPost.body,  // Moltbook API expects "content" field
                         submolt: currentPreviewPost.submolt || 'general'
                     })
                 });
@@ -4200,7 +4236,7 @@ Examples:
 
                         <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px; margin-bottom: 16px;">
                             <div style="font-size: 14px; line-height: 1.8;">
-                                ${plan.features.unlimited_posts ? '<div style="margin-bottom: 8px;">✅ <strong>Unlimited Posts</strong> (no rate limit!)</div>' : '<div style="margin-bottom: 8px;">⏱️ 30-minute post cooldown</div>'}
+                                <div style="margin-bottom: 8px;">⏱️ Platform limits apply (Moltbook: 30 min)</div>
                                 <div style="margin-bottom: 8px;">🤖 Up to ${plan.features.max_agents === 999 ? 'Unlimited' : plan.features.max_agents} agent${plan.features.max_agents !== 1 ? 's' : ''}</div>
                                 ${plan.features.scheduled_posting ? '<div style="margin-bottom: 8px;">📅 Scheduled posting</div>' : ''}
                                 ${plan.features.analytics ? '<div style="margin-bottom: 8px;">📊 Analytics dashboard</div>' : ''}
@@ -4346,7 +4382,7 @@ Examples:
                     details.textContent = '⚠️ Payment failed • Please update payment method';
                     if (manageBtn) manageBtn.style.display = 'block';
                 } else {
-                    details.textContent = '30-minute post cooldown • Upgrade for unlimited posts!';
+                    details.textContent = 'Platform limits apply • Upgrade for more agents & features!';
                     if (manageBtn) manageBtn.style.display = 'none';
                 }
             }

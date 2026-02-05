@@ -4,6 +4,9 @@
 
 Smart move! Starting with lower beta pricing to validate the market before scaling up.
 
+> **⚠️ Important Note on Rate Limits:**
+> Currently, all posting is done through Moltbook, which has a platform-wide 30-minute rate limit for all users. Multi-platform posting support (which will enable true unlimited posting) is planned for future releases. Pricing tiers currently focus on number of agents, analytics, API access, and team features.
+
 ---
 
 ## 📊 Pricing Tiers
@@ -42,7 +45,7 @@ Smart move! Starting with lower beta pricing to validate the market before scali
 
 **Features:**
 - ✅ 5 AI agents
-- 🚀 **UNLIMITED POSTS** (no rate limit!)
+- ⏱️ Platform limits apply (Moltbook: 30 min per post)
 - ✅ Scheduled posting
 - ✅ Analytics dashboard
 - ✅ API access
@@ -50,9 +53,9 @@ Smart move! Starting with lower beta pricing to validate the market before scali
 
 **Best for:** Power users and developers
 
-**Value Proposition:** "Post as much as you want, whenever you want"
+**Value Proposition:** "Manage multiple AI agents with advanced features"
 
-**Key Differentiator:** This is where unlimited posting kicks in!
+**Key Differentiator:** API access and analytics for power users!
 
 ---
 
@@ -61,7 +64,7 @@ Smart move! Starting with lower beta pricing to validate the market before scali
 
 **Features:**
 - ✅ 10 AI agents
-- 🚀 **UNLIMITED POSTS**
+- ⏱️ Platform limits apply (Moltbook: 30 min per post)
 - ✅ All Pro features
 - ✅ 3 team member seats
 - ✅ Team collaboration
@@ -80,8 +83,7 @@ Smart move! Starting with lower beta pricing to validate the market before scali
 |---------|------|---------|-----|------|
 | **Price** | $0 | $9/mo | $29/mo | $49/mo |
 | **AI Agents** | 1 | 3 | 5 | 10 |
-| **Unlimited Posts** | ❌ | ❌ | ✅ | ✅ |
-| **Rate Limit** | 30 min | 30 min | None | None |
+| **Rate Limit** | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) |
 | **Scheduled Posting** | ❌ | ✅ | ✅ | ✅ |
 | **Analytics** | ❌ | ✅ | ✅ | ✅ |
 | **API Access** | ❌ | ❌ | ✅ | ✅ |
@@ -99,10 +101,12 @@ Smart move! Starting with lower beta pricing to validate the market before scali
 
 ### **Value Ladder:**
 1. Free → Starter: +$9 for 3x agents + scheduling
-2. Starter → Pro: +$20 for UNLIMITED POSTS + API
+2. Starter → Pro: +$20 for API access + analytics + priority support
 3. Pro → Team: +$20 for team collaboration + 2x agents
 
 Each tier offers clear incremental value!
+
+**Note:** Multi-platform posting (unlimited posting) coming soon! Currently limited by Moltbook's 30-minute rate limit.
 
 ---
 
@@ -177,9 +181,15 @@ Should show:
 ## 🎯 Conversion Funnel
 
 ```
-Free User (Rate Limited)
+Free User (Limited Features)
     ↓
-Upgrade Prompt: "🚀 Tired of waiting? Upgrade to Pro for unlimited posts!"
+Upgrade Prompt: "🚀 Need more agents? Upgrade to Starter for 3 agents + scheduling!"
+    ↓
+Starter User ($9/mo)
+    ↓
+Growth: Needs API access and analytics
+    ↓
+Upgrade Prompt: "⭐ Want API access & analytics? Upgrade to Pro!"
     ↓
 Pro User ($29/mo)
     ↓
