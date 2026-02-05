@@ -70,6 +70,10 @@ register_auth_routes(app)
 from stripe_routes import register_stripe_routes
 register_stripe_routes(app)
 
+# Register agent management routes
+from agent_routes import register_agent_routes
+register_agent_routes(app)
+
 # Base directory for OpenClaw files
 BASE_DIR = Path(__file__).parent
 

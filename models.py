@@ -38,6 +38,7 @@ class User(db.Model):
     transactions = db.relationship('CreditTransaction', backref='user', lazy='dynamic')
     magic_links = db.relationship('MagicLink', backref='user', lazy='dynamic')
     post_history = db.relationship('PostHistory', backref='user', lazy='dynamic')
+    agents = db.relationship('Agent', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -254,3 +255,51 @@ class ConfigFile(db.Model):
 
     def __repr__(self):
         return f'<ConfigFile user_id={self.user_id} filename={self.filename}>'
+
+
+class Agent(db.Model):
+    """User's AI agent configuration"""
+    __tablename__ = 'agents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Agent identity
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    avatar_emoji = db.Column(db.String(10), default='🤖')
+
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    is_default = db.Column(db.Boolean, default=False)  # User's default agent
+
+    # Configuration stored as JSON
+    llm_config = db.Column(db.JSON)  # {provider, model, api_key, temperature, etc.}
+    identity_config = db.Column(db.JSON)  # {personality, role, behavior, etc.}
+    moltbook_config = db.Column(db.JSON)  # {api_key, default_submolt, etc.}
+
+    # Usage statistics
+    total_posts = db.Column(db.Integer, default=0)
+    last_post_at = db.Column(db.DateTime)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Agent {self.name} (user_id={self.user_id})>'
+
+    def to_dict(self):
+        """Convert agent to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'avatar_emoji': self.avatar_emoji,
+            'is_active': self.is_active,
+            'is_default': self.is_default,
+            'total_posts': self.total_posts,
+            'last_post_at': self.last_post_at.isoformat() if self.last_post_at else None,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }

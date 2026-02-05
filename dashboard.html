@@ -729,6 +729,7 @@
                 <button class="tab" data-tab="security">🔒 Security</button>
                 <button class="tab" data-tab="moltbook">🦞 Moltbook</button>
                 <button class="tab" data-tab="subscription">💎 Subscription</button>
+                <button class="tab" data-tab="agents">🤖 My Agents</button>
                 <button class="tab" id="admin-tab-button" data-tab="admin" style="display: none;">🔐 Admin</button>
                 <button class="tab" data-tab="export">Export</button>
             </div>
@@ -1415,6 +1416,33 @@
                 </div>
             </div>
 
+            <!-- Agents Tab -->
+            <div class="tab-content" id="agents">
+                <h2>🤖 My Agents</h2>
+
+                <!-- Agent Limit Info -->
+                <div id="agent-limit-info" class="info-box" style="margin-bottom: 24px; display: none;">
+                    <p><strong>Agent Limit:</strong> <span id="agent-count">0</span> / <span id="max-agents">1</span> agents</p>
+                    <p style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-top: 8px;">
+                        Upgrade your subscription to manage more agents simultaneously.
+                    </p>
+                </div>
+
+                <!-- Create New Agent Button -->
+                <div style="margin-bottom: 32px;">
+                    <button onclick="showCreateAgentModal()" style="background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)); padding: 14px 28px; font-size: 16px; font-weight: 600;">
+                        ➕ Create New Agent
+                    </button>
+                </div>
+
+                <!-- Agents List -->
+                <div id="agents-list">
+                    <p style="text-align: center; color: rgba(255, 255, 255, 0.5); padding: 40px;">
+                        Loading agents...
+                    </p>
+                </div>
+            </div>
+
             <!-- Admin Tab -->
             <div class="tab-content" id="admin">
                 <h2>🔐 Admin Controls</h2>
@@ -1596,6 +1624,10 @@
 
             if (tabName === 'moltbook') {
                 loadMoltbookState();
+            }
+
+            if (tabName === 'agents') {
+                loadAgents();
             }
         }
 
@@ -2973,6 +3005,299 @@ Examples:
             }
         }
 
+        // ============================================
+        // AGENT MANAGEMENT FUNCTIONS
+        // ============================================
+
+        let currentAgents = [];
+        let editingAgentId = null;
+
+        async function loadAgents() {
+            try {
+                const response = await fetch('/api/agents', {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load agents');
+                }
+
+                const data = await response.json();
+                currentAgents = data.agents || [];
+
+                // Update UI
+                displayAgents(currentAgents);
+                updateAgentLimitInfo(data.count, data.max_agents, data.can_create_more);
+
+                console.log(`✅ Loaded ${currentAgents.length} agents`);
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                document.getElementById('agents-list').innerHTML = `
+                    <p style="text-align: center; color: #ef4444; padding: 40px;">
+                        ❌ Failed to load agents. Please refresh the page.
+                    </p>
+                `;
+            }
+        }
+
+        function displayAgents(agents) {
+            const agentsList = document.getElementById('agents-list');
+
+            if (agents.length === 0) {
+                agentsList.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px;">
+                        <p style="font-size: 48px; margin-bottom: 16px;">🤖</p>
+                        <h3 style="color: rgba(255, 255, 255, 0.9); margin-bottom: 12px;">No agents yet</h3>
+                        <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 24px;">
+                            Create your first agent to get started
+                        </p>
+                        <button onclick="showCreateAgentModal()" style="background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));">
+                            ➕ Create Your First Agent
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            agentsList.innerHTML = agents.map(agent => `
+                <div class="card" style="position: relative; ${agent.is_default ? 'border: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);' : ''}">
+                    ${agent.is_default ? '<div style="position: absolute; top: 12px; right: 12px; background: var(--neon-cyan); color: #0f172a; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">DEFAULT</div>' : ''}
+
+                    <div style="display: flex; align-items: start; gap: 16px;">
+                        <div style="font-size: 48px; line-height: 1;">${agent.avatar_emoji}</div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.95);">${agent.name}</h3>
+                            <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 12px;">
+                                ${agent.description || 'No description'}
+                            </p>
+
+                            <div style="display: flex; gap: 16px; font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-bottom: 16px;">
+                                <span>📊 ${agent.total_posts} posts</span>
+                                <span>📅 Created ${new Date(agent.created_at).toLocaleDateString()}</span>
+                                ${!agent.is_active ? '<span style="color: #fbbf24;">⚠️ Inactive</span>' : ''}
+                            </div>
+
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button onclick="selectAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-cyan);">
+                                    ✅ Select
+                                </button>
+                                <button onclick="editAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-purple);">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="cloneAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280;">
+                                    📋 Clone
+                                </button>
+                                <button onclick="exportAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280;">
+                                    📥 Export
+                                </button>
+                                ${!agent.is_default ? `<button onclick="deleteAgent(${agent.id}, '${agent.name}')" style="padding: 8px 16px; font-size: 14px; background: #ef4444;">🗑️ Delete</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateAgentLimitInfo(count, maxAgents, canCreateMore) {
+            const limitInfo = document.getElementById('agent-limit-info');
+            document.getElementById('agent-count').textContent = count;
+            document.getElementById('max-agents').textContent = maxAgents;
+
+            if (count >= maxAgents) {
+                limitInfo.style.display = 'block';
+                limitInfo.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15))';
+                limitInfo.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            } else {
+                limitInfo.style.display = 'block';
+                limitInfo.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(168, 85, 247, 0.15))';
+                limitInfo.style.borderColor = 'rgba(6, 182, 212, 0.4)';
+            }
+        }
+
+        function showCreateAgentModal() {
+            editingAgentId = null;
+            document.getElementById('agent-modal-title').textContent = '🤖 Create New Agent';
+            document.getElementById('agent-form').reset();
+            document.getElementById('agent-id').value = '';
+            document.getElementById('agent-emoji').value = '🤖';
+            document.getElementById('agent-modal').style.display = 'block';
+        }
+
+        async function editAgent(agentId) {
+            try {
+                const response = await fetch(`/api/agents/${agentId}`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load agent');
+                }
+
+                const data = await response.json();
+                const agent = data.agent;
+
+                editingAgentId = agentId;
+                document.getElementById('agent-modal-title').textContent = '✏️ Edit Agent';
+                document.getElementById('agent-id').value = agent.id;
+                document.getElementById('agent-name').value = agent.name;
+                document.getElementById('agent-emoji').value = agent.avatar_emoji;
+                document.getElementById('agent-description').value = agent.description || '';
+                document.getElementById('agent-is-default').checked = agent.is_default;
+
+                document.getElementById('agent-modal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading agent:', error);
+                alert('❌ Failed to load agent details');
+            }
+        }
+
+        async function saveAgent(event) {
+            event.preventDefault();
+
+            const agentId = document.getElementById('agent-id').value;
+            const agentData = {
+                name: document.getElementById('agent-name').value.trim(),
+                avatar_emoji: document.getElementById('agent-emoji').value || '🤖',
+                description: document.getElementById('agent-description').value.trim(),
+                is_default: document.getElementById('agent-is-default').checked
+            };
+
+            try {
+                const url = agentId ? `/api/agents/${agentId}` : '/api/agents';
+                const method = agentId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(agentData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to save agent');
+                }
+
+                alert(data.message || '✅ Agent saved successfully!');
+                closeModal('agent-modal');
+                await loadAgents();
+            } catch (error) {
+                console.error('Error saving agent:', error);
+                alert(`❌ ${error.message}`);
+            }
+        }
+
+        async function deleteAgent(agentId, agentName) {
+            if (!confirm(`Are you sure you want to delete "${agentName}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/agents/${agentId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to delete agent');
+                }
+
+                alert('✅ Agent deleted successfully');
+                await loadAgents();
+            } catch (error) {
+                console.error('Error deleting agent:', error);
+                alert(`❌ ${error.message}`);
+            }
+        }
+
+        async function cloneAgent(agentId) {
+            try {
+                const response = await fetch(`/api/agents/${agentId}/clone`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to clone agent');
+                }
+
+                alert('✅ Agent cloned successfully!');
+                await loadAgents();
+            } catch (error) {
+                console.error('Error cloning agent:', error);
+                alert(`❌ ${error.message}`);
+            }
+        }
+
+        async function exportAgent(agentId) {
+            try {
+                const response = await fetch(`/api/agents/${agentId}/export`, {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Failed to export agent');
+                }
+
+                // Download as JSON file
+                const blob = new Blob([JSON.stringify(data.export, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `agent-${data.export.name.toLowerCase().replace(/\s+/g, '-')}-export.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('✅ Agent exported successfully!');
+            } catch (error) {
+                console.error('Error exporting agent:', error);
+                alert('❌ Failed to export agent');
+            }
+        }
+
+        async function selectAgent(agentId) {
+            try {
+                const agent = currentAgents.find(a => a.id === agentId);
+                if (!agent) {
+                    throw new Error('Agent not found');
+                }
+
+                // Load full agent configuration
+                const response = await fetch(`/api/agents/${agentId}`, {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Failed to load agent configuration');
+                }
+
+                // Apply agent configuration to dashboard
+                const agentConfig = data.agent;
+
+                // TODO: Apply LLM config
+                // TODO: Apply identity config
+                // TODO: Apply Moltbook config
+
+                alert(`✅ Switched to agent: ${agent.name}\n\nNote: Full agent configuration sync coming soon!`);
+            } catch (error) {
+                console.error('Error selecting agent:', error);
+                alert(`❌ ${error.message}`);
+            }
+        }
+
         // Add event listener for character count
         document.addEventListener('DOMContentLoaded', function() {
             const adminContent = document.getElementById('admin-post-content');
@@ -3183,6 +3508,49 @@ Examples:
             <div class="spinner" style="margin: 0 auto 20px;"></div>
             <h3>Processing payment...</h3>
             <p style="color: #666; margin-top: 8px;">Please wait</p>
+        </div>
+    </div>
+
+    <!-- Create/Edit Agent Modal -->
+    <div id="agent-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="modal-close" onclick="closeModal('agent-modal')">&times;</span>
+            <h2 id="agent-modal-title">🤖 Create New Agent</h2>
+
+            <form id="agent-form" onsubmit="saveAgent(event)">
+                <input type="hidden" id="agent-id" value="">
+
+                <div class="form-group">
+                    <label for="agent-name">Agent Name *</label>
+                    <input type="text" id="agent-name" placeholder="e.g., Research Assistant" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="agent-emoji">Avatar Emoji</label>
+                    <input type="text" id="agent-emoji" placeholder="🤖" maxlength="2" value="🤖">
+                </div>
+
+                <div class="form-group">
+                    <label for="agent-description">Description</label>
+                    <textarea id="agent-description" placeholder="What does this agent do?" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="agent-is-default">
+                        Set as default agent
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" style="flex: 1;">
+                        💾 Save Agent
+                    </button>
+                    <button type="button" onclick="closeModal('agent-modal')" style="flex: 1; background: #6b7280;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
