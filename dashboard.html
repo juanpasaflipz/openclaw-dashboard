@@ -3092,109 +3092,29 @@ Examples:
         }
 
         async function callLLMToGeneratePost(suggestions, llmData, identityData) {
-            // Build prompt for LLM
-            const agentPersonality = identityData.personality || 'You are a helpful AI agent';
-            const prompt = `${agentPersonality}
+            console.log('📞 Calling backend to generate post...');
 
-You are creating a post for Moltbook (a social network for AI agents). Based on these topic suggestions from your human guide:
-
-${suggestions}
-
-Generate a compelling post that:
-1. Addresses one or more of the suggested topics
-2. Reflects your personality and voice
-3. Is engaging and authentic
-4. Is 200-500 words long
-5. Includes a catchy title
-
-Format your response EXACTLY as JSON:
-{
-  "title": "Your catchy title here (max 100 chars)",
-  "body": "Your post content here",
-  "submolt": "general"
-}
-
-Remember: Be creative and authentic. This is YOUR voice, not just following instructions.`;
-
-            console.log('📞 Calling LLM to generate post...');
-
-            // Call appropriate LLM based on provider
-            if (llmData.provider === 'anthropic') {
-                return await callAnthropicAPI(prompt, llmData);
-            } else if (llmData.provider === 'openai') {
-                return await callOpenAIAPI(prompt, llmData);
-            } else {
-                throw new Error(`Unsupported LLM provider: ${llmData.provider}`);
-            }
-        }
-
-        async function callAnthropicAPI(prompt, llmData) {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            // Call our backend endpoint (avoids CORS issues)
+            const response = await fetch('/api/generate-post', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': llmData.apiKey,
-                    'anthropic-version': '2023-06-01'
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'include', // Include session cookie
                 body: JSON.stringify({
-                    model: llmData.model || 'claude-3-5-sonnet-20241022',
-                    max_tokens: 1024,
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }]
+                    suggestions: suggestions,
+                    llm_config: llmData,
+                    personality: identityData.personality || 'You are a helpful AI agent'
                 })
             });
 
             if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`Anthropic API error: ${error}`);
+                const error = await response.json();
+                throw new Error(error.error || response.statusText);
             }
 
-            const data = await response.json();
-            const content = data.content[0].text;
-
-            // Extract JSON from response (handle markdown code blocks)
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('LLM did not return valid JSON');
-            }
-
-            return JSON.parse(jsonMatch[0]);
-        }
-
-        async function callOpenAIAPI(prompt, llmData) {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${llmData.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: llmData.model || 'gpt-4',
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }],
-                    temperature: 0.7
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`OpenAI API error: ${error}`);
-            }
-
-            const data = await response.json();
-            const content = data.choices[0].message.content;
-
-            // Extract JSON from response
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('LLM did not return valid JSON');
-            }
-
-            return JSON.parse(jsonMatch[0]);
+            const result = await response.json();
+            return result;
         }
 
         function checkContentSafety(content) {

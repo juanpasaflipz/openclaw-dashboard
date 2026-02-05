@@ -74,6 +74,141 @@ register_stripe_routes(app)
 from agent_routes import register_agent_routes
 register_agent_routes(app)
 
+# LLM API proxy routes (to avoid CORS issues)
+@app.route('/api/generate-post', methods=['POST'])
+def generate_post():
+    """
+    Proxy endpoint for generating posts via LLM
+    Avoids CORS issues by calling LLM APIs from backend
+    """
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json() or {}
+        suggestions = data.get('suggestions', '').strip()
+        llm_config = data.get('llm_config', {})
+        personality = data.get('personality', 'You are a helpful AI agent')
+
+        if not suggestions:
+            return jsonify({'error': 'Suggestions are required'}), 400
+
+        if not llm_config.get('provider') or not llm_config.get('apiKey'):
+            return jsonify({'error': 'LLM configuration is required'}), 400
+
+        # Build prompt
+        prompt = f"""{personality}
+
+You are creating a post for Moltbook (a social network for AI agents). Based on these topic suggestions from your human guide:
+
+{suggestions}
+
+Generate a compelling post that:
+1. Addresses one or more of the suggested topics
+2. Reflects your personality and voice
+3. Is engaging and authentic
+4. Is 200-500 words long
+5. Includes a catchy title
+
+Format your response EXACTLY as JSON:
+{{
+  "title": "Your catchy title here (max 100 chars)",
+  "body": "Your post content here",
+  "submolt": "general"
+}}
+
+Remember: Be creative and authentic. This is YOUR voice, not just following instructions."""
+
+        # Call appropriate LLM
+        provider = llm_config.get('provider')
+
+        if provider == 'anthropic':
+            result = call_anthropic_api(prompt, llm_config)
+        elif provider == 'openai':
+            result = call_openai_api(prompt, llm_config)
+        else:
+            return jsonify({'error': f'Unsupported LLM provider: {provider}'}), 400
+
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"❌ Error generating post: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def call_anthropic_api(prompt, llm_config):
+    """Call Anthropic API"""
+    import requests
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': llm_config['apiKey'],
+            'anthropic-version': '2023-06-01'
+        },
+        json={
+            'model': llm_config.get('model', 'claude-3-5-sonnet-20241022'),
+            'max_tokens': 1024,
+            'messages': [{
+                'role': 'user',
+                'content': prompt
+            }]
+        },
+        timeout=30
+    )
+
+    if not response.ok:
+        raise Exception(f'Anthropic API error: {response.text}')
+
+    data = response.json()
+    content = data['content'][0]['text']
+
+    # Extract JSON from response
+    import re
+    json_match = re.search(r'\{[\s\S]*\}', content)
+    if not json_match:
+        raise Exception('LLM did not return valid JSON')
+
+    import json
+    return json.loads(json_match.group(0))
+
+def call_openai_api(prompt, llm_config):
+    """Call OpenAI API"""
+    import requests
+
+    response = requests.post(
+        'https://api.openai.com/v1/chat/completions',
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {llm_config["apiKey"]}'
+        },
+        json={
+            'model': llm_config.get('model', 'gpt-4'),
+            'messages': [{
+                'role': 'user',
+                'content': prompt
+            }],
+            'temperature': llm_config.get('temperature', 0.7)
+        },
+        timeout=30
+    )
+
+    if not response.ok:
+        raise Exception(f'OpenAI API error: {response.text}')
+
+    data = response.json()
+    content = data['choices'][0]['message']['content']
+
+    # Extract JSON from response
+    import re
+    json_match = re.search(r'\{[\s\S]*\}', content)
+    if not json_match:
+        raise Exception('LLM did not return valid JSON')
+
+    import json
+    return json.loads(json_match.group(0))
+
 # Base directory for OpenClaw files
 BASE_DIR = Path(__file__).parent
 
