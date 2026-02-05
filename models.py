@@ -88,6 +88,9 @@ class User(db.Model):
 
     def has_unlimited_posts(self):
         """Check if user has unlimited posting (no rate limit)"""
+        # Admins always have unlimited posts for testing/emergency situations
+        if self.is_admin:
+            return True
         return self.is_premium() and self.subscription_tier in ['pro', 'team']
 
     def get_max_agents(self):
