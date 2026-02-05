@@ -3011,8 +3011,8 @@ Examples:
             const llmData = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
             const identityData = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
 
-            if (!llmData.provider || !llmData.api_key) {
-                showAlert('moltbook', 'error', '❌ Please configure your LLM connection first (LLM Connection tab)');
+            if (!llmData.provider || !llmData.apiKey) {
+                showInlineAlert('post-preview-section', 'error', '❌ Please configure your LLM connection first (LLM Connection tab)', true);
                 return;
             }
 
@@ -3052,9 +3052,43 @@ Examples:
                 console.log('✅ Post preview generated successfully');
             } catch (error) {
                 console.error('Error generating post:', error);
-                showAlert('moltbook', 'error', `❌ Failed to generate post: ${error.message}`);
-                document.getElementById('post-preview-section').style.display = 'none';
+                showInlineAlert('post-preview-section', 'error', `❌ Failed to generate post: ${error.message}`, false);
+                document.getElementById('preview-loading').style.display = 'none';
             }
+        }
+
+        function showInlineAlert(sectionId, type, message, scrollTo = false) {
+            // Remove any existing inline alerts
+            const existingAlerts = document.querySelectorAll('.inline-alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            // Create new inline alert
+            const alert = document.createElement('div');
+            alert.className = 'inline-alert';
+            alert.style.cssText = `
+                padding: 16px;
+                border-radius: 8px;
+                margin-bottom: 16px;
+                font-size: 14px;
+                font-weight: 500;
+                ${type === 'error'
+                    ? 'background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15)); border: 2px solid rgba(239, 68, 68, 0.4); color: #fca5a5;'
+                    : 'background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15)); border: 2px solid rgba(16, 185, 129, 0.4); color: #6ee7b7;'
+                }
+            `;
+            alert.textContent = message;
+
+            // Insert at the top of the section
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.insertBefore(alert, section.firstChild);
+                if (scrollTo) {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => alert.remove(), 5000);
         }
 
         async function callLLMToGeneratePost(suggestions, llmData, identityData) {
@@ -3099,7 +3133,7 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': llmData.api_key,
+                    'x-api-key': llmData.apiKey,
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
@@ -3134,7 +3168,7 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${llmData.api_key}`
+                    'Authorization': `Bearer ${llmData.apiKey}`
                 },
                 body: JSON.stringify({
                     model: llmData.model || 'gpt-4',
@@ -3188,13 +3222,13 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
 
         async function approveAndPost() {
             if (!currentPreviewPost) {
-                showAlert('moltbook', 'error', '❌ No post to approve');
+                showInlineAlert('post-preview-section', 'error', '❌ No post to approve', false);
                 return;
             }
 
             const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
             if (!moltbookData.api_key) {
-                showAlert('moltbook', 'error', '❌ No Moltbook API key configured');
+                showInlineAlert('post-preview-section', 'error', '❌ No Moltbook API key configured', false);
                 return;
             }
 
@@ -3217,17 +3251,19 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
                 const result = await response.json();
 
                 if (response.ok) {
-                    showAlert('moltbook', 'success', '🎉 Post published successfully to Moltbook!');
-                    cancelPreview();
+                    showInlineAlert('post-preview-section', 'success', '🎉 Post published successfully to Moltbook!', false);
 
                     // Clear suggestions after successful post
                     document.getElementById('agent-suggestions').value = '';
+
+                    // Hide preview after 2 seconds
+                    setTimeout(() => cancelPreview(), 2000);
                 } else {
                     throw new Error(result.error || response.statusText);
                 }
             } catch (error) {
                 console.error('Error posting to Moltbook:', error);
-                showAlert('moltbook', 'error', `❌ Failed to post: ${error.message}`);
+                showInlineAlert('post-preview-section', 'error', `❌ Failed to post: ${error.message}`, false);
             }
         }
 
