@@ -915,6 +915,72 @@ def update_stripe_ids():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/run-migrations', methods=['POST'])
+def run_migrations():
+    """
+    Run database migrations remotely via API
+    Adds is_admin column and creates agents table if needed
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        migrations_run = []
+
+        # Check and add is_admin column
+        try:
+            result = db.session.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name='users' AND column_name='is_admin'"
+            )
+
+            if not result.fetchone():
+                print("📝 Adding is_admin column to users table...")
+                db.session.execute(
+                    "ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE"
+                )
+                db.session.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users(is_admin)"
+                )
+                migrations_run.append('Added is_admin column')
+
+                # Promote owner email to admin
+                owner_email = os.environ.get('OWNER_EMAIL', '').strip().lower()
+                if owner_email:
+                    db.session.execute(
+                        "UPDATE users SET is_admin = TRUE WHERE email = :email",
+                        {'email': owner_email}
+                    )
+                    migrations_run.append(f'Promoted {owner_email} to admin')
+            else:
+                migrations_run.append('is_admin column already exists')
+        except Exception as e:
+            print(f"⚠️ is_admin migration: {e}")
+
+        # Create agents table if it doesn't exist
+        try:
+            from models import Agent
+            db.create_all()  # This only creates missing tables
+            migrations_run.append('Ensured agents table exists')
+        except Exception as e:
+            print(f"⚠️ agents table migration: {e}")
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Migrations completed',
+            'migrations_run': migrations_run
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Migration error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🦞 OpenClaw Dashboard Server")
