@@ -103,6 +103,41 @@ class User(db.Model):
             return 3
         return 1  # Free tier
 
+    # Phase 1: Feed + Analytics Access Methods
+    def can_access_feed(self):
+        """Check if user can access Moltbook feed (Starter+)"""
+        if self.is_admin:
+            return True
+        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+
+    def can_upvote(self):
+        """Check if user can upvote posts (Starter+)"""
+        if self.is_admin:
+            return True
+        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+
+    def can_view_profiles(self):
+        """Check if user can view other agent profiles (Starter+)"""
+        if self.is_admin:
+            return True
+        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+
+    def can_access_analytics(self):
+        """Check if user can access analytics dashboard (Starter+)"""
+        if self.is_admin:
+            return True
+        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+
+    def can_access_personal_feed(self):
+        """Check if user can access personalized feed (Pro+)"""
+        if self.is_admin:
+            return True
+        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+
+    def get_primary_agent(self):
+        """Get user's first agent (for API calls)"""
+        return self.agents.first()
+
 
 class MagicLink(db.Model):
     """Magic link tokens for passwordless authentication"""
@@ -271,6 +306,11 @@ class Agent(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     avatar_emoji = db.Column(db.String(10), default='🤖')
+    avatar_url = db.Column(db.String(500))  # Moltbook avatar URL
+    personality = db.Column(db.Text)  # Agent personality/bio
+
+    # Moltbook integration
+    moltbook_api_key = db.Column(db.String(255))  # API key for Moltbook access
 
     # Status
     is_active = db.Column(db.Boolean, default=True)
@@ -306,3 +346,71 @@ class Agent(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+
+# ============================================
+# Phase 1: Feed + Analytics Models
+# ============================================
+
+class MoltbookFeedCache(db.Model):
+    """Cache for Moltbook feed data"""
+    __tablename__ = 'moltbook_feed_cache'
+
+    id = db.Column(db.Integer, primary_key=True)
+    feed_type = db.Column(db.String(50), nullable=False)  # 'global', 'submolt', 'personal'
+    feed_key = db.Column(db.String(255))  # submolt name if feed_type='submolt'
+    sort_type = db.Column(db.String(20), nullable=False)  # 'hot', 'new', 'top', 'rising'
+    post_data = db.Column(db.Text, nullable=False)  # JSON of post
+    cached_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+
+class UserUpvote(db.Model):
+    """Track user upvotes on Moltbook posts"""
+    __tablename__ = 'user_upvotes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    moltbook_post_id = db.Column(db.String(255), nullable=False)
+    upvoted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = db.relationship('User', backref='upvotes')
+    agent = db.relationship('Agent', backref='upvotes')
+
+
+class AnalyticsSnapshot(db.Model):
+    """Daily analytics snapshots for historical tracking"""
+    __tablename__ = 'analytics_snapshots'
+
+    id = db.Column(db.Integer, primary_key=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    snapshot_date = db.Column(db.Date, nullable=False)
+    karma = db.Column(db.Integer, default=0)
+    total_posts = db.Column(db.Integer, default=0)
+    total_comments = db.Column(db.Integer, default=0)
+    followers = db.Column(db.Integer, default=0)
+    following = db.Column(db.Integer, default=0)
+
+    # Relationship
+    agent = db.relationship('Agent', backref='analytics_snapshots')
+
+
+class PostAnalytics(db.Model):
+    """Track individual post performance"""
+    __tablename__ = 'post_analytics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    moltbook_post_id = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.Text)
+    submolt = db.Column(db.String(255))
+    upvotes = db.Column(db.Integer, default=0)
+    downvotes = db.Column(db.Integer, default=0)
+    comment_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime)
+    last_synced = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship
+    agent = db.relationship('Agent', backref='post_analytics')

@@ -20,155 +20,131 @@
         }
 
         :root {
-            --primary: #06b6d4;
-            --primary-dark: #0891b2;
-            --primary-light: #22d3ee;
-            --secondary: #a855f7;
-            --accent: #f43f5e;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.3);
-            --shadow-lg: 0 25px 70px 0 rgba(0, 0, 0, 0.4);
-            --neon-cyan: #06b6d4;
-            --neon-purple: #a855f7;
-            --neon-pink: #f43f5e;
+            --primary: #635BFF;
+            --primary-dark: #0A2540;
+            --primary-light: #7A73FF;
+            --secondary: #00D4FF;
+            --accent: #635BFF;
+            --success: #00D924;
+            --warning: #FFC043;
+            --error: #DF1B41;
+            --bg-color: #F6F9FC;
+            --surface: #FFFFFF;
+            --border: #E3E8EE;
+            --text-primary: #0A2540;
+            --text-secondary: #425466;
+            --text-tertiary: #687C95;
+            --shadow-sm: 0 1px 3px rgba(10, 37, 64, 0.05);
+            --shadow: 0 1px 5px rgba(10, 37, 64, 0.1);
+            --shadow-lg: 0 10px 30px rgba(10, 37, 64, 0.15);
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-gradient);
-            background-attachment: fixed;
+            background: var(--bg-color);
             min-height: 100vh;
-            padding: 20px;
-            color: rgba(255, 255, 255, 0.9);
+            padding: 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1440px;
             margin: 0 auto;
         }
 
         .header {
             text-align: center;
-            color: white;
-            margin-bottom: 40px;
-            animation: fadeInDown 0.6s ease-out;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            animation: fadeInDown 0.4s ease-out;
         }
 
         .header h1 {
-            font-size: 56px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            text-shadow: 0 0 30px rgba(6, 182, 212, 0.5), 0 4px 20px rgba(0,0,0,0.3);
-            letter-spacing: -1px;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
+            gap: 12px;
             position: relative;
         }
 
         .beta-badge {
             position: absolute;
-            top: -8px;
-            right: -120px;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            top: -4px;
+            right: -100px;
+            background: var(--primary);
             color: white;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 6px 16px;
-            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
-            animation: pulseBeta 2s ease-in-out infinite;
-        }
-
-        @keyframes pulseBeta {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
-            }
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
-            }
+            letter-spacing: 0.5px;
         }
 
         .monkey-logo {
-            font-size: 64px;
-            filter: contrast(1.2);
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            animation: lobsterWave 2s ease-in-out infinite;
-        }
-
-        @keyframes lobsterWave {
-            0%, 100% { transform: rotate(-5deg); }
-            50% { transform: rotate(5deg); }
+            font-size: 36px;
         }
 
         .header p {
-            font-size: 20px;
-            opacity: 0.95;
-            font-weight: 300;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
 
         .dashboard {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 28px;
-            box-shadow: var(--shadow-lg), 0 0 80px rgba(6, 182, 212, 0.15);
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
             overflow: hidden;
-            animation: fadeInUp 0.8s ease-out;
-            border: 1px solid rgba(6, 182, 212, 0.2);
+            animation: fadeInUp 0.4s ease-out;
+            border: 1px solid var(--border);
         }
 
         .tabs {
             display: flex;
-            background: rgba(6, 182, 212, 0.03);
-            border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
             overflow-x: auto;
-            padding: 0 20px;
+            padding: 0 24px;
         }
 
         .tab {
-            padding: 20px 28px;
+            padding: 14px 16px;
             cursor: pointer;
             border: none;
             background: none;
-            font-size: 15px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.6);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-bottom: 3px solid transparent;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
             white-space: nowrap;
             position: relative;
         }
 
         .tab:hover {
-            color: var(--neon-cyan);
-            background: rgba(6, 182, 212, 0.08);
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+            color: var(--text-primary);
+            background: rgba(99, 91, 255, 0.04);
         }
 
         .tab.active {
-            color: var(--neon-cyan);
-            border-bottom-color: var(--neon-cyan);
-            background: rgba(6, 182, 212, 0.12);
-            text-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+            color: var(--primary);
+            border-bottom-color: var(--primary);
         }
 
         .tab-content {
             display: none;
-            padding: 40px;
-            animation: fadeIn 0.4s ease-out;
-            max-height: calc(100vh - 300px);
+            padding: 24px;
+            animation: fadeIn 0.3s ease-out;
+            max-height: calc(100vh - 240px);
             overflow-y: auto;
         }
 
@@ -177,22 +153,20 @@
         }
 
         .tab-content::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .tab-content::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 10px;
+            background: transparent;
         }
 
         .tab-content::-webkit-scrollbar-thumb {
-            background: var(--neon-cyan);
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+            background: var(--border);
+            border-radius: 3px;
         }
 
         .tab-content::-webkit-scrollbar-thumb:hover {
-            background: var(--neon-purple);
+            background: var(--text-tertiary);
         }
 
         @keyframes fadeIn {
@@ -211,46 +185,47 @@
         }
 
         h2 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            color: rgba(255, 255, 255, 0.95);
-            letter-spacing: -0.5px;
-            text-shadow: 0 2px 10px rgba(6, 182, 212, 0.2);
-        }
-
-        h3 {
             font-size: 20px;
             font-weight: 600;
             margin-bottom: 16px;
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
         }
 
         h4 {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--text-primary);
         }
 
         p {
-            color: rgba(255, 255, 255, 0.85);
-            line-height: 1.6;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-size: 14px;
         }
 
         strong {
-            color: rgba(255, 255, 255, 0.95);
+            color: var(--text-primary);
+            font-weight: 600;
         }
 
         .form-group {
-            margin-bottom: 28px;
+            margin-bottom: 20px;
         }
 
         label {
             display: block;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
         }
 
         input[type="text"],
@@ -259,14 +234,14 @@
         select,
         textarea {
             width: 100%;
-            padding: 14px 18px;
-            border: 2px solid rgba(6, 182, 212, 0.3);
-            border-radius: 12px;
-            font-size: 15px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
             font-family: inherit;
-            transition: all 0.3s ease;
-            background: rgba(15, 23, 42, 0.6);
-            color: rgba(255, 255, 255, 0.9);
+            transition: all 0.15s ease;
+            background: var(--surface);
+            color: var(--text-primary);
         }
 
         input[type="text"]:focus,
@@ -275,95 +250,95 @@
         select:focus,
         textarea:focus {
             outline: none;
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), 0 0 0 4px rgba(6, 182, 212, 0.1);
-            background: rgba(15, 23, 42, 0.8);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.1);
         }
 
         input::placeholder,
         textarea::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            color: var(--text-tertiary);
         }
 
         textarea {
             resize: vertical;
-            min-height: 140px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            min-height: 120px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
             font-size: 13px;
+            line-height: 1.6;
         }
 
         .emoji-picker {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 8px;
             margin-top: 12px;
         }
 
         .emoji-option {
-            font-size: 32px;
-            padding: 12px;
+            font-size: 28px;
+            padding: 10px;
             cursor: pointer;
-            border: 2px solid rgba(6, 182, 212, 0.3);
-            border-radius: 12px;
-            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(15, 23, 42, 0.6);
+            background: var(--surface);
         }
 
         .emoji-option:hover {
-            border-color: var(--neon-cyan);
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+            border-color: var(--primary);
+            transform: scale(1.03);
+            box-shadow: var(--shadow-sm);
         }
 
         .emoji-option.selected {
-            border-color: var(--neon-cyan);
-            background: rgba(6, 182, 212, 0.2);
-            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2), 0 0 20px rgba(6, 182, 212, 0.3);
+            border-color: var(--primary);
+            background: rgba(99, 91, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.1);
         }
 
         .button-group {
             display: flex;
-            gap: 12px;
-            margin-top: 32px;
-            padding-top: 32px;
-            border-top: 1px solid rgba(6, 182, 212, 0.2);
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 14px 32px;
+            padding: 9px 16px;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.15s ease;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             position: relative;
         }
 
         .btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .btn.loading {
-            opacity: 0.8;
+            opacity: 0.7;
             cursor: wait;
-            padding-right: 48px;
+            padding-right: 40px;
         }
 
         .btn.loading::after {
             content: '';
             position: absolute;
-            right: 16px;
-            width: 16px;
-            height: 16px;
+            right: 12px;
+            width: 14px;
+            height: 14px;
             border: 2px solid currentColor;
             border-top-color: transparent;
             border-radius: 50%;
@@ -375,16 +350,14 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+            background: var(--primary);
             color: white;
-            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4), 0 0 30px rgba(6, 182, 212, 0.2);
-            border: 1px solid rgba(6, 182, 212, 0.3);
+            box-shadow: var(--shadow-sm);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(6, 182, 212, 0.6), 0 0 40px rgba(168, 85, 247, 0.3);
-            border-color: rgba(6, 182, 212, 0.5);
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow);
         }
 
         .btn-primary:active {
@@ -392,89 +365,88 @@
         }
 
         .btn-secondary {
-            background: rgba(6, 182, 212, 0.15);
-            color: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(6, 182, 212, 0.3);
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
-        .btn-secondary:hover {
-            background: rgba(6, 182, 212, 0.25);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-color);
+            border-color: var(--text-tertiary);
         }
 
         .btn-success {
             background: var(--success);
             color: white;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            box-shadow: var(--shadow-sm);
         }
 
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        .btn-success:hover:not(:disabled) {
+            background: #00C520;
+            box-shadow: var(--shadow);
         }
 
         .alert {
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
             display: none;
-            font-weight: 500;
-            border-left: 4px solid;
+            font-weight: 400;
+            font-size: 13px;
+            border: 1px solid;
         }
 
         .alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            color: #047857;
-            border-color: var(--success);
+            background: #F0FDF4;
+            color: #15803D;
+            border-color: #BBF7D0;
         }
 
         .alert.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: #dc2626;
-            border-color: var(--error);
+            background: #FEF2F2;
+            color: #DC2626;
+            border-color: #FECACA;
         }
 
         .alert.show {
             display: flex;
             align-items: center;
-            gap: 12px;
-            animation: slideDown 0.3s ease-out;
+            gap: 8px;
+            animation: slideDown 0.2s ease-out;
         }
 
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
+            from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 2px solid rgba(6, 182, 212, 0.3);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: all 0.3s ease;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.15s ease;
         }
 
         .card:hover {
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
-            transform: translateY(-2px);
+            box-shadow: var(--shadow);
         }
 
         .info-box {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
-            border-left: 4px solid var(--neon-cyan);
-            padding: 20px;
-            margin-bottom: 28px;
-            border-radius: 12px;
-            border: 1px solid rgba(6, 182, 212, 0.2);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+            background: #F0F9FF;
+            border-left: 3px solid var(--primary);
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            border: 1px solid #DBEAFE;
         }
 
         .info-box p {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.7;
+            color: var(--text-secondary);
+            line-height: 1.6;
             margin: 0;
+            font-size: 13px;
         }
 
         .grid-2 {
@@ -484,21 +456,20 @@
         }
 
         .status-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 2px solid rgba(6, 182, 212, 0.2);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
+            gap: 12px;
+            transition: all 0.15s ease;
         }
 
         .status-card:hover {
-            border-color: var(--neon-cyan);
-            transform: translateX(4px);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
         }
 
         .status-indicator {
@@ -519,33 +490,31 @@
         }
 
         .preview {
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(6, 182, 212, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 16px;
-            font-family: 'JetBrains Mono', monospace;
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 12px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
             font-size: 13px;
             white-space: pre-wrap;
             max-height: 400px;
             overflow-y: auto;
-            color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
 
         .preview::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .preview::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 10px;
+            background: transparent;
         }
 
         .preview::-webkit-scrollbar-thumb {
-            background: var(--neon-cyan);
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+            background: var(--border);
+            border-radius: 3px;
         }
 
         .llm-provider-grid {
@@ -728,6 +697,8 @@
                 <button class="tab" data-tab="tools">Tools</button>
                 <button class="tab" data-tab="security">🔒 Security</button>
                 <button class="tab" data-tab="moltbook">🦞 Moltbook</button>
+                <button class="tab" data-tab="feed">📖 Feed</button>
+                <button class="tab" data-tab="analytics">📊 Analytics</button>
                 <button class="tab" data-tab="subscription">💎 Subscription</button>
                 <button class="tab" data-tab="agents">🤖 My Agents</button>
                 <button class="tab" id="admin-tab-button" data-tab="admin" style="display: none;">🔐 Admin</button>
@@ -1443,6 +1414,126 @@
                 </div>
             </div>
 
+
+            <!-- Feed Tab -->
+            <div class="tab-content" id="feed">
+                <h2>📖 Moltbook Feed</h2>
+
+                <div id="feed-upgrade-prompt" style="display: none; background: #F0F9FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
+                    <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Feed</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Browse the global Moltbook feed, discover posts from other agents, and engage with the community!</p>
+                    <button class="btn btn-primary" onclick="switchTab('subscription')">
+                        Upgrade to Starter ($9/mo)
+                    </button>
+                </div>
+
+                <div id="feed-content" style="display: none;">
+                    <!-- Feed Controls -->
+                    <div class="feed-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+                        <div class="sort-buttons" style="display: flex; gap: 6px;">
+                            <button class="btn-sort active" data-sort="hot" onclick="changeFeedSort('hot')" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--primary); background: var(--primary); color: white; cursor: pointer; font-size: 13px; font-weight: 500;">🔥 Hot</button>
+                            <button class="btn-sort" data-sort="new" onclick="changeFeedSort('new')" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); cursor: pointer; font-size: 13px; font-weight: 500;">🆕 New</button>
+                            <button class="btn-sort" data-sort="top" onclick="changeFeedSort('top')" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); cursor: pointer; font-size: 13px; font-weight: 500;">⭐ Top</button>
+                            <button class="btn-sort" data-sort="rising" onclick="changeFeedSort('rising')" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); cursor: pointer; font-size: 13px; font-weight: 500;">📈 Rising</button>
+                        </div>
+
+                        <button class="btn btn-secondary" onclick="refreshFeed()">
+                            <span>🔄</span> Refresh
+                        </button>
+                    </div>
+
+                    <!-- Feed Container -->
+                    <div id="feed-container" class="feed-container">
+                        <!-- Posts will be loaded here -->
+                    </div>
+
+                    <!-- Loading Spinner -->
+                    <div id="feed-loading" style="text-align: center; padding: 40px; display: none;">
+                        <div class="spinner" style="margin: 0 auto 16px;"></div>
+                        <p style="color: rgba(255, 255, 255, 0.7);">Loading posts...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="feed-empty" style="text-align: center; padding: 60px 20px; display: none;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">🦞</div>
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 18px;">No posts found</p>
+                    </div>
+
+                    <!-- Load More -->
+                    <div style="text-align: center; margin-top: 24px;">
+                        <button class="btn btn-secondary" onclick="loadMorePosts()" id="load-more-btn" style="display: none;">
+                            Load More Posts
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-content" id="analytics">
+                <h2>📊 Analytics</h2>
+
+                <div id="analytics-upgrade-prompt" style="display: none; background: #F0F9FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
+                    <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Analytics</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Track your karma growth, post performance, and engagement metrics!</p>
+                    <button class="btn btn-primary" onclick="switchTab('subscription')">
+                        Upgrade to Starter ($9/mo)
+                    </button>
+                </div>
+
+                <div id="analytics-content" style="display: none;">
+                    <!-- Agent Selector -->
+                    <div class="form-group" style="max-width: 300px; margin-bottom: 24px;">
+                        <label for="analytics-agent-select">Select Agent</label>
+                        <select id="analytics-agent-select" onchange="loadAnalytics()">
+                            <option value="">-- Select an agent --</option>
+                        </select>
+                    </div>
+
+                    <!-- Stats Overview -->
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
+                        <div class="stat-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 20px;">
+                            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px;">Karma</div>
+                            <div id="stat-karma" style="font-size: 32px; font-weight: 700; color: white;">-</div>
+                        </div>
+
+                        <div class="stat-card" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(219, 39, 119, 0.1)); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 12px; padding: 20px;">
+                            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px;">Total Posts</div>
+                            <div id="stat-posts" style="font-size: 32px; font-weight: 700; color: white;">-</div>
+                        </div>
+
+                        <div class="stat-card" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(14, 165, 233, 0.1)); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 20px;">
+                            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px;">Total Upvotes</div>
+                            <div id="stat-upvotes" style="font-size: 32px; font-weight: 700; color: white;">-</div>
+                        </div>
+
+                        <div class="stat-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px;">
+                            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px;">Followers</div>
+                            <div id="stat-followers" style="font-size: 32px; font-weight: 700; color: white;">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Karma Chart -->
+                    <div class="card" style="margin-bottom: 32px;">
+                        <h3 style="margin-bottom: 16px;">Karma Over Time</h3>
+                        <canvas id="karma-chart" width="400" height="150"></canvas>
+                    </div>
+
+                    <!-- Top Posts -->
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Top Performing Posts</h3>
+                        <div id="top-posts-container">
+                            <p style="color: rgba(255, 255, 255, 0.6); text-align: center;">No posts yet</p>
+                        </div>
+                    </div>
+
+                    <!-- Sync Button -->
+                    <div style="margin-top: 24px; text-align: center;">
+                        <button class="btn btn-secondary" onclick="syncAnalytics()">
+                            <span>🔄</span> Sync from Moltbook
+                        </button>
+                    </div>
+                </div>
+            </div>
             <!-- Subscription Tab -->
             <div class="tab-content" id="subscription">
                 <h2>💎 Subscription Plans</h2>
@@ -1687,6 +1778,14 @@
 
             if (tabName === 'agents') {
                 loadAgents();
+            }
+
+            if (tabName === 'feed') {
+                initFeedTab();
+            }
+
+            if (tabName === 'analytics') {
+                initAnalyticsTab();
             }
         }
 
@@ -2600,6 +2699,29 @@ Examples:
                     // Store the agent data
                     localStorage.setItem('openclaw_moltbook', JSON.stringify(storageData));
 
+                    // IMPORTANT: Also save to backend database
+                    try {
+                        const saveResponse = await fetch('/api/agents/import', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                name: agentData.name,
+                                moltbook_api_key: apiKey,
+                                description: agentData.description,
+                                avatar_url: agentData.avatar_url,
+                                moltbook_config: JSON.stringify(storageData)
+                            })
+                        });
+                        if (saveResponse.ok) {
+                            console.log('✅ Agent saved to backend database');
+                        } else {
+                            console.warn('⚠️ Failed to save agent to backend:', await saveResponse.text());
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Could not save to backend:', err);
+                    }
+
                     // Show profile section
                     document.getElementById('registration-section').style.display = 'none';
                     document.getElementById('claim-section').style.display = 'none';
@@ -3262,7 +3384,7 @@ Examples:
 
                 const postData = {
                     title: title,
-                    body: content,
+                    content: content,
                     submolt: submolt || 'general'
                 };
 
@@ -3996,6 +4118,29 @@ Examples:
             }
         }
 
+        // Load user's agents
+        async function loadUserAgents() {
+            try {
+                const response = await fetch('/api/agents', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.agents) {
+                        window.userAgents = data.agents;
+                        console.log(`✅ Loaded ${data.agents.length} agent(s)`);
+                    }
+                } else {
+                    console.warn('Could not load agents');
+                    window.userAgents = [];
+                }
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                window.userAgents = [];
+            }
+        }
+
         // Update UI based on auth status
         function updateAuthUI(isLoggedIn) {
             const loginBtn = document.getElementById('login-btn');
@@ -4355,7 +4500,7 @@ Examples:
             };
 
             if (badge) {
-                badge.textContent = tierEmojis[userData.subscription_tier || 'free'];
+                badge.textContent = tierEmojis[currentUser.subscription_tier || 'free'];
             }
 
             // Update current subscription card
@@ -4370,11 +4515,11 @@ Examples:
                     'pro': 'Pro Plan',
                     'team': 'Team Plan'
                 };
-                tierName.textContent = planNames[userData.subscription_tier || 'free'];
+                tierName.textContent = planNames[currentUser.subscription_tier || 'free'];
             }
 
             if (details) {
-                if (userData.subscription_status === 'active' && userData.subscription_tier !== 'free') {
+                if (userData.subscription_status === 'active' && currentUser.subscription_tier !== 'free') {
                     const expiresAt = new Date(userData.subscription_expires_at).toLocaleDateString();
                     details.textContent = `Active • Renews on ${expiresAt}`;
                     if (manageBtn) manageBtn.style.display = 'block';
@@ -4388,7 +4533,7 @@ Examples:
             }
 
             currentSubscription = {
-                tier: userData.subscription_tier || 'free',
+                tier: currentUser.subscription_tier || 'free',
                 status: userData.subscription_status
             };
 
@@ -4402,6 +4547,9 @@ Examples:
         window.addEventListener('load', () => {
             // Always check authentication status
             checkAuthStatus();
+
+            // Load user's agents
+            loadUserAgents();
 
             // Load subscription plans
             loadSubscriptionPlans();
@@ -4430,6 +4578,500 @@ Examples:
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         });
+
+        // ============================================
+        // PHASE 1: FEED + ANALYTICS JAVASCRIPT
+        // ============================================
+
+        // Feed State
+        let currentSort = 'hot';
+        let currentPosts = [];
+        let paginationCursor = null;
+
+        // Load feed when tab is opened
+        function initFeedTab() {
+            console.log('📖 Initializing Feed tab');
+
+            // Check if user can access feed
+            if (!currentUser || !currentUser.subscription_tier) {
+                document.getElementById('feed-upgrade-prompt').style.display = 'block';
+                document.getElementById('feed-content').style.display = 'none';
+                return;
+            }
+
+            const tier = currentUser.subscription_tier;
+            if (tier === 'free' || !['starter', 'pro', 'team'].includes(tier)) {
+                document.getElementById('feed-upgrade-prompt').style.display = 'block';
+                document.getElementById('feed-content').style.display = 'none';
+            } else {
+                document.getElementById('feed-upgrade-prompt').style.display = 'none';
+                document.getElementById('feed-content').style.display = 'block';
+                loadFeed('hot', false);
+            }
+        }
+
+        // Load feed
+        async function loadFeed(sort = 'hot', append = false) {
+            console.log(`📖 Loading feed (sort: ${sort}, append: ${append})`);
+
+            // Show loading
+            document.getElementById('feed-loading').style.display = 'block';
+            document.getElementById('feed-empty').style.display = 'none';
+
+            if (!append) {
+                document.getElementById('feed-container').innerHTML = '';
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    sort: sort,
+                    limit: 25
+                });
+
+                if (append && paginationCursor) {
+                    params.append('after', paginationCursor);
+                }
+
+                const response = await fetch(`/api/moltbook/feed?${params}`, {
+                    credentials: 'include'
+                });
+
+                if (response.status === 403) {
+                    const error = await response.json();
+                    document.getElementById('feed-upgrade-prompt').style.display = 'block';
+                    document.getElementById('feed-content').style.display = 'none';
+                    document.getElementById('feed-loading').style.display = 'none';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to load feed');
+                }
+
+                const data = await response.json();
+                console.log('📦 Feed API Response:', data);
+                console.log('📝 Posts count:', data.posts ? data.posts.length : 0);
+
+                if (data.posts && data.posts.length > 0) {
+                    console.log('🎯 First post sample:', data.posts[0]);
+                }
+
+                // Update pagination
+                paginationCursor = data.pagination?.after;
+
+                // Render posts
+                if (append) {
+                    currentPosts = [...currentPosts, ...data.posts];
+                } else {
+                    currentPosts = data.posts || [];
+                }
+
+                renderPosts(data.posts || [], append);
+
+                // Show/hide empty state
+                if (currentPosts.length === 0) {
+                    document.getElementById('feed-empty').style.display = 'block';
+                }
+
+                // Hide/show load more button
+                document.getElementById('load-more-btn').style.display =
+                    paginationCursor ? 'block' : 'none';
+
+            } catch (error) {
+                console.error('Error loading feed:', error);
+                alert(`❌ Failed to load feed: ${error.message}`);
+            } finally {
+                document.getElementById('feed-loading').style.display = 'none';
+            }
+        }
+
+        function renderPosts(posts, append = false) {
+            const container = document.getElementById('feed-container');
+
+            if (!append) {
+                container.innerHTML = '';
+            }
+
+            if (!posts || posts.length === 0) {
+                return;
+            }
+
+            posts.forEach(post => {
+                const card = document.createElement('div');
+                card.className = 'post-card';
+                card.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;';
+
+                const authorAvatar = post.author?.avatar || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22%3E%3Crect fill=%22%231e293b%22 width=%2232%22 height=%2232%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2210%22 fill=%22%230ea5e9%22/%3E%3Ctext x=%2216%22 y=%2221%22 font-size=%2214%22 fill=%22white%22 text-anchor=%22middle%22%3E?%3C/text%3E%3C/svg%3E';
+                const authorName = post.author?.name || 'Unknown';
+                const submoltName = post.submolt?.name || 'general';
+                const title = post.title || 'Untitled';
+                const content = post.content || '';
+                const upvotes = post.upvotes || 0;
+                const comments = post.comment_count || 0;
+                const createdAt = post.created_at || '';
+                const postId = post.id;
+                const isUpvoted = post.is_upvoted || false;
+
+                const upvoteStyle = isUpvoted ?
+                    'background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));' :
+                    'background: rgba(15, 23, 42, 0.6);';
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <img src="${authorAvatar}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 12px;" onerror="this.style.display='none'">
+                        <div style="flex: 1;">
+                            <span style="color: var(--neon-cyan); font-weight: 600;">${authorName}</span>
+                            <span style="color: rgba(255, 255, 255, 0.5); margin: 0 8px;">•</span>
+                            <span style="color: rgba(255, 255, 255, 0.7);">m/${submoltName}</span>
+                            <span style="color: rgba(255, 255, 255, 0.5); margin: 0 8px;">•</span>
+                            <span style="color: rgba(255, 255, 255, 0.5);">${formatTimeAgo(createdAt)}</span>
+                        </div>
+                    </div>
+                    <h3 style="color: white; margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">${title}</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 16px 0; line-height: 1.6;">${truncate(content, 200)}</p>
+                    <div style="display: flex; gap: 16px; align-items: center;">
+                        <button class="upvote-btn" data-post-id="${postId}" data-upvoted="${isUpvoted}" onclick="upvotePost('${postId}', this)" style="${upvoteStyle} border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <span>⬆️</span>
+                            <span class="upvote-count">${upvotes}</span>
+                        </button>
+                        <div style="border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span>💬</span>
+                            <span>${comments}</span>
+                        </div>
+                        <a href="https://www.moltbook.com/m/${submoltName}/posts/${postId}" target="_blank" style="margin-left: auto; color: var(--neon-cyan); text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                            <span>🦞</span>
+                            <span>View on Moltbook</span>
+                        </a>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        async function upvotePost(postId, button) {
+            console.log('👍 Upvoting post:', postId);
+
+            const isUpvoted = button.dataset.upvoted === 'true';
+
+            if (isUpvoted) {
+                console.log('Already upvoted');
+                return;
+            }
+
+            // Optimistic UI update
+            button.style.background = 'linear-gradient(135deg, var(--neon-purple), var(--neon-cyan))';
+            button.dataset.upvoted = 'true';
+            const countSpan = button.querySelector('.upvote-count');
+            const oldCount = parseInt(countSpan.textContent);
+            countSpan.textContent = oldCount + 1;
+
+            try {
+                const response = await fetch(`/api/moltbook/posts/${postId}/upvote`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({})
+                });
+
+                if (response.status === 403) {
+                    const error = await response.json();
+                    alert(error.error);
+                    // Revert UI
+                    button.style.background = 'rgba(15, 23, 42, 0.6)';
+                    button.dataset.upvoted = 'false';
+                    countSpan.textContent = oldCount;
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to upvote');
+                }
+
+                const data = await response.json();
+                console.log('✅ Upvoted successfully');
+
+            } catch (error) {
+                console.error('Error upvoting:', error);
+                // Revert optimistic update
+                button.style.background = 'rgba(15, 23, 42, 0.6)';
+                button.dataset.upvoted = 'false';
+                countSpan.textContent = oldCount;
+                alert(`❌ Failed to upvote: ${error.message}`);
+            }
+        }
+
+        function changeFeedSort(sort) {
+            // Update active button
+            document.querySelectorAll('.btn-sort').forEach(btn => {
+                if (btn.dataset.sort === sort) {
+                    btn.classList.add('active');
+                    btn.style.background = 'linear-gradient(135deg, var(--neon-purple), var(--neon-cyan))';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = 'rgba(15, 23, 42, 0.6)';
+                }
+            });
+
+            currentSort = sort;
+            paginationCursor = null;
+            loadFeed(sort, false);
+        }
+
+        function loadMorePosts() {
+            loadFeed(currentSort, true);
+        }
+
+        function refreshFeed() {
+            paginationCursor = null;
+            loadFeed(currentSort, false);
+        }
+
+        // Utility functions
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return '';
+            const now = new Date();
+            const posted = new Date(timestamp);
+            const diff = Math.floor((now - posted) / 1000); // seconds
+
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+
+        function truncate(text, maxLength) {
+            if (!text || text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        // ============================================
+        // ANALYTICS
+        // ============================================
+
+        let karmaChart = null;
+
+        function initAnalyticsTab() {
+            console.log('📊 Initializing Analytics tab');
+
+            // Check tier access
+            if (!currentUser || !currentUser.subscription_tier) {
+                document.getElementById('analytics-upgrade-prompt').style.display = 'block';
+                document.getElementById('analytics-content').style.display = 'none';
+                return;
+            }
+
+            const tier = currentUser.subscription_tier;
+            if (tier === 'free' || !['starter', 'pro', 'team'].includes(tier)) {
+                document.getElementById('analytics-upgrade-prompt').style.display = 'block';
+                document.getElementById('analytics-content').style.display = 'none';
+            } else {
+                document.getElementById('analytics-upgrade-prompt').style.display = 'none';
+                document.getElementById('analytics-content').style.display = 'block';
+
+                // Populate agent selector
+                populateAnalyticsAgentSelector();
+            }
+        }
+
+        function populateAnalyticsAgentSelector() {
+            const select = document.getElementById('analytics-agent-select');
+            select.innerHTML = '<option value="">-- Select an agent --</option>';
+
+            if (window.userAgents && window.userAgents.length > 0) {
+                window.userAgents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent.id;
+                    option.textContent = agent.name;
+                    select.appendChild(option);
+                });
+
+                // Auto-select first agent
+                select.value = window.userAgents[0].id;
+                loadAnalytics();
+            }
+        }
+
+        async function loadAnalytics() {
+            const agentId = document.getElementById('analytics-agent-select').value;
+            if (!agentId) return;
+
+            console.log('📊 Loading analytics for agent:', agentId);
+
+            try {
+                // Load overview
+                const overviewResponse = await fetch(`/api/analytics/overview?agent_id=${agentId}`, {
+                    credentials: 'include'
+                });
+
+                if (overviewResponse.status === 403) {
+                    const error = await overviewResponse.json();
+                    document.getElementById('analytics-upgrade-prompt').style.display = 'block';
+                    document.getElementById('analytics-content').style.display = 'none';
+                    return;
+                }
+
+                if (!overviewResponse.ok) {
+                    throw new Error('Failed to load analytics');
+                }
+
+                const overview = await overviewResponse.json();
+
+                // Update stats
+                document.getElementById('stat-karma').textContent = overview.current.karma;
+                document.getElementById('stat-posts').textContent = overview.current.total_posts;
+                document.getElementById('stat-upvotes').textContent = overview.current.total_upvotes;
+                document.getElementById('stat-followers').textContent = overview.current.followers;
+
+                // Render top posts
+                renderTopPosts(overview.top_posts);
+
+                // Load karma history for chart
+                const historyResponse = await fetch(`/api/analytics/karma-history?agent_id=${agentId}&days=30`, {
+                    credentials: 'include'
+                });
+                const history = await historyResponse.json();
+                renderKarmaChart(history.data);
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                alert(`❌ Failed to load analytics: ${error.message}`);
+            }
+        }
+
+        function renderTopPosts(posts) {
+            const container = document.getElementById('top-posts-container');
+
+            if (!posts || posts.length === 0) {
+                container.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center;">No posts yet</p>';
+                return;
+            }
+
+            container.innerHTML = posts.map((post, index) => `
+                <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); ${index === 0 ? 'background: linear-gradient(90deg, rgba(255, 215, 0, 0.05), transparent);' : ''}">
+                    <div style="font-size: 24px; font-weight: 700; color: ${index === 0 ? '#FFD700' : 'rgba(255, 255, 255, 0.3)'}; margin-right: 16px; min-width: 30px;">
+                        ${index + 1}${index === 0 ? '🏆' : ''}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: white; margin-bottom: 4px;">${post.title}</div>
+                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">
+                            m/${post.submolt || 'general'} • ${post.upvotes} upvotes • ${post.comments} comments
+                        </div>
+                    </div>
+                    <a href="https://www.moltbook.com/posts/${post.post_id}" target="_blank" style="color: var(--neon-cyan); text-decoration: none;">
+                        View 🦞
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function renderKarmaChart(data) {
+            const canvas = document.getElementById('karma-chart');
+            const ctx = canvas.getContext('2d');
+
+            // Destroy existing chart
+            if (karmaChart) {
+                karmaChart.destroy();
+            }
+
+            if (!data || data.length === 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data yet', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // Simple line chart (basic implementation)
+            const maxKarma = Math.max(...data.map(d => d.karma), 10);
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw axes
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw line
+            if (data.length > 1) {
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                data.forEach((point, index) => {
+                    const x = padding + (width - 2 * padding) * (index / (data.length - 1));
+                    const y = height - padding - (height - 2 * padding) * (point.karma / maxKarma);
+
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+
+                ctx.stroke();
+            }
+
+            // Draw points
+            ctx.fillStyle = '#06b6d4';
+            data.forEach((point, index) => {
+                const x = padding + (width - 2 * padding) * (index / Math.max(data.length - 1, 1));
+                const y = height - padding - (height - 2 * padding) * (point.karma / maxKarma);
+
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Labels
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+
+            if (data.length > 0) {
+                const firstDate = new Date(data[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const lastDate = new Date(data[data.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                ctx.fillText(firstDate, padding, height - 10);
+                ctx.fillText(lastDate, width - padding, height - 10);
+                ctx.fillText(`Max: ${maxKarma}`, padding, 20);
+            }
+        }
+
+        async function syncAnalytics() {
+            const agentId = document.getElementById('analytics-agent-select').value;
+            if (!agentId) {
+                alert('Please select an agent first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/analytics/sync', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({ agent_id: agentId })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to sync analytics');
+                }
+
+                alert('✅ Analytics synced from Moltbook!');
+
+                // Reload analytics
+                setTimeout(() => loadAnalytics(), 1000);
+
+            } catch (error) {
+                console.error('Error syncing analytics:', error);
+                alert(`❌ Failed to sync: ${error.message}`);
+            }
+        }
     </script>
 </body>
 </html>

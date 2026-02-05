@@ -321,7 +321,7 @@ def register_agent_routes(app):
     @app.route('/api/agents/import', methods=['POST'])
     @require_auth
     def import_agent():
-        """Import agent configuration from JSON"""
+        """Import agent configuration from JSON or save Moltbook agent"""
         try:
             user_id = session.get('user_id')
             user = User.query.get(user_id)
@@ -340,6 +340,84 @@ def register_agent_routes(app):
                 }), 403
 
             data = request.get_json() or {}
+
+            # Check if this is a Moltbook agent save (has moltbook_api_key at top level)
+            if 'moltbook_api_key' in data:
+                # This is a Moltbook agent connection save
+                name = data.get('name', '').strip()
+                if not name:
+                    return jsonify({'error': 'Agent name is required'}), 400
+
+                moltbook_api_key = data.get('moltbook_api_key', '').strip()
+                if not moltbook_api_key:
+                    return jsonify({'error': 'Moltbook API key is required'}), 400
+
+                # Check if agent already exists
+                existing_agent = Agent.query.filter_by(user_id=user_id, name=name).first()
+
+                if existing_agent:
+                    # Update existing agent
+                    existing_agent.moltbook_api_key = moltbook_api_key
+                    existing_agent.description = data.get('description', existing_agent.description)
+                    existing_agent.avatar_url = data.get('avatar_url', existing_agent.avatar_url)
+                    existing_agent.personality = data.get('personality', existing_agent.personality)
+
+                    if 'moltbook_config' in data:
+                        import json
+                        # Parse if string, use directly if dict
+                        config = data['moltbook_config']
+                        if isinstance(config, str):
+                            try:
+                                config = json.loads(config)
+                            except:
+                                config = {}
+                        existing_agent.moltbook_config = config
+
+                    existing_agent.updated_at = datetime.utcnow()
+                    db.session.commit()
+
+                    print(f"✅ Moltbook agent updated: {existing_agent.name}")
+
+                    return jsonify({
+                        'success': True,
+                        'message': 'Moltbook agent updated successfully',
+                        'agent': existing_agent.to_dict()
+                    })
+                else:
+                    # Create new Moltbook agent
+                    import json
+                    moltbook_config = data.get('moltbook_config', {})
+                    if isinstance(moltbook_config, str):
+                        try:
+                            moltbook_config = json.loads(moltbook_config)
+                        except:
+                            moltbook_config = {}
+
+                    agent = Agent(
+                        user_id=user_id,
+                        name=name,
+                        description=data.get('description', ''),
+                        avatar_url=data.get('avatar_url', ''),
+                        personality=data.get('personality', ''),
+                        moltbook_api_key=moltbook_api_key,
+                        is_default=(current_agent_count == 0),  # First agent is default
+                        llm_config={},
+                        identity_config={},
+                        moltbook_config=moltbook_config
+                    )
+
+                    db.session.add(agent)
+                    db.session.commit()
+
+                    print(f"✅ Moltbook agent saved: {agent.name} (user: {user.email})")
+
+                    return jsonify({
+                        'success': True,
+                        'message': 'Moltbook agent saved successfully',
+                        'agent': agent.to_dict()
+                    }), 201
+
+            # Otherwise, handle standard export/import format
             import_data = data.get('export', {})
 
             # Validate import data

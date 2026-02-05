@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics
 db.init_app(app)
 
 # Register authentication routes
@@ -69,6 +69,12 @@ register_auth_routes(app)
 # Register Stripe/payment routes
 from stripe_routes import register_stripe_routes
 register_stripe_routes(app)
+
+# Register Phase 1 routes (Feed + Analytics)
+from moltbook_routes import moltbook_bp
+from analytics_routes import analytics_bp
+app.register_blueprint(moltbook_bp)
+app.register_blueprint(analytics_bp)
 
 # Register agent management routes
 from agent_routes import register_agent_routes
