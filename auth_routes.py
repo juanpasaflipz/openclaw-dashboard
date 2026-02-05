@@ -98,9 +98,17 @@ def register_auth_routes(app):
                 user = User(email=email)
                 # Give 5 free credits for new users
                 user.credit_balance = 5
+
+                # Make owner admin automatically
+                owner_email = os.environ.get('OWNER_EMAIL', '').strip().lower()
+                if owner_email and email == owner_email:
+                    user.is_admin = True
+                    print(f"✅ New ADMIN user created: {email} (5 free credits)")
+                else:
+                    print(f"✅ New user created: {email} (5 free credits)")
+
                 db.session.add(user)
                 db.session.commit()
-                print(f"✅ New user created: {email} (5 free credits)")
 
             # Create magic link
             magic_link = MagicLink.create_for_user(user.id, expires_in_minutes=15)
@@ -206,7 +214,8 @@ def register_auth_routes(app):
                     'stripe_customer_id': user.stripe_customer_id,
                     'subscription_tier': user.subscription_tier,
                     'subscription_status': user.subscription_status,
-                    'subscription_expires_at': user.subscription_expires_at.isoformat() if user.subscription_expires_at else None
+                    'subscription_expires_at': user.subscription_expires_at.isoformat() if user.subscription_expires_at else None,
+                    'is_admin': user.is_admin
                 }
             })
 

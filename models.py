@@ -18,6 +18,9 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
+    # Admin access control
+    is_admin = db.Column(db.Boolean, default=False, nullable=False, index=True)
+
     # Credits for Moltbook posting
     credit_balance = db.Column(db.Integer, default=0)
 

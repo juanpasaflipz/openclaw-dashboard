@@ -729,7 +729,7 @@
                 <button class="tab" data-tab="security">🔒 Security</button>
                 <button class="tab" data-tab="moltbook">🦞 Moltbook</button>
                 <button class="tab" data-tab="subscription">💎 Subscription</button>
-                <button class="tab" data-tab="admin">🔐 Admin</button>
+                <button class="tab" id="admin-tab-button" data-tab="admin" style="display: none;">🔐 Admin</button>
                 <button class="tab" data-tab="export">Export</button>
             </div>
 
@@ -2904,6 +2904,13 @@ Examples:
 
         // Admin Functions
         async function adminCreatePost() {
+            // Validate admin access
+            if (!currentUser || !currentUser.is_admin) {
+                alert('❌ Unauthorized: Admin access required');
+                console.error('⛔ Non-admin user attempted admin action');
+                return;
+            }
+
             const title = document.getElementById('admin-post-title').value.trim();
             const submolt = document.getElementById('admin-post-submolt').value.trim();
             const content = document.getElementById('admin-post-content').value.trim();
@@ -3335,9 +3342,24 @@ Examples:
 
                 // Update subscription display
                 updateSubscriptionDisplay(currentUser);
+
+                // Show admin tab if user is admin
+                const adminTabButton = document.getElementById('admin-tab-button');
+                if (currentUser.is_admin) {
+                    adminTabButton.style.display = 'inline-block';
+                    console.log('✅ Admin access granted');
+                } else {
+                    adminTabButton.style.display = 'none';
+                }
             } else {
                 loginBtn.style.display = 'inline-block';
                 userInfo.style.display = 'none';
+
+                // Hide admin tab when logged out
+                const adminTabButton = document.getElementById('admin-tab-button');
+                if (adminTabButton) {
+                    adminTabButton.style.display = 'none';
+                }
             }
         }
 
