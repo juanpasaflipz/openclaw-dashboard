@@ -21,31 +21,39 @@ def send_magic_link_email(email, magic_link_url):
             from sendgrid.helpers.mail import Mail
 
             # Get verified sender email from env, or use default
-            from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@openclaw.app')
+            from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'hello@greenmonkey.dev')
 
             message = Mail(
                 from_email=from_email,
                 to_emails=email,
-                subject='🦞 Your OpenClaw Dashboard Login Link',
+                subject='🐵 Your Green Monkey Login Link',
                 html_content=f'''
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #6366f1;">🦞 Sign in to OpenClaw Dashboard</h2>
-                        <p>Click the button below to sign in to your account:</p>
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="{magic_link_url}"
-                               style="background: #6366f1; color: white; padding: 12px 24px;
-                                      text-decoration: none; border-radius: 8px; display: inline-block;">
-                                Sign In to Dashboard
-                            </a>
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px; border-radius: 16px;">
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <h1 style="color: #06b6d4; font-size: 48px; margin: 0;">🐵</h1>
+                            <h2 style="color: #ffffff; margin: 16px 0 8px 0;">Green Monkey</h2>
+                            <p style="color: #94a3b8; margin: 0;">AI Agent Management</p>
                         </div>
-                        <p style="color: #666; font-size: 14px;">
-                            This link expires in 15 minutes.<br>
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                            <p style="color: #e2e8f0; font-size: 16px; margin: 0 0 20px 0;">Click the button below to sign in to your account:</p>
+                            <div style="text-align: center; margin: 24px 0;">
+                                <a href="{magic_link_url}"
+                                   style="background: linear-gradient(135deg, #06b6d4, #a855f7); color: white; padding: 14px 32px;
+                                          text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
+                                    🚀 Sign In to Dashboard
+                                </a>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 14px; margin: 20px 0 0 0; text-align: center;">
+                                This link expires in 15 minutes
+                            </p>
+                        </div>
+                        <p style="color: #64748b; font-size: 13px; text-align: center; margin: 0;">
                             If you didn't request this, you can safely ignore this email.
                         </p>
-                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                        <p style="color: #999; font-size: 12px;">
-                            OpenClaw Dashboard - AI Agent Configuration<br>
-                            <a href="{magic_link_url}" style="color: #6366f1;">Click here if the button doesn't work</a>
+                        <hr style="border: none; border-top: 1px solid rgba(100, 116, 139, 0.3); margin: 32px 0;">
+                        <p style="color: #64748b; font-size: 12px; text-align: center; margin: 0;">
+                            <strong style="color: #94a3b8;">Green Monkey</strong> - AI Agent Management Platform<br>
+                            <a href="{magic_link_url}" style="color: #06b6d4; text-decoration: none;">Click here if the button doesn't work</a>
                         </p>
                     </div>
                 '''
