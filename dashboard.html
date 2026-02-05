@@ -1369,12 +1369,71 @@
                             </p>
                         </div>
 
-                        <button class="btn btn-primary" onclick="saveAgentSuggestions()">
-                            <span style="margin-right: 8px;">💾</span> Save Suggestions
-                        </button>
+                        <div style="display: flex; gap: 12px; margin-top: 16px;">
+                            <button class="btn btn-primary" onclick="saveAgentSuggestions()">
+                                <span style="margin-right: 8px;">💾</span> Save Suggestions
+                            </button>
+                            <button class="btn btn-primary" onclick="generatePostPreview()" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));">
+                                <span style="margin-right: 8px;">🎨</span> Generate Post Preview
+                            </button>
+                        </div>
                         <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 12px;">
-                            Your agent will access these suggestions when generating content.
+                            Save suggestions for later, or generate a post preview now to review before posting.
                         </p>
+                    </div>
+
+                    <!-- Post Preview Section -->
+                    <div id="post-preview-section" class="card" style="margin-top: 24px; display: none; border: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);">
+                        <h4 style="margin-bottom: 16px;">👁️ Post Preview</h4>
+                        <p style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-bottom: 16px;">
+                            Review your agent's generated post before publishing:
+                        </p>
+
+                        <div id="preview-loading" style="text-align: center; padding: 40px; display: none;">
+                            <div class="spinner" style="margin: 0 auto 16px;"></div>
+                            <p style="color: rgba(255, 255, 255, 0.7);">✨ Your agent is crafting a post...</p>
+                        </div>
+
+                        <div id="preview-content" style="display: none;">
+                            <!-- Title Preview -->
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <label style="font-size: 12px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Title</label>
+                                <p id="preview-title" style="font-size: 18px; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0;"></p>
+                            </div>
+
+                            <!-- Submolt Preview -->
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid rgba(168, 85, 247, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <label style="font-size: 12px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Submolt</label>
+                                <p id="preview-submolt" style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin: 0;"></p>
+                            </div>
+
+                            <!-- Body Preview -->
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <label style="font-size: 12px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Content</label>
+                                <p id="preview-body" style="font-size: 15px; line-height: 1.6; color: rgba(255, 255, 255, 0.85); margin: 0; white-space: pre-wrap;"></p>
+                            </div>
+
+                            <!-- Safety Warning (if applicable) -->
+                            <div id="safety-warning" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15)); border: 2px solid rgba(251, 191, 36, 0.4); border-radius: 8px; padding: 16px; margin-bottom: 16px; display: none;">
+                                <p style="margin: 0; color: #fbbf24; font-weight: 600;">
+                                    <span style="margin-right: 8px;">⚠️</span> Content Safety Suggestion
+                                </p>
+                                <p id="safety-message" style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin: 8px 0 0 0;"></p>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                                <button class="btn btn-primary" onclick="approveAndPost()" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669);">
+                                    <span style="margin-right: 8px;">✅</span> Approve & Post to Moltbook
+                                </button>
+                                <button class="btn btn-secondary" onclick="rejectAndRegenerate()" style="flex: 1;">
+                                    <span style="margin-right: 8px;">🔄</span> Regenerate
+                                </button>
+                                <button class="btn btn-secondary" onclick="cancelPreview()">
+                                    <span style="margin-right: 8px;">❌</span> Cancel
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="grid-2" style="margin-top: 16px;">
@@ -2932,6 +2991,254 @@ Examples:
             localStorage.setItem('agent_topic_suggestions', suggestions);
 
             showAlert('moltbook', 'success', '✅ Suggestions saved! Your agent will use these when generating posts.');
+        }
+
+        // ============================================
+        // POST PREVIEW & GENERATION FUNCTIONS
+        // ============================================
+
+        let currentPreviewPost = null;
+
+        async function generatePostPreview() {
+            const suggestions = document.getElementById('agent-suggestions').value.trim();
+
+            if (!suggestions) {
+                showAlert('moltbook', 'error', '❌ Please enter some topic suggestions first');
+                return;
+            }
+
+            // Get LLM configuration
+            const llmData = JSON.parse(localStorage.getItem('openclaw_llm') || '{}');
+            const identityData = JSON.parse(localStorage.getItem('openclaw_identity') || '{}');
+
+            if (!llmData.provider || !llmData.api_key) {
+                showAlert('moltbook', 'error', '❌ Please configure your LLM connection first (LLM Connection tab)');
+                return;
+            }
+
+            // Show preview section and loading state
+            document.getElementById('post-preview-section').style.display = 'block';
+            document.getElementById('preview-loading').style.display = 'block';
+            document.getElementById('preview-content').style.display = 'none';
+
+            try {
+                // Generate post using LLM
+                const generatedPost = await callLLMToGeneratePost(suggestions, llmData, identityData);
+
+                // Store for later posting
+                currentPreviewPost = generatedPost;
+
+                // Check content safety
+                const safetyCheck = checkContentSafety(generatedPost.body);
+
+                // Display preview
+                document.getElementById('preview-title').textContent = generatedPost.title;
+                document.getElementById('preview-body').textContent = generatedPost.body;
+                document.getElementById('preview-submolt').textContent = generatedPost.submolt || 'general';
+
+                // Show safety warning if applicable
+                const safetyWarning = document.getElementById('safety-warning');
+                if (safetyCheck.warning) {
+                    document.getElementById('safety-message').textContent = safetyCheck.message;
+                    safetyWarning.style.display = 'block';
+                } else {
+                    safetyWarning.style.display = 'none';
+                }
+
+                // Hide loading, show content
+                document.getElementById('preview-loading').style.display = 'none';
+                document.getElementById('preview-content').style.display = 'block';
+
+                console.log('✅ Post preview generated successfully');
+            } catch (error) {
+                console.error('Error generating post:', error);
+                showAlert('moltbook', 'error', `❌ Failed to generate post: ${error.message}`);
+                document.getElementById('post-preview-section').style.display = 'none';
+            }
+        }
+
+        async function callLLMToGeneratePost(suggestions, llmData, identityData) {
+            // Build prompt for LLM
+            const agentPersonality = identityData.personality || 'You are a helpful AI agent';
+            const prompt = `${agentPersonality}
+
+You are creating a post for Moltbook (a social network for AI agents). Based on these topic suggestions from your human guide:
+
+${suggestions}
+
+Generate a compelling post that:
+1. Addresses one or more of the suggested topics
+2. Reflects your personality and voice
+3. Is engaging and authentic
+4. Is 200-500 words long
+5. Includes a catchy title
+
+Format your response EXACTLY as JSON:
+{
+  "title": "Your catchy title here (max 100 chars)",
+  "body": "Your post content here",
+  "submolt": "general"
+}
+
+Remember: Be creative and authentic. This is YOUR voice, not just following instructions.`;
+
+            console.log('📞 Calling LLM to generate post...');
+
+            // Call appropriate LLM based on provider
+            if (llmData.provider === 'anthropic') {
+                return await callAnthropicAPI(prompt, llmData);
+            } else if (llmData.provider === 'openai') {
+                return await callOpenAIAPI(prompt, llmData);
+            } else {
+                throw new Error(`Unsupported LLM provider: ${llmData.provider}`);
+            }
+        }
+
+        async function callAnthropicAPI(prompt, llmData) {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': llmData.api_key,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: llmData.model || 'claude-3-5-sonnet-20241022',
+                    max_tokens: 1024,
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Anthropic API error: ${error}`);
+            }
+
+            const data = await response.json();
+            const content = data.content[0].text;
+
+            // Extract JSON from response (handle markdown code blocks)
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('LLM did not return valid JSON');
+            }
+
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        async function callOpenAIAPI(prompt, llmData) {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${llmData.api_key}`
+                },
+                body: JSON.stringify({
+                    model: llmData.model || 'gpt-4',
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`OpenAI API error: ${error}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+
+            // Extract JSON from response
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('LLM did not return valid JSON');
+            }
+
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        function checkContentSafety(content) {
+            // Basic content safety check (keywords-based)
+            const warningKeywords = [
+                'violence', 'weapon', 'bomb', 'kill', 'death', 'suicide',
+                'hate', 'racist', 'sexist', 'discriminat',
+                'illegal', 'drug', 'scam', 'fraud'
+            ];
+
+            const lowerContent = content.toLowerCase();
+            const foundKeywords = warningKeywords.filter(keyword =>
+                lowerContent.includes(keyword)
+            );
+
+            if (foundKeywords.length > 0) {
+                return {
+                    warning: true,
+                    message: `This post contains potentially sensitive topics: ${foundKeywords.join(', ')}. Please review carefully before posting. You can still choose to post if appropriate.`
+                };
+            }
+
+            return { warning: false };
+        }
+
+        async function approveAndPost() {
+            if (!currentPreviewPost) {
+                showAlert('moltbook', 'error', '❌ No post to approve');
+                return;
+            }
+
+            const moltbookData = JSON.parse(localStorage.getItem('openclaw_moltbook') || '{}');
+            if (!moltbookData.api_key) {
+                showAlert('moltbook', 'error', '❌ No Moltbook API key configured');
+                return;
+            }
+
+            try {
+                console.log('📤 Posting approved content to Moltbook...');
+
+                const response = await fetch('https://www.moltbook.com/api/v1/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${moltbookData.api_key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: currentPreviewPost.title,
+                        body: currentPreviewPost.body,
+                        submolt: currentPreviewPost.submolt || 'general'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('moltbook', 'success', '🎉 Post published successfully to Moltbook!');
+                    cancelPreview();
+
+                    // Clear suggestions after successful post
+                    document.getElementById('agent-suggestions').value = '';
+                } else {
+                    throw new Error(result.error || response.statusText);
+                }
+            } catch (error) {
+                console.error('Error posting to Moltbook:', error);
+                showAlert('moltbook', 'error', `❌ Failed to post: ${error.message}`);
+            }
+        }
+
+        function rejectAndRegenerate() {
+            // Automatically regenerate with same suggestions
+            generatePostPreview();
+        }
+
+        function cancelPreview() {
+            document.getElementById('post-preview-section').style.display = 'none';
+            currentPreviewPost = null;
         }
 
         // Admin Functions
