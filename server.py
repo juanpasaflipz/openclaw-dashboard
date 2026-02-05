@@ -859,6 +859,62 @@ def update_pricing():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/update-stripe-ids', methods=['POST'])
+def update_stripe_ids():
+    """
+    Update Stripe product and price IDs in subscription plans
+    Use this after creating products in Stripe dashboard
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        updates = []
+
+        # Update Starter plan
+        if 'starter_price_id' in data:
+            starter = SubscriptionPlan.query.filter_by(tier='starter').first()
+            if starter:
+                starter.stripe_price_id = data['starter_price_id']
+                if 'starter_product_id' in data:
+                    starter.stripe_product_id = data['starter_product_id']
+                updates.append('Starter')
+
+        # Update Pro plan
+        if 'pro_price_id' in data:
+            pro = SubscriptionPlan.query.filter_by(tier='pro').first()
+            if pro:
+                pro.stripe_price_id = data['pro_price_id']
+                if 'pro_product_id' in data:
+                    pro.stripe_product_id = data['pro_product_id']
+                updates.append('Pro')
+
+        # Update Team plan
+        if 'team_price_id' in data:
+            team = SubscriptionPlan.query.filter_by(tier='team').first()
+            if team:
+                team.stripe_price_id = data['team_price_id']
+                if 'team_product_id' in data:
+                    team.stripe_product_id = data['team_product_id']
+                updates.append('Team')
+
+        if updates:
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': f'Updated Stripe IDs for: {", ".join(updates)}',
+                'updated_plans': updates
+            })
+        else:
+            return jsonify({'error': 'No price IDs provided'}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🦞 OpenClaw Dashboard Server")
