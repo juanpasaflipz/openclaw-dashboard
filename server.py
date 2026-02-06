@@ -62,6 +62,10 @@ else:
 from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics
 db.init_app(app)
 
+# Initialize rate limiter
+from rate_limiter import init_limiter
+limiter = init_limiter(app)
+
 # Register authentication routes
 from auth_routes import register_auth_routes
 register_auth_routes(app)
@@ -79,6 +83,18 @@ app.register_blueprint(analytics_bp)
 # Register agent management routes
 from agent_routes import register_agent_routes
 register_agent_routes(app)
+
+# Register setup wizard routes
+from setup_routes import register_setup_routes
+register_setup_routes(app)
+
+# Register chat channels routes
+from channels_routes import register_channels_routes
+register_channels_routes(app)
+
+# Register LLM providers routes
+from llm_providers_routes import register_llm_providers_routes
+register_llm_providers_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])

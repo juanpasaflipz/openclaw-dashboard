@@ -5,6 +5,7 @@ from flask import jsonify, request, session, url_for
 from models import db, User, MagicLink
 from datetime import datetime
 import os
+from rate_limiter import limiter
 
 
 def send_magic_link_email(email, magic_link_url):
@@ -87,6 +88,7 @@ def register_auth_routes(app):
     """Register authentication routes with the Flask app"""
 
     @app.route('/api/auth/request-magic-link', methods=['POST'])
+    @limiter.limit("5 per minute, 20 per hour")
     def request_magic_link():
         """Request a magic link for email-based authentication"""
         try:
