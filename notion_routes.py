@@ -188,7 +188,7 @@ def register_notion_routes(app):
             return jsonify({'error': str(e)}), 500
 
 
-    @app.route('/api/notion/pages/<page_id>', methods='GET'])
+    @app.route('/api/notion/pages/<page_id>', methods=['GET'])
     def get_notion_page(page_id):
         """Get Notion page content"""
         if 'user_id' not in session:
