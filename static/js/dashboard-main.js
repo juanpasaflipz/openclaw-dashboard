@@ -4119,6 +4119,52 @@ Examples:
             }
         }
 
+        async function connectService(service) {
+            /**
+             * Generic function to connect Google services (calendar, drive)
+             * @param {string} service - 'calendar' or 'drive'
+             */
+            try {
+                // Start OAuth flow
+                const response = await fetch(`/api/oauth/google/start/${service}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(`Error: ${data.error}\n${data.message || ''}`);
+                    return;
+                }
+
+                // Open OAuth window
+                const width = 600;
+                const height = 700;
+                const left = (screen.width - width) / 2;
+                const top = (screen.height - height) / 2;
+
+                const authWindow = window.open(
+                    data.authorization_url,
+                    `Google OAuth - ${service}`,
+                    `width=${width},height=${height},left=${left},top=${top}`
+                );
+
+                // Poll for window closure
+                const checkWindow = setInterval(() => {
+                    try {
+                        if (authWindow.closed) {
+                            clearInterval(checkWindow);
+                            // Reload connected services
+                            setTimeout(() => loadConnectedServices(), 1000);
+                        }
+                    } catch (e) {
+                        // Ignore COOP errors from cross-origin popup
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error(`Error connecting ${service}:`, error);
+                alert(`Failed to connect ${service}: ${error.message}`);
+            }
+        }
+
         async function disconnectService(serviceId, serviceName) {
             if (!confirm(`Disconnect ${serviceName}?\n\nYour agent will no longer have access to this service.`)) {
                 return;

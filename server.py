@@ -104,6 +104,18 @@ register_oauth_routes(app)
 from gmail_routes import register_gmail_routes
 register_gmail_routes(app)
 
+# Register Calendar routes
+from calendar_routes import register_calendar_routes
+register_calendar_routes(app)
+
+# Register Drive routes
+from drive_routes import register_drive_routes
+register_drive_routes(app)
+
+# Register Notion routes
+from notion_routes import register_notion_routes
+register_notion_routes(app)
+
 # Register AI Agent Actions routes
 from agent_actions_routes import register_agent_actions_routes
 register_agent_actions_routes(app)

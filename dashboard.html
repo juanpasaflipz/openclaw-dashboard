@@ -1389,8 +1389,8 @@
                     </button>
                 </div>
 
-                <!-- Google Calendar Card (Coming Soon) -->
-                <div class="service-card disabled">
+                <!-- Google Calendar Card -->
+                <div class="service-card" data-service="google_calendar">
                     <div class="service-card-header">
                         <div class="service-icon">📅</div>
                         <div class="service-info">
@@ -1398,16 +1398,27 @@
                             <span class="service-category">Connect</span>
                         </div>
                         <div style="margin-left: auto;">
-                            <span class="service-badge">Coming Soon</span>
+                            <span class="service-status" id="calendar-status">Not Connected</span>
                         </div>
                     </div>
                     <p class="service-description">
-                        Manage your calendar. Your agent can read events, create meetings, and send invites.
+                        Manage your calendar. Your agent can read events, create meetings, send invites, and extract meeting times from emails.
                     </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View your calendar events</li>
+                            <li>Create and modify events</li>
+                            <li>Send calendar invites</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectService('calendar')">
+                        🚀 Connect Calendar
+                    </button>
                 </div>
 
-                <!-- Google Drive Card (Coming Soon) -->
-                <div class="service-card disabled">
+                <!-- Google Drive Card -->
+                <div class="service-card" data-service="google_drive">
                     <div class="service-card-header">
                         <div class="service-icon">📁</div>
                         <div class="service-info">
@@ -1415,12 +1426,51 @@
                             <span class="service-category">Connect</span>
                         </div>
                         <div style="margin-left: auto;">
+                            <span class="service-status" id="drive-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Access your files. Your agent can read documents, create files, organize folders, and save email attachments.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View and download your files</li>
+                            <li>Create new files and folders</li>
+                            <li>Search your Drive</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectService('drive')">
+                        🚀 Connect Drive
+                    </button>
+                </div>
+
+                <!-- Notion Card -->
+                <div class="service-card" data-service="notion">
+                    <div class="service-card-header">
+                        <div class="service-icon">📝</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Notion</h4>
+                            <span class="service-category">Know</span>
+                        </div>
+                        <div style="margin-left: auto;">
                             <span class="service-badge">Coming Soon</span>
                         </div>
                     </div>
                     <p class="service-description">
-                        Access your files. Your agent can read documents, create files, and organize folders.
+                        Connect your workspace. Save emails as notes, create pages, search your knowledge base, and sync tasks.
                     </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Read and write pages</li>
+                            <li>Query databases</li>
+                            <li>Search workspace</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="alert('Notion OAuth coming soon! 🚧')" disabled>
+                        🚧 Coming Soon
+                    </button>
                 </div>
 
                 <!-- More services placeholder -->
