@@ -40,15 +40,13 @@ def register_agent_actions_routes(app):
             return jsonify({'error': 'User not found'}), 404
 
         try:
-            # Get agent (use primary or specified)
+            # Get agent (optional - used for tracking who made the request)
             agent_id = request.json.get('agent_id')
+            agent = None
             if agent_id:
                 agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
             else:
                 agent = user.get_primary_agent()
-
-            if not agent:
-                return jsonify({'error': 'No agent found'}), 404
 
             # Get Gmail service
             service, error = get_gmail_service(user_id)
@@ -172,10 +170,8 @@ Format your response as JSON with keys: summary, urgent_items (array), suggested
             if not email_id:
                 return jsonify({'error': 'email_id required'}), 400
 
-            # Get agent
+            # Get agent (optional)
             agent = user.get_primary_agent()
-            if not agent:
-                return jsonify({'error': 'No agent found'}), 404
 
             # Get Gmail service
             service, error = get_gmail_service(user_id)
@@ -221,7 +217,7 @@ Write a clear, professional reply. Be concise and helpful."""
             # Create action for approval
             action = AgentAction(
                 user_id=user_id,
-                agent_id=agent.id,
+                agent_id=agent.id if agent else None,
                 action_type='send_email',
                 service_type='gmail',
                 status='pending',
