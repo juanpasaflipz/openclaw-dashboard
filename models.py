@@ -414,3 +414,44 @@ class PostAnalytics(db.Model):
 
     # Relationship
     agent = db.relationship('Agent', backref='post_analytics')
+
+
+class Superpower(db.Model):
+    """Track connected external services (Gmail, Calendar, Drive, etc.)"""
+    __tablename__ = 'superpowers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)  # Nullable for user-level connections
+
+    # Service identification
+    service_type = db.Column(db.String(50), nullable=False, index=True)  # 'gmail', 'google_calendar', 'google_drive', etc.
+    service_name = db.Column(db.String(100), nullable=False)  # Display name
+    category = db.Column(db.String(50), nullable=False)  # 'connect', 'know', 'do', 'automate', 'protect', 'scale'
+
+    # Connection status
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    connected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime)
+
+    # OAuth tokens (stored encrypted)
+    access_token_encrypted = db.Column(db.Text)  # Encrypted OAuth access token
+    refresh_token_encrypted = db.Column(db.Text)  # Encrypted OAuth refresh token
+    token_expires_at = db.Column(db.DateTime)
+
+    # Service-specific configuration (JSON)
+    config = db.Column(db.Text)  # JSON blob for service-specific settings
+
+    # Permission scopes granted
+    scopes_granted = db.Column(db.Text)  # JSON array of OAuth scopes
+
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0)
+    last_error = db.Column(db.Text)  # Store last error for debugging
+
+    # Relationships
+    user = db.relationship('User', backref='superpowers')
+    agent = db.relationship('Agent', backref='superpowers')
+
+    def __repr__(self):
+        return f'<Superpower {self.service_type} for User {self.user_id}>'

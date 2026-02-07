@@ -1463,3 +1463,193 @@
         .form-actions button {
             flex: 1;
         }
+
+        /* Connect Tab - Service Cards */
+        .service-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary);
+        }
+
+        .service-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .service-card.disabled:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: var(--border);
+        }
+
+        .service-card.connected {
+            border-color: var(--success);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+        }
+
+        .service-card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .service-icon {
+            font-size: 48px;
+            line-height: 1;
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 6px 0;
+        }
+
+        .service-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(99, 91, 255, 0.15);
+            color: #93C5FD;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .service-status {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+        }
+
+        .service-status.connected {
+            color: var(--success);
+        }
+
+        .service-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(245, 158, 11, 0.2);
+            color: #FCD34D;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .service-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 16px 0;
+        }
+
+        .service-permissions {
+            background: rgba(99, 91, 255, 0.08);
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+
+        .service-permissions strong {
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .service-permissions ul {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+
+        .service-permissions li {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .service-connect-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 16px;
+        }
+
+        .service-connect-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .service-connect-btn.connected {
+            background: var(--success);
+        }
+
+        #connectedServices {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .connected-service-item {
+            background: var(--surface);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .connected-service-item .service-icon {
+            font-size: 32px;
+        }
+
+        .connected-service-details {
+            flex: 1;
+        }
+
+        .connected-service-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+        }
+
+        .connected-service-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .disconnect-btn {
+            padding: 6px 12px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #EF4444;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .disconnect-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }

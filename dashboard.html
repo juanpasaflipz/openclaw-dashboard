@@ -95,6 +95,10 @@
                             <span class="nav-item-icon">🤖</span>
                             <span>Providers</span>
                         </button>
+                        <button class="nav-item" data-tab="connect">
+                            <span class="nav-item-icon">🔌</span>
+                            <span>Connect</span>
+                        </button>
                     </div>
 
                     <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
@@ -1328,6 +1332,98 @@
                         </h3>
                         <div id="providerBundlesGrid" class="bundles-grid"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Connect Tab -->
+            <div class="tab-content" id="connect">
+                <h2>🔌 Connect Services</h2>
+
+                <div class="info-box">
+                    <p>Connect your favorite services to give your AI agent superpowers. Your agent can read emails, manage calendar events, search the web, and more.</p>
+                </div>
+
+                <!-- Connected Services -->
+                <div style="margin-bottom: 32px;">
+                    <h3 style="margin-bottom: 16px;">Connected Services</h3>
+                    <div id="connectedServices">
+                        <div style="text-align: center; padding: 24px; color: var(--text-tertiary);">
+                            No services connected yet. Connect your first service below!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Services -->
+                <h3 style="margin-bottom: 16px;">Available Services</h3>
+
+                <!-- Gmail Card -->
+                <div class="service-card" data-service="gmail">
+                    <div class="service-card-header">
+                        <div class="service-icon">📧</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Gmail</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="gmail-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Read and send emails. Your agent can monitor your inbox, draft replies, and send messages on your behalf (with approval).
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Read your emails</li>
+                            <li>Send emails on your behalf</li>
+                            <li>Manage labels and folders</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectGmail()">
+                        🚀 Connect Gmail
+                    </button>
+                </div>
+
+                <!-- Google Calendar Card (Coming Soon) -->
+                <div class="service-card disabled">
+                    <div class="service-card-header">
+                        <div class="service-icon">📅</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Google Calendar</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-badge">Coming Soon</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Manage your calendar. Your agent can read events, create meetings, and send invites.
+                    </p>
+                </div>
+
+                <!-- Google Drive Card (Coming Soon) -->
+                <div class="service-card disabled">
+                    <div class="service-card-header">
+                        <div class="service-icon">📁</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Google Drive</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-badge">Coming Soon</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Access your files. Your agent can read documents, create files, and organize folders.
+                    </p>
+                </div>
+
+                <!-- More services placeholder -->
+                <div style="margin-top: 32px; padding: 24px; text-align: center; background: rgba(99, 91, 255, 0.1); border-radius: 12px; border: 2px dashed rgba(99, 91, 255, 0.3);">
+                    <h4 style="margin: 0 0 8px 0;">More Services Coming Soon</h4>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
+                        Notion, Slack, GitHub, Shopify, and many more integrations are on the way!
+                    </p>
                 </div>
             </div>
 

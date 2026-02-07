@@ -3981,3 +3981,168 @@ Examples:
                 })
                 .catch(err => console.log('Not logged in'));
         });
+
+        // ========================================
+        // CONNECT TAB - SUPERPOWERS
+        // ========================================
+
+        // Load connected services on tab switch
+        const connectTab = document.querySelector('[data-tab="connect"]');
+        if (connectTab) {
+            connectTab.addEventListener('click', loadConnectedServices);
+        }
+
+        async function loadConnectedServices() {
+            try {
+                const response = await fetch('/api/superpowers/list');
+
+                if (response.status === 401) {
+                    return; // Not logged in
+                }
+
+                const data = await response.json();
+                const services = data.superpowers || [];
+
+                // Update connected services display
+                const connectedContainer = document.getElementById('connectedServices');
+                if (services.length === 0) {
+                    connectedContainer.innerHTML = `
+                        <div style="text-align: center; padding: 24px; color: var(--text-tertiary); grid-column: 1/-1;">
+                            No services connected yet. Connect your first service below!
+                        </div>
+                    `;
+                } else {
+                    connectedContainer.innerHTML = services.map(service => `
+                        <div class="connected-service-item">
+                            <div class="service-icon">${getServiceIcon(service.service_type)}</div>
+                            <div class="connected-service-details">
+                                <div class="connected-service-name">${service.service_name}</div>
+                                <div class="connected-service-time">
+                                    Connected ${formatTimeAgo(service.connected_at)}
+                                </div>
+                            </div>
+                            <button class="disconnect-btn" onclick="disconnectService(${service.id}, '${service.service_name}')">
+                                Disconnect
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                // Update Gmail status
+                const gmailService = services.find(s => s.service_type === 'gmail');
+                const gmailStatus = document.getElementById('gmail-status');
+                const gmailBtn = document.querySelector('.service-card[data-service="gmail"] .service-connect-btn');
+
+                if (gmailService && gmailService.is_enabled) {
+                    if (gmailStatus) gmailStatus.textContent = '✅ Connected';
+                    if (gmailStatus) gmailStatus.classList.add('connected');
+                    if (gmailBtn) gmailBtn.textContent = '⚙️ Manage Gmail';
+                    if (gmailBtn) gmailBtn.classList.add('connected');
+                } else {
+                    if (gmailStatus) gmailStatus.textContent = 'Not Connected';
+                    if (gmailStatus) gmailStatus.classList.remove('connected');
+                    if (gmailBtn) gmailBtn.textContent = '🚀 Connect Gmail';
+                    if (gmailBtn) gmailBtn.classList.remove('connected');
+                }
+
+            } catch (error) {
+                console.error('Error loading connected services:', error);
+            }
+        }
+
+        function getServiceIcon(serviceType) {
+            const icons = {
+                'gmail': '📧',
+                'calendar': '📅',
+                'drive': '📁',
+                'notion': '📝',
+                'slack': '💬',
+                'github': '🐙'
+            };
+            return icons[serviceType] || '🔌';
+        }
+
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return 'recently';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            return 'just now';
+        }
+
+        async function connectGmail() {
+            try {
+                // Start OAuth flow
+                const response = await fetch('/api/oauth/google/start/gmail');
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(`Error: ${data.error}\n${data.message || ''}`);
+                    return;
+                }
+
+                // Open OAuth window
+                const width = 600;
+                const height = 700;
+                const left = (screen.width - width) / 2;
+                const top = (screen.height - height) / 2;
+
+                const authWindow = window.open(
+                    data.authorization_url,
+                    'Google OAuth',
+                    `width=${width},height=${height},left=${left},top=${top}`
+                );
+
+                // Poll for window closure
+                const checkWindow = setInterval(() => {
+                    if (authWindow.closed) {
+                        clearInterval(checkWindow);
+                        // Reload connected services
+                        setTimeout(() => loadConnectedServices(), 1000);
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error('Error connecting Gmail:', error);
+                alert(`Failed to connect Gmail: ${error.message}`);
+            }
+        }
+
+        async function disconnectService(serviceId, serviceName) {
+            if (!confirm(`Disconnect ${serviceName}?\n\nYour agent will no longer have access to this service.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/superpowers/${serviceId}/disconnect`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`✅ ${serviceName} disconnected`);
+                    loadConnectedServices();
+                } else {
+                    alert(`❌ Failed to disconnect: ${data.error}`);
+                }
+
+            } catch (error) {
+                console.error('Error disconnecting service:', error);
+                alert(`Failed to disconnect: ${error.message}`);
+            }
+        }
+
+        // Handle OAuth callback redirect with tab parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam === 'connect') {
+            setTimeout(() => switchTab('connect'), 500);
+        }
