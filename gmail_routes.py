@@ -11,6 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import json
+import os
 
 
 def get_gmail_service(user_id):
@@ -34,12 +35,14 @@ def get_gmail_service(user_id):
         if not superpower.access_token_encrypted:
             return None, 'Gmail access token missing'
 
-        # Create credentials object
+        # Create credentials object with OAuth client info for token refresh
         # TODO: Decrypt tokens
         credentials = Credentials(
             token=superpower.access_token_encrypted,
             refresh_token=superpower.refresh_token_encrypted,
             token_uri='https://oauth2.googleapis.com/token',
+            client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
             scopes=json.loads(superpower.scopes_granted) if superpower.scopes_granted else []
         )
 
