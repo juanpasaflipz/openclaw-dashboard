@@ -17,11 +17,19 @@ def get_anthropic_client():
         api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return None, "ANTHROPIC_API_KEY not configured"
-        return anthropic.Anthropic(api_key=api_key), None
+
+        # Initialize client with minimal config to avoid proxy issues
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+        except TypeError as te:
+            # Handle version-specific initialization issues
+            client = anthropic.Client(api_key=api_key)
+
+        return client, None
     except ImportError:
         return None, "anthropic package not installed"
     except Exception as e:
-        return None, str(e)
+        return None, f"Anthropic client error: {str(e)}"
 
 
 def register_agent_actions_routes(app):
