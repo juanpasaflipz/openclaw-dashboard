@@ -8,10 +8,20 @@ from gmail_routes import get_gmail_service
 from datetime import datetime
 import json
 import os
-import anthropic
 
-# Initialize Anthropic client
-client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+
+def get_anthropic_client():
+    """Get Anthropic client (lazy initialization)"""
+    try:
+        import anthropic
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return None, "ANTHROPIC_API_KEY not configured"
+        return anthropic.Anthropic(api_key=api_key), None
+    except ImportError:
+        return None, "anthropic package not installed"
+    except Exception as e:
+        return None, str(e)
 
 
 def register_agent_actions_routes(app):
@@ -90,6 +100,11 @@ Provide:
 3. Suggested actions (reply needed, can archive, etc.)
 
 Format your response as JSON with keys: summary, urgent_items (array), suggested_actions (array)"""
+
+            # Get Anthropic client
+            client, error = get_anthropic_client()
+            if error:
+                return jsonify({'error': f'AI not configured: {error}'}), 500
 
             response = client.messages.create(
                 model="claude-sonnet-4-5-20250929",
@@ -186,6 +201,11 @@ Content: {email_data.get('snippet', '')}
 {f'Additional context: {context}' if context else ''}
 
 Write a clear, professional reply. Be concise and helpful."""
+
+            # Get Anthropic client
+            client, error = get_anthropic_client()
+            if error:
+                return jsonify({'error': f'AI not configured: {error}'}), 500
 
             response = client.messages.create(
                 model="claude-sonnet-4-5-20250929",
