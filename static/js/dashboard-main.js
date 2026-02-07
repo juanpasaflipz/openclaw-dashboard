@@ -4293,8 +4293,14 @@ Examples:
                         ${data.urgent_items && data.urgent_items.length > 0 ? `
                             <div style="margin-bottom: 16px;">
                                 <div style="font-weight: 600; color: #FFA500; margin-bottom: 8px;">⚠️ Urgent Items:</div>
-                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85);">
-                                    ${data.urgent_items.map(item => `<li>${typeof item === 'string' ? item : JSON.stringify(item)}</li>`).join('')}
+                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85); line-height: 1.6;">
+                                    ${data.urgent_items.map(item => {
+                                        if (typeof item === 'string') return `<li>${item}</li>`;
+                                        // Parse object and show in readable format
+                                        const subject = item.subject ? `<strong>${item.subject}</strong>` : '';
+                                        const reason = item.reason || item.description || '';
+                                        return `<li>${subject}${subject && reason ? ': ' : ''}${reason}</li>`;
+                                    }).join('')}
                                 </ul>
                             </div>
                         ` : ''}
@@ -4302,8 +4308,12 @@ Examples:
                         ${data.suggested_actions && data.suggested_actions.length > 0 ? `
                             <div>
                                 <div style="font-weight: 600; color: #4ADE80; margin-bottom: 8px;">💡 Suggested Actions:</div>
-                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85);">
-                                    ${data.suggested_actions.map(action => `<li>${typeof action === 'string' ? action : JSON.stringify(action)}</li>`).join('')}
+                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85); line-height: 1.6;">
+                                    ${data.suggested_actions.map(action => {
+                                        if (typeof action === 'string') return `<li>${action}</li>`;
+                                        // Parse object and show action text
+                                        return `<li>${action.action || action.description || JSON.stringify(action)}</li>`;
+                                    }).join('')}
                                 </ul>
                             </div>
                         ` : ''}
