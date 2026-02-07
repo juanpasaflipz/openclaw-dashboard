@@ -4102,10 +4102,14 @@ Examples:
 
                 // Poll for window closure
                 const checkWindow = setInterval(() => {
-                    if (authWindow.closed) {
-                        clearInterval(checkWindow);
-                        // Reload connected services
-                        setTimeout(() => loadConnectedServices(), 1000);
+                    try {
+                        if (authWindow.closed) {
+                            clearInterval(checkWindow);
+                            // Reload connected services
+                            setTimeout(() => loadConnectedServices(), 1000);
+                        }
+                    } catch (e) {
+                        // Ignore COOP errors from cross-origin popup
                     }
                 }, 500);
 
@@ -4146,3 +4150,195 @@ Examples:
         if (tabParam === 'connect') {
             setTimeout(() => switchTab('connect'), 500);
         }
+
+        // ============================================
+        // AI Agent Actions Functions
+        // ============================================
+
+        async function loadPendingActions() {
+            try {
+                const response = await fetch('/api/agent-actions/pending');
+                const data = await response.json();
+
+                const container = document.getElementById('pending-actions-container');
+                const badge = document.getElementById('pending-actions-badge');
+
+                if (!data.success || data.count === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">
+                            <div style="font-size: 48px; margin-bottom: 12px;">📬</div>
+                            <p>No pending actions</p>
+                        </div>
+                    `;
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                // Update badge
+                badge.textContent = data.count;
+                badge.style.display = 'inline-block';
+
+                // Render actions
+                container.innerHTML = data.actions.map(action => `
+                    <div class="action-card" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+                                    ${action.action_type === 'send_email' ? '📧 Send Email' : action.action_type}
+                                </div>
+                                <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">
+                                    ${action.agent ? action.agent.avatar_emoji + ' ' + action.agent.name : 'AI Agent'} • ${formatTimeAgo(action.created_at)}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-primary" onclick="approveAction(${action.id})" style="padding: 6px 12px; font-size: 13px;">
+                                    ✅ Approve
+                                </button>
+                                <button class="btn btn-secondary" onclick="rejectAction(${action.id})" style="padding: 6px 12px; font-size: 13px;">
+                                    ❌ Reject
+                                </button>
+                            </div>
+                        </div>
+
+                        ${action.ai_reasoning ? `
+                            <div style="padding: 12px; background: rgba(0, 0, 0, 0.2); border-radius: 6px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5); margin-bottom: 4px;">AI Reasoning:</div>
+                                <div style="color: rgba(255, 255, 255, 0.85); font-size: 14px;">${action.ai_reasoning}</div>
+                            </div>
+                        ` : ''}
+
+                        <div style="padding: 12px; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
+                            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5); margin-bottom: 8px;">Action Details:</div>
+                            ${action.action_type === 'send_email' ? `
+                                <div style="color: rgba(255, 255, 255, 0.85); font-size: 13px;">
+                                    <div><strong>To:</strong> ${action.action_data.to}</div>
+                                    <div><strong>Subject:</strong> ${action.action_data.subject}</div>
+                                    <div style="margin-top: 8px; white-space: pre-wrap;">${action.action_data.body}</div>
+                                </div>
+                            ` : JSON.stringify(action.action_data, null, 2)}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading pending actions:', error);
+            }
+        }
+
+        async function approveAction(actionId) {
+            if (!confirm('Approve this action? It will be executed immediately.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/agent-actions/${actionId}/approve`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Action approved and executed!');
+                    loadPendingActions();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error approving action:', error);
+                alert('Failed to approve action');
+            }
+        }
+
+        async function rejectAction(actionId) {
+            try {
+                const response = await fetch(`/api/agent-actions/${actionId}/reject`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('❌ Action rejected');
+                    loadPendingActions();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error rejecting action:', error);
+                alert('Failed to reject action');
+            }
+        }
+
+        async function analyzeInbox() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyzing...';
+
+            try {
+                const response = await fetch('/api/agent-actions/analyze-inbox', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const resultsDiv = document.getElementById('analysis-results');
+                    const contentDiv = document.getElementById('analysis-content');
+
+                    contentDiv.innerHTML = `
+                        <div style="color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; line-height: 1.6;">
+                            ${data.analysis}
+                        </div>
+
+                        ${data.urgent_items && data.urgent_items.length > 0 ? `
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-weight: 600; color: #FFA500; margin-bottom: 8px;">⚠️ Urgent Items:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85);">
+                                    ${data.urgent_items.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${data.suggested_actions && data.suggested_actions.length > 0 ? `
+                            <div>
+                                <div style="font-weight: 600; color: #4ADE80; margin-bottom: 8px;">💡 Suggested Actions:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.85);">
+                                    ${data.suggested_actions.map(action => `<li>${action}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <div style="margin-top: 12px; font-size: 12px; color: rgba(255, 255, 255, 0.5);">
+                            Analyzed ${data.emails_analyzed} recent emails
+                        </div>
+                    `;
+
+                    resultsDiv.style.display = 'block';
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error analyzing inbox:', error);
+                alert('Failed to analyze inbox');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📊 Analyze Inbox';
+            }
+        }
+
+        async function testDraftReply() {
+            // For demo, we'll use the first email from inbox
+            // In production, user would select an email first
+            alert('This feature requires selecting an email first. Coming soon!');
+        }
+
+        // Load pending actions when Actions tab is opened
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add listener to Actions tab
+            const actionsTab = document.querySelector('[data-tab="actions"]');
+            if (actionsTab) {
+                actionsTab.addEventListener('click', () => {
+                    loadPendingActions();
+                });
+            }
+        });

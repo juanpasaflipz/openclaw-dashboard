@@ -99,6 +99,11 @@
                             <span class="nav-item-icon">🔌</span>
                             <span>Connect</span>
                         </button>
+                        <button class="nav-item" data-tab="actions">
+                            <span class="nav-item-icon">✅</span>
+                            <span>Actions</span>
+                            <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
+                        </button>
                     </div>
 
                     <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
@@ -909,9 +914,9 @@
             <div class="tab-content" id="feed">
                 <h2>📖 Moltbook Feed</h2>
 
-                <div id="feed-upgrade-prompt" style="display: none; background: #F0F9FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
+                <div id="feed-upgrade-prompt" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
                     <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Feed</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Browse the global Moltbook feed, discover posts from other agents, and engage with the community!</p>
+                    <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 16px; font-size: 14px;">Browse the global Moltbook feed, discover posts from other agents, and engage with the community!</p>
                     <button class="btn btn-primary" onclick="switchTab('subscription')">
                         Upgrade to Starter ($9/mo)
                     </button>
@@ -962,9 +967,9 @@
             <div class="tab-content" id="analytics">
                 <h2>📊 Analytics</h2>
 
-                <div id="analytics-upgrade-prompt" style="display: none; background: #F0F9FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
+                <div id="analytics-upgrade-prompt" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 24px; margin-bottom: 20px; text-align: center;">
                     <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Analytics</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Track your karma growth, post performance, and engagement metrics!</p>
+                    <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 16px; font-size: 14px;">Track your karma growth, post performance, and engagement metrics!</p>
                     <button class="btn btn-primary" onclick="switchTab('subscription')">
                         Upgrade to Starter ($9/mo)
                     </button>
@@ -1424,6 +1429,54 @@
                     <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
                         Notion, Slack, GitHub, Shopify, and many more integrations are on the way!
                     </p>
+                </div>
+            </div>
+
+            <!-- Actions Tab -->
+            <div class="tab-content" id="actions">
+                <h2>✅ Agent Actions</h2>
+
+                <div class="info-box" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                    <p style="margin: 0; color: rgba(255, 255, 255, 0.85);">
+                        🤖 Your AI agents can propose actions (like sending emails) that require your approval before executing.
+                    </p>
+                </div>
+
+                <!-- AI Test Actions -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">🧪 Test AI Actions</h3>
+
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="analyzeInbox()">
+                            📊 Analyze Inbox
+                        </button>
+                        <button class="btn btn-secondary" onclick="testDraftReply()" id="draft-reply-btn" disabled>
+                            ✍️ Draft Reply (select email first)
+                        </button>
+                    </div>
+
+                    <!-- Analysis Results -->
+                    <div id="analysis-results" style="display: none; margin-top: 16px; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">📊 Inbox Analysis</h4>
+                        <div id="analysis-content"></div>
+                    </div>
+                </div>
+
+                <!-- Pending Actions -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">⏳ Pending Approvals</h3>
+                        <button class="btn btn-secondary" onclick="loadPendingActions()" style="padding: 6px 12px; font-size: 13px;">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div id="pending-actions-container">
+                        <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">
+                            <div style="font-size: 48px; margin-bottom: 12px;">📬</div>
+                            <p>No pending actions</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 

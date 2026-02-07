@@ -87,3 +87,5 @@ node_modules/
 *.tmp
 temp/
 tmp/
+.vercel
+.env*.local

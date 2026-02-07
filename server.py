@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction
 db.init_app(app)
 
 # Initialize rate limiter
@@ -103,6 +103,10 @@ register_oauth_routes(app)
 # Register Gmail routes
 from gmail_routes import register_gmail_routes
 register_gmail_routes(app)
+
+# Register AI Agent Actions routes
+from agent_actions_routes import register_agent_actions_routes
+register_agent_actions_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])

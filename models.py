@@ -455,3 +455,65 @@ class Superpower(db.Model):
 
     def __repr__(self):
         return f'<Superpower {self.service_type} for User {self.user_id}>'
+
+
+class AgentAction(db.Model):
+    """Approval queue for AI agent actions that require user consent"""
+    __tablename__ = 'agent_actions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    # Action details
+    action_type = db.Column(db.String(50), nullable=False, index=True)  # 'send_email', 'draft_reply', 'categorize', etc.
+    service_type = db.Column(db.String(50), nullable=False)  # 'gmail', 'google_calendar', etc.
+
+    # Action status
+    status = db.Column(db.String(20), default='pending', index=True)  # 'pending', 'approved', 'rejected', 'executed', 'failed'
+
+    # Payload (JSON)
+    action_data = db.Column(db.Text, nullable=False)  # JSON with action parameters (to, subject, body, etc.)
+
+    # AI context
+    ai_reasoning = db.Column(db.Text)  # Why the AI wants to take this action
+    ai_confidence = db.Column(db.Float)  # Confidence score 0-1
+
+    # Result tracking
+    result_data = db.Column(db.Text)  # JSON with execution results
+    error_message = db.Column(db.Text)  # Error if execution failed
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    approved_at = db.Column(db.DateTime)
+    executed_at = db.Column(db.DateTime)
+
+    # Relationships
+    user = db.relationship('User', backref='agent_actions')
+    agent = db.relationship('Agent', backref='agent_actions')
+
+    def __repr__(self):
+        return f'<AgentAction {self.action_type} ({self.status})>'
+
+    def to_dict(self):
+        """Convert action to dictionary for API responses"""
+        import json
+        return {
+            'id': self.id,
+            'action_type': self.action_type,
+            'service_type': self.service_type,
+            'status': self.status,
+            'action_data': json.loads(self.action_data) if self.action_data else {},
+            'ai_reasoning': self.ai_reasoning,
+            'ai_confidence': self.ai_confidence,
+            'result_data': json.loads(self.result_data) if self.result_data else {},
+            'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'approved_at': self.approved_at.isoformat() if self.approved_at else None,
+            'executed_at': self.executed_at.isoformat() if self.executed_at else None,
+            'agent': {
+                'id': self.agent.id,
+                'name': self.agent.name,
+                'avatar_emoji': self.agent.avatar_emoji
+            } if self.agent else None
+        }
