@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult
 db.init_app(app)
 
 # Initialize rate limiter
@@ -119,6 +119,22 @@ register_notion_routes(app)
 # Register AI Agent Actions routes
 from agent_actions_routes import register_agent_actions_routes
 register_agent_actions_routes(app)
+
+# Register AI Workbench routes
+from model_config_routes import register_model_config_routes
+register_model_config_routes(app)
+
+from external_agents_routes import register_external_agents_routes
+register_external_agents_routes(app)
+
+from chatbot_routes import register_chatbot_routes
+register_chatbot_routes(app)
+
+from web_browsing_routes import register_web_browsing_routes
+register_web_browsing_routes(app)
+
+from utility_routes import register_utility_routes
+register_utility_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])

@@ -109,6 +109,32 @@
                     <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
 
                     <div class="nav-section">
+                        <div class="nav-section-title">AI Workbench</div>
+                        <button class="nav-item" data-tab="chatbot">
+                            <span class="nav-item-icon">💬</span>
+                            <span>Chat Bot</span>
+                        </button>
+                        <button class="nav-item" data-tab="web-browse">
+                            <span class="nav-item-icon">🌐</span>
+                            <span>Web Browse</span>
+                        </button>
+                        <button class="nav-item" data-tab="utility">
+                            <span class="nav-item-icon">🧰</span>
+                            <span>Utility</span>
+                        </button>
+                        <button class="nav-item" data-tab="model-config">
+                            <span class="nav-item-icon">⚙️</span>
+                            <span>Model Config</span>
+                        </button>
+                        <button class="nav-item" data-tab="ext-agents">
+                            <span class="nav-item-icon">🐙</span>
+                            <span>Agents Hub</span>
+                        </button>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
+
+                    <div class="nav-section">
                         <button class="nav-item" data-tab="subscription">
                             <span class="nav-item-icon">💎</span>
                             <span>Subscription</span>
@@ -1560,11 +1586,324 @@
                     <button class="btn btn-primary" onclick="loadPreviews()">Refresh Previews</button>
                 </div>
             </div>
+            <!-- ========== CHAT BOT TAB ========== -->
+            <div class="tab-content" id="chatbot">
+                <h2>Chat Bot</h2>
+                <div class="chat-layout">
+                    <!-- Left: Conversation List -->
+                    <div class="chat-sidebar">
+                        <div class="chat-sidebar-header">
+                            <button class="btn btn-primary btn-sm" onclick="createNewConversation()" style="width:100%;">+ New Chat</button>
+                        </div>
+                        <div class="chat-agent-selector">
+                            <label style="font-size:11px; color:var(--text-tertiary);">Agent Mode</label>
+                            <select id="chat-agent-mode" onchange="onChatAgentModeChange()">
+                                <option value="direct_llm">Direct LLM</option>
+                                <option value="nautilus">Nautilus</option>
+                            </select>
+                        </div>
+                        <div id="chat-conversation-list" class="chat-conversation-list">
+                            <p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>
+                        </div>
+                    </div>
+                    <!-- Right: Chat Area -->
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <span id="chat-title" style="font-weight:600;">Select or create a conversation</span>
+                            <span id="chat-model-indicator" class="model-indicator" style="display:none;"></span>
+                        </div>
+                        <div id="chat-messages" class="chat-messages">
+                            <div class="chat-empty-state">
+                                <span style="font-size:48px;">💬</span>
+                                <p>Start a conversation by selecting Direct LLM or connecting to Nautilus</p>
+                            </div>
+                        </div>
+                        <div class="chat-input-bar">
+                            <textarea id="chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+                            <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="chatbot-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== WEB BROWSE TAB ========== -->
+            <div class="tab-content" id="web-browse">
+                <h2>Web Research</h2>
+                <div class="card">
+                    <h3>AI-Powered Research</h3>
+                    <p style="color:var(--text-secondary); margin-bottom:16px;">Ask a question and the AI will search the web, fetch relevant pages, and synthesize an answer with source citations.</p>
+                    <textarea id="browse-question" placeholder="What do you want to research? e.g., 'Latest developments in WebAssembly' or 'Best practices for Python async programming'" rows="3" style="width:100%;"></textarea>
+                    <div style="display:flex; gap:12px; margin-top:12px;">
+                        <button class="btn btn-primary" id="browse-research-btn" onclick="startResearch()">Research</button>
+                        <span id="browse-model-indicator" class="model-indicator" style="display:none;"></span>
+                    </div>
+                </div>
+
+                <div id="browse-progress" class="research-progress" style="display:none;">
+                    <div class="progress-step" id="step-searching"><span class="step-icon">🔍</span> Generating search queries...</div>
+                    <div class="progress-step" id="step-fetching"><span class="step-icon">📄</span> Fetching pages...</div>
+                    <div class="progress-step" id="step-analyzing"><span class="step-icon">🧠</span> Analyzing and synthesizing...</div>
+                </div>
+
+                <div id="browse-results" style="display:none;">
+                    <div class="card" style="margin-top:20px;">
+                        <h3>Summary</h3>
+                        <div id="browse-summary" class="browse-summary"></div>
+                    </div>
+                    <div class="card" style="margin-top:12px;">
+                        <h3>Sources</h3>
+                        <div id="browse-sources"></div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); margin:24px 0;"></div>
+
+                <div class="card">
+                    <h3>Fetch URL</h3>
+                    <p style="color:var(--text-secondary); margin-bottom:12px;">Extract text content from a specific URL.</p>
+                    <div style="display:flex; gap:12px;">
+                        <input type="url" id="browse-fetch-url" placeholder="https://example.com/article" style="flex:1;">
+                        <button class="btn btn-secondary" onclick="fetchSingleUrl()">Fetch</button>
+                    </div>
+                    <div id="browse-fetch-result" style="display:none; margin-top:12px;">
+                        <pre id="browse-fetch-content" style="max-height:300px; overflow-y:auto; padding:12px; background:var(--bg-color); border-radius:8px; font-size:12px; white-space:pre-wrap;"></pre>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <h3>Research History</h3>
+                    <div id="browse-history"></div>
+                </div>
+                <div id="web-browse-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== UTILITY TAB ========== -->
+            <div class="tab-content" id="utility">
+                <h2>Utility Tools</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">General-purpose AI tools — each with a specialized system prompt. Select a tool, type your request, and get results.</p>
+
+                <div id="utility-tools-grid" class="tools-grid">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 id="utility-tool-title">Select a tool above</h3>
+                        <span id="utility-model-indicator" class="model-indicator" style="display:none;"></span>
+                    </div>
+                    <textarea id="utility-input" placeholder="Select a tool to get started..." rows="4" style="width:100%;" disabled></textarea>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary" id="utility-run-btn" onclick="runUtility()" disabled>Run</button>
+                    </div>
+                </div>
+
+                <div id="utility-output-card" class="card" style="margin-top:16px; display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3>Output</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="copyUtilityOutput()">Copy</button>
+                    </div>
+                    <div id="utility-output" class="utility-output"></div>
+                </div>
+                <div id="utility-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== MODEL CONFIG TAB ========== -->
+            <div class="tab-content" id="model-config">
+                <h2>Model Configuration</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">Configure which LLM model powers each feature. BYO API key — all providers supported.</p>
+
+                <div class="grid-2" id="model-config-cards">
+                    <!-- Chat Bot Config Card -->
+                    <div class="card model-config-card" data-slot="chatbot">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">💬</span>
+                            <div>
+                                <h3 style="margin:0;">Chat Bot</h3>
+                                <p id="mc-chatbot-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('chatbot')">Configure</button>
+                    </div>
+
+                    <!-- Web Browsing Config Card -->
+                    <div class="card model-config-card" data-slot="web_browsing">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🌐</span>
+                            <div>
+                                <h3 style="margin:0;">Web Browsing</h3>
+                                <p id="mc-web_browsing-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('web_browsing')">Configure</button>
+                    </div>
+
+                    <!-- Utility Config Card -->
+                    <div class="card model-config-card" data-slot="utility">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🧰</span>
+                            <div>
+                                <h3 style="margin:0;">Utility</h3>
+                                <p id="mc-utility-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('utility')">Configure</button>
+                    </div>
+                </div>
+
+                <!-- Inline Config Form (shown when Configure is clicked) -->
+                <div id="model-config-form" class="card" style="display:none; margin-top:20px;">
+                    <h3 id="mc-form-title">Configure Model</h3>
+                    <input type="hidden" id="mc-feature-slot">
+
+                    <div class="grid-2" style="margin-top:16px;">
+                        <div>
+                            <label>Provider</label>
+                            <select id="mc-provider" onchange="onMCProviderChange()">
+                                <option value="">Select provider...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Model</label>
+                            <input type="text" id="mc-model" list="mc-model-suggestions" placeholder="Select or type model name">
+                            <datalist id="mc-model-suggestions"></datalist>
+                        </div>
+                    </div>
+
+                    <div id="mc-api-key-group" style="margin-top:12px;">
+                        <label>API Key</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="password" id="mc-api-key" placeholder="sk-..." style="flex:1;">
+                            <button class="btn btn-secondary btn-sm" onclick="togglePassword('mc-api-key')">Show</button>
+                        </div>
+                    </div>
+
+                    <div id="mc-endpoint-group" style="margin-top:12px; display:none;">
+                        <label>Endpoint URL</label>
+                        <input type="url" id="mc-endpoint-url" placeholder="https://api.example.com/v1/chat/completions">
+                    </div>
+
+                    <div class="grid-2" style="margin-top:12px;">
+                        <div>
+                            <label>Temperature: <span id="mc-temp-value">0.7</span></label>
+                            <input type="range" id="mc-temperature" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('mc-temp-value').textContent=this.value">
+                        </div>
+                        <div>
+                            <label>Max Tokens</label>
+                            <input type="number" id="mc-max-tokens" value="1024" min="1" max="128000">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:20px;">
+                        <button class="btn btn-primary" onclick="saveModelConfig()">Save</button>
+                        <button class="btn btn-secondary" id="mc-test-btn" onclick="testModelConfig()">Test Connection</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('model-config-form').style.display='none'">Cancel</button>
+                        <span id="mc-test-result" style="display:flex; align-items:center; font-size:13px;"></span>
+                    </div>
+                </div>
+                <div id="model-config-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== EXTERNAL AGENTS TAB ========== -->
+            <div class="tab-content" id="ext-agents">
+                <h2>Agents Hub</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">Connect external AI agents. Nautilus is the featured agent — connect via WebSocket for real-time chat with tools.</p>
+
+                <!-- Featured Agent: Nautilus -->
+                <div class="card featured-agent-card" id="nautilus-card">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+                        <span style="font-size:36px;">🐙</span>
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h3 style="margin:0;">Nautilus</h3>
+                                <span class="badge-featured">Featured</span>
+                                <span id="nautilus-status-dot" class="status-dot status-disconnected"></span>
+                            </div>
+                            <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">TypeScript ReAct agent with file-ops, bash, HTTP, web-search tools and 3-tier memory.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <label>WebSocket URL</label>
+                            <input type="text" id="nautilus-ws-url" value="ws://127.0.0.1:18789" placeholder="ws://host:port">
+                        </div>
+                        <div>
+                            <label>Auth Mode</label>
+                            <select id="nautilus-auth-mode" onchange="onNautilusAuthModeChange()">
+                                <option value="none">None</option>
+                                <option value="pairing">Pairing Token</option>
+                                <option value="password">Password</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="nautilus-auth-field" style="display:none; margin-top:12px;">
+                        <label id="nautilus-auth-label">Token</label>
+                        <input type="password" id="nautilus-auth-value" placeholder="Enter token or password">
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+                        <button class="btn btn-primary" id="nautilus-connect-btn" onclick="connectNautilus()">Connect</button>
+                        <button class="btn btn-secondary" id="nautilus-disconnect-btn" onclick="disconnectNautilus()" style="display:none;">Disconnect</button>
+                        <button class="btn btn-secondary" onclick="seedNautilus()">Reset Config</button>
+                        <span id="nautilus-connect-status" style="font-size:13px; color:var(--text-tertiary);"></span>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Your Agents</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="showAddAgentForm()">+ Add Agent</button>
+                </div>
+
+                <div id="external-agents-list" style="margin-top:12px;">
+                    <p style="color:var(--text-tertiary); font-size:13px;">No custom agents registered yet.</p>
+                </div>
+
+                <!-- Add Agent Form (hidden by default) -->
+                <div id="add-agent-form" class="card" style="display:none; margin-top:16px;">
+                    <h3>Register New Agent</h3>
+                    <div class="grid-2" style="margin-top:12px;">
+                        <div>
+                            <label>Name</label>
+                            <input type="text" id="new-agent-name" placeholder="Agent name">
+                        </div>
+                        <div>
+                            <label>Emoji</label>
+                            <input type="text" id="new-agent-emoji" placeholder="🤖" maxlength="4" style="width:60px;">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label>Description</label>
+                        <textarea id="new-agent-description" placeholder="What does this agent do?" rows="2"></textarea>
+                    </div>
+                    <div class="grid-2" style="margin-top:12px;">
+                        <div>
+                            <label>Type</label>
+                            <select id="new-agent-type">
+                                <option value="websocket">WebSocket</option>
+                                <option value="http_api">HTTP API</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Connection URL</label>
+                            <input type="text" id="new-agent-url" placeholder="ws://host:port or https://api.example.com">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-top:16px;">
+                        <button class="btn btn-primary" onclick="registerAgent()">Register</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('add-agent-form').style.display='none'">Cancel</button>
+                    </div>
+                </div>
+                <div id="ext-agents-alert" class="alert"></div>
+            </div>
+
                 </div> <!-- end content-wrapper -->
             </main> <!-- end main-content -->
         </div> <!-- end app-layout -->
     </div> <!-- end container -->
 
+    <script src="/static/js/nautilus-client.js"></script>
     <script src="/static/js/dashboard-main.js"></script>
 </body>
 </html>

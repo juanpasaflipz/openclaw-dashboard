@@ -517,3 +517,171 @@ class AgentAction(db.Model):
                 'avatar_emoji': self.agent.avatar_emoji
             } if self.agent else None
         }
+
+
+# ============================================
+# AI Workbench Models
+# ============================================
+
+class UserModelConfig(db.Model):
+    """Per-user, per-feature LLM configuration"""
+    __tablename__ = 'user_model_configs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    feature_slot = db.Column(db.String(50), nullable=False)  # 'chatbot', 'web_browsing', 'utility', or custom tool name
+
+    # LLM config
+    provider = db.Column(db.String(50), nullable=False)  # 'openai', 'anthropic', 'google', 'groq', etc.
+    model = db.Column(db.String(200), nullable=False)
+    api_key = db.Column(db.Text)  # Encrypted in production
+    endpoint_url = db.Column(db.String(500))  # Custom endpoint URL
+    extra_config = db.Column(db.JSON)  # {temperature, max_tokens, etc.}
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'feature_slot', name='_user_feature_uc'),)
+
+    user = db.relationship('User', backref='model_configs')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'feature_slot': self.feature_slot,
+            'provider': self.provider,
+            'model': self.model,
+            'has_api_key': bool(self.api_key),
+            'endpoint_url': self.endpoint_url,
+            'extra_config': self.extra_config or {},
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ChatConversation(db.Model):
+    """Chat conversation groupings"""
+    __tablename__ = 'chat_conversations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(255), default='New Chat')
+
+    # What feature/agent this conversation belongs to
+    feature = db.Column(db.String(50), default='chatbot')  # chatbot, web_browsing, utility, nautilus
+    agent_type = db.Column(db.String(50), default='direct_llm')  # direct_llm, nautilus, external
+    agent_id = db.Column(db.Integer, db.ForeignKey('external_agents.id'), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='chat_conversations')
+    messages = db.relationship('ChatMessage', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'conversation_id': self.conversation_id,
+            'title': self.title,
+            'feature': self.feature,
+            'agent_type': self.agent_type,
+            'agent_id': self.agent_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'message_count': self.messages.count(),
+        }
+
+
+class ChatMessage(db.Model):
+    """Individual chat messages"""
+    __tablename__ = 'chat_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.String(64), db.ForeignKey('chat_conversations.conversation_id'), nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False)  # user, assistant, system, tool
+    content = db.Column(db.Text, nullable=False)
+    metadata_json = db.Column(db.JSON)  # tool calls, model used, tokens, thinking content
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'role': self.role,
+            'content': self.content,
+            'metadata': self.metadata_json or {},
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ExternalAgent(db.Model):
+    """Third-party agent registrations"""
+    __tablename__ = 'external_agents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    avatar_emoji = db.Column(db.String(10), default='🤖')
+    avatar_url = db.Column(db.String(500))
+
+    agent_type = db.Column(db.String(50), nullable=False, default='websocket')  # websocket, http_api, marketplace
+    connection_url = db.Column(db.String(500))  # ws:// or https://
+    auth_config = db.Column(db.JSON)  # {mode: 'pairing'|'password'|'none', token, password}
+    agent_config = db.Column(db.JSON)  # {capabilities, default_model, persona}
+
+    is_featured = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    last_connected_at = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='external_agents')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'avatar_emoji': self.avatar_emoji,
+            'avatar_url': self.avatar_url,
+            'agent_type': self.agent_type,
+            'connection_url': self.connection_url,
+            'auth_config': {k: ('***' if k in ('token', 'password') else v) for k, v in (self.auth_config or {}).items()},
+            'agent_config': self.agent_config or {},
+            'is_featured': self.is_featured,
+            'is_active': self.is_active,
+            'last_connected_at': self.last_connected_at.isoformat() if self.last_connected_at else None,
+            'last_error': self.last_error,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WebBrowsingResult(db.Model):
+    """Web browsing/research history and cache"""
+    __tablename__ = 'web_browsing_results'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    conversation_id = db.Column(db.String(64), nullable=True)  # Links to chat if triggered from there
+
+    query = db.Column(db.Text, nullable=False)
+    urls_fetched = db.Column(db.JSON)  # List of URLs fetched
+    extracted_content = db.Column(db.Text)  # Raw extracted text
+    ai_summary = db.Column(db.Text)  # AI-generated summary
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='web_browsing_results')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'query': self.query,
+            'urls_fetched': self.urls_fetched or [],
+            'ai_summary': self.ai_summary,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

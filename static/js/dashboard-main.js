@@ -68,6 +68,23 @@
             if (tabName === 'analytics') {
                 initAnalyticsTab();
             }
+
+            // AI Workbench tabs
+            if (tabName === 'chatbot') {
+                initChatTab();
+            }
+            if (tabName === 'web-browse') {
+                initWebBrowseTab();
+            }
+            if (tabName === 'utility') {
+                initUtilityTab();
+            }
+            if (tabName === 'model-config') {
+                initModelConfigTab();
+            }
+            if (tabName === 'ext-agents') {
+                initExtAgentsTab();
+            }
         }
 
         // LLM Provider Selection
@@ -4398,3 +4415,946 @@ Examples:
                 });
             }
         });
+
+
+        // ============================================
+        // AI WORKBENCH — Model Config
+        // ============================================
+        let mcProviders = [];
+        let mcConfigs = {};
+
+        async function initModelConfigTab() {
+            // Load providers list
+            if (mcProviders.length === 0) {
+                try {
+                    const resp = await fetch(`${API_BASE}/model-config/providers`);
+                    const data = await resp.json();
+                    mcProviders = data.providers || [];
+                    populateMCProviderDropdown();
+                } catch (e) { console.error('Failed to load providers:', e); }
+            }
+            // Load saved configs
+            try {
+                const resp = await fetch(`${API_BASE}/model-config`, { credentials: 'include' });
+                const data = await resp.json();
+                mcConfigs = {};
+                (data.configs || []).forEach(c => { mcConfigs[c.feature_slot] = c; });
+                updateModelConfigCards();
+            } catch (e) { console.error('Failed to load model configs:', e); }
+        }
+
+        function populateMCProviderDropdown() {
+            const sel = document.getElementById('mc-provider');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Select provider...</option>';
+            mcProviders.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+        }
+
+        function updateModelConfigCards() {
+            ['chatbot', 'web_browsing', 'utility'].forEach(slot => {
+                const el = document.getElementById(`mc-${slot}-status`);
+                if (!el) return;
+                const cfg = mcConfigs[slot];
+                if (cfg) {
+                    el.textContent = `${cfg.provider} / ${cfg.model}`;
+                    el.classList.add('configured');
+                } else {
+                    el.textContent = 'Not configured';
+                    el.classList.remove('configured');
+                }
+            });
+        }
+
+        function openModelConfigForm(slot) {
+            document.getElementById('model-config-form').style.display = 'block';
+            document.getElementById('mc-feature-slot').value = slot;
+            document.getElementById('mc-form-title').textContent = `Configure Model — ${slot.replace('_', ' ')}`;
+            document.getElementById('mc-test-result').textContent = '';
+
+            // Pre-fill if config exists
+            const cfg = mcConfigs[slot];
+            if (cfg) {
+                document.getElementById('mc-provider').value = cfg.provider;
+                onMCProviderChange();
+                document.getElementById('mc-model').value = cfg.model;
+                document.getElementById('mc-endpoint-url').value = cfg.endpoint_url || '';
+                const extra = cfg.extra_config || {};
+                document.getElementById('mc-temperature').value = extra.temperature || 0.7;
+                document.getElementById('mc-temp-value').textContent = extra.temperature || 0.7;
+                document.getElementById('mc-max-tokens').value = extra.max_tokens || 1024;
+                // Don't pre-fill API key for security — it's masked
+                document.getElementById('mc-api-key').value = '';
+                document.getElementById('mc-api-key').placeholder = cfg.has_api_key ? '(saved — enter new to change)' : 'sk-...';
+            } else {
+                document.getElementById('mc-provider').value = '';
+                document.getElementById('mc-model').value = '';
+                document.getElementById('mc-api-key').value = '';
+                document.getElementById('mc-api-key').placeholder = 'sk-...';
+                document.getElementById('mc-endpoint-url').value = '';
+                document.getElementById('mc-temperature').value = 0.7;
+                document.getElementById('mc-temp-value').textContent = '0.7';
+                document.getElementById('mc-max-tokens').value = 1024;
+            }
+        }
+
+        function onMCProviderChange() {
+            const provider = document.getElementById('mc-provider').value;
+            const pInfo = mcProviders.find(p => p.id === provider);
+
+            // Show/hide API key
+            const keyGroup = document.getElementById('mc-api-key-group');
+            keyGroup.style.display = (pInfo && !pInfo.needs_api_key) ? 'none' : 'block';
+
+            // Show/hide endpoint URL
+            const urlGroup = document.getElementById('mc-endpoint-group');
+            urlGroup.style.display = (pInfo && pInfo.needs_endpoint_url) ? 'block' : 'none';
+            if (pInfo && pInfo.default_endpoint) {
+                document.getElementById('mc-endpoint-url').placeholder = pInfo.default_endpoint;
+            }
+
+            // Update model suggestions
+            const suggestions = document.getElementById('mc-model-suggestions');
+            suggestions.innerHTML = '';
+            if (pInfo) {
+                pInfo.models.forEach(m => {
+                    suggestions.innerHTML += `<option value="${m}">`;
+                });
+            }
+        }
+
+        async function saveModelConfig() {
+            const slot = document.getElementById('mc-feature-slot').value;
+            const payload = {
+                provider: document.getElementById('mc-provider').value,
+                model: document.getElementById('mc-model').value,
+                api_key: document.getElementById('mc-api-key').value,
+                endpoint_url: document.getElementById('mc-endpoint-url').value,
+                extra_config: {
+                    temperature: parseFloat(document.getElementById('mc-temperature').value),
+                    max_tokens: parseInt(document.getElementById('mc-max-tokens').value),
+                },
+            };
+
+            try {
+                const resp = await fetch(`${API_BASE}/model-config/${slot}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    mcConfigs[slot] = data.config;
+                    updateModelConfigCards();
+                    showAlert('model-config', 'success', 'Model configuration saved!');
+                    document.getElementById('model-config-form').style.display = 'none';
+                } else {
+                    showAlert('model-config', 'error', data.error || 'Failed to save');
+                }
+            } catch (e) {
+                showAlert('model-config', 'error', 'Network error: ' + e.message);
+            }
+        }
+
+        async function testModelConfig() {
+            const slot = document.getElementById('mc-feature-slot').value;
+            const payload = {
+                provider: document.getElementById('mc-provider').value,
+                model: document.getElementById('mc-model').value,
+                api_key: document.getElementById('mc-api-key').value,
+                endpoint_url: document.getElementById('mc-endpoint-url').value,
+            };
+            const resultEl = document.getElementById('mc-test-result');
+            resultEl.textContent = 'Testing...';
+            resultEl.style.color = 'var(--text-tertiary)';
+
+            try {
+                const resp = await fetch(`${API_BASE}/model-config/${slot}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                resultEl.textContent = data.message;
+                resultEl.style.color = data.success ? 'var(--success)' : 'var(--error)';
+            } catch (e) {
+                resultEl.textContent = 'Network error';
+                resultEl.style.color = 'var(--error)';
+            }
+        }
+
+
+        // ============================================
+        // AI WORKBENCH — External Agents
+        // ============================================
+        let nautilusClient = null;
+        let extAgents = [];
+
+        async function initExtAgentsTab() {
+            await loadExtAgents();
+        }
+
+        async function loadExtAgents() {
+            try {
+                const resp = await fetch(`${API_BASE}/external-agents`, { credentials: 'include' });
+                const data = await resp.json();
+                extAgents = data.agents || [];
+                renderExtAgents();
+            } catch (e) { console.error('Failed to load agents:', e); }
+        }
+
+        function renderExtAgents() {
+            const list = document.getElementById('external-agents-list');
+            if (!list) return;
+            const nonFeatured = extAgents.filter(a => !a.is_featured);
+            if (nonFeatured.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-tertiary); font-size:13px;">No custom agents registered yet.</p>';
+                return;
+            }
+            list.innerHTML = nonFeatured.map(a => `
+                <div class="agent-card">
+                    <span style="font-size:24px;">${a.avatar_emoji || '🤖'}</span>
+                    <div class="agent-info">
+                        <h4>${a.name}</h4>
+                        <p>${a.agent_type} — ${a.connection_url || 'No URL'}</p>
+                    </div>
+                    <div class="agent-actions-btns">
+                        <button class="btn btn-secondary btn-sm" onclick="testExtAgent(${a.id})">Test</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteExtAgent(${a.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddAgentForm() {
+            document.getElementById('add-agent-form').style.display = 'block';
+        }
+
+        async function registerAgent() {
+            const payload = {
+                name: document.getElementById('new-agent-name').value,
+                avatar_emoji: document.getElementById('new-agent-emoji').value || '🤖',
+                description: document.getElementById('new-agent-description').value,
+                agent_type: document.getElementById('new-agent-type').value,
+                connection_url: document.getElementById('new-agent-url').value,
+            };
+            try {
+                const resp = await fetch(`${API_BASE}/external-agents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showAlert('ext-agents', 'success', `Agent "${payload.name}" registered!`);
+                    document.getElementById('add-agent-form').style.display = 'none';
+                    await loadExtAgents();
+                } else {
+                    showAlert('ext-agents', 'error', data.error || 'Failed to register');
+                }
+            } catch (e) {
+                showAlert('ext-agents', 'error', 'Network error: ' + e.message);
+            }
+        }
+
+        async function deleteExtAgent(agentId) {
+            if (!confirm('Delete this agent?')) return;
+            try {
+                await fetch(`${API_BASE}/external-agents/${agentId}`, { method: 'DELETE', credentials: 'include' });
+                await loadExtAgents();
+            } catch (e) { console.error(e); }
+        }
+
+        async function testExtAgent(agentId) {
+            try {
+                const resp = await fetch(`${API_BASE}/external-agents/${agentId}/test`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const data = await resp.json();
+                showAlert('ext-agents', data.success ? 'success' : 'error', data.message);
+            } catch (e) {
+                showAlert('ext-agents', 'error', 'Network error');
+            }
+        }
+
+        async function seedNautilus() {
+            try {
+                const resp = await fetch(`${API_BASE}/external-agents/seed-nautilus`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showAlert('ext-agents', 'success', data.already_exists ? 'Nautilus config reset.' : 'Nautilus seeded as featured agent!');
+                    await loadExtAgents();
+                }
+            } catch (e) {
+                showAlert('ext-agents', 'error', 'Network error');
+            }
+        }
+
+        function onNautilusAuthModeChange() {
+            const mode = document.getElementById('nautilus-auth-mode').value;
+            const field = document.getElementById('nautilus-auth-field');
+            const label = document.getElementById('nautilus-auth-label');
+            if (mode === 'none') {
+                field.style.display = 'none';
+            } else {
+                field.style.display = 'block';
+                label.textContent = mode === 'pairing' ? 'Pairing Token' : 'Password';
+            }
+        }
+
+        async function connectNautilus() {
+            const wsUrl = document.getElementById('nautilus-ws-url').value;
+            const authMode = document.getElementById('nautilus-auth-mode').value;
+            const authValue = document.getElementById('nautilus-auth-value').value;
+            const statusEl = document.getElementById('nautilus-connect-status');
+            const dot = document.getElementById('nautilus-status-dot');
+
+            statusEl.textContent = 'Connecting...';
+            statusEl.style.color = 'var(--text-tertiary)';
+
+            if (nautilusClient) {
+                nautilusClient.disconnect();
+            }
+
+            nautilusClient = new NautilusClient();
+
+            nautilusClient.onConnect = () => {
+                statusEl.textContent = 'Connected';
+                statusEl.style.color = 'var(--success)';
+                dot.className = 'status-dot status-connected';
+                document.getElementById('nautilus-connect-btn').style.display = 'none';
+                document.getElementById('nautilus-disconnect-btn').style.display = 'inline-flex';
+                // Update agent status in DB
+                const nautAgent = extAgents.find(a => a.name === 'Nautilus');
+                if (nautAgent) {
+                    fetch(`${API_BASE}/external-agents/${nautAgent.id}/update-status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ connected: true }),
+                    }).catch(() => {});
+                }
+                // Populate Nautilus option in chat agent selector
+                updateChatAgentOptions();
+            };
+
+            nautilusClient.onDisconnect = (info) => {
+                statusEl.textContent = `Disconnected${info.reason ? ': ' + info.reason : ''}`;
+                statusEl.style.color = 'var(--error)';
+                dot.className = 'status-dot status-disconnected';
+                document.getElementById('nautilus-connect-btn').style.display = 'inline-flex';
+                document.getElementById('nautilus-disconnect-btn').style.display = 'none';
+            };
+
+            nautilusClient.onError = (err) => {
+                statusEl.textContent = `Error: ${err.message}`;
+                statusEl.style.color = 'var(--error)';
+            };
+
+            nautilusClient.onAuthResult = (result) => {
+                if (!result.success) {
+                    statusEl.textContent = `Auth failed: ${result.message || 'unknown'}`;
+                    statusEl.style.color = 'var(--error)';
+                }
+            };
+
+            const authConfig = { mode: authMode };
+            if (authMode === 'pairing') authConfig.token = authValue;
+            if (authMode === 'password') authConfig.password = authValue;
+
+            try {
+                await nautilusClient.connect(wsUrl, authConfig);
+            } catch (e) {
+                statusEl.textContent = 'Failed to connect: ' + (e.message || 'WebSocket error');
+                statusEl.style.color = 'var(--error)';
+            }
+        }
+
+        function disconnectNautilus() {
+            if (nautilusClient) {
+                nautilusClient.disconnect();
+                nautilusClient = null;
+            }
+        }
+
+        function updateChatAgentOptions() {
+            const sel = document.getElementById('chat-agent-mode');
+            if (!sel) return;
+            // Keep existing options, add external agents
+            const existingValues = Array.from(sel.options).map(o => o.value);
+            extAgents.filter(a => !a.is_featured && a.agent_type === 'http_api').forEach(a => {
+                if (!existingValues.includes('ext_' + a.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = 'ext_' + a.id;
+                    opt.textContent = a.name;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+
+        // ============================================
+        // AI WORKBENCH — Chat Bot
+        // ============================================
+        let chatConversations = [];
+        let activeConversationId = null;
+        let chatInitialized = false;
+
+        async function initChatTab() {
+            if (!chatInitialized) {
+                chatInitialized = true;
+                // Show model config indicator
+                const cfg = mcConfigs['chatbot'];
+                const indicator = document.getElementById('chat-model-indicator');
+                if (cfg && indicator) {
+                    indicator.textContent = `${cfg.provider}/${cfg.model}`;
+                    indicator.style.display = 'inline';
+                }
+            }
+            await loadConversations();
+        }
+
+        async function loadConversations() {
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations`, { credentials: 'include' });
+                const data = await resp.json();
+                chatConversations = data.conversations || [];
+                renderConversationList();
+            } catch (e) { console.error('Failed to load conversations:', e); }
+        }
+
+        function renderConversationList() {
+            const list = document.getElementById('chat-conversation-list');
+            if (!list) return;
+            if (chatConversations.length === 0) {
+                list.innerHTML = '<p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>';
+                return;
+            }
+            list.innerHTML = chatConversations.map(c => `
+                <div class="chat-conversation-item ${c.conversation_id === activeConversationId ? 'active' : ''}"
+                     onclick="selectConversation('${c.conversation_id}')">
+                    <span class="conv-title">${c.title}</span>
+                    <span class="conv-delete" onclick="event.stopPropagation(); deleteConversation('${c.conversation_id}')">x</span>
+                </div>
+            `).join('');
+        }
+
+        async function createNewConversation() {
+            const mode = document.getElementById('chat-agent-mode').value;
+            const agentType = mode === 'nautilus' ? 'nautilus' : (mode.startsWith('ext_') ? 'external' : 'direct_llm');
+
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        title: 'New Chat',
+                        feature: 'chatbot',
+                        agent_type: agentType,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    chatConversations.unshift(data.conversation);
+                    selectConversation(data.conversation.conversation_id);
+                    renderConversationList();
+                }
+            } catch (e) {
+                showAlert('chatbot', 'error', 'Failed to create conversation');
+            }
+        }
+
+        async function selectConversation(convId) {
+            activeConversationId = convId;
+            renderConversationList();
+
+            const conv = chatConversations.find(c => c.conversation_id === convId);
+            document.getElementById('chat-title').textContent = conv ? conv.title : 'Chat';
+
+            // Load messages
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations/${convId}/messages`, { credentials: 'include' });
+                const data = await resp.json();
+                renderChatMessages(data.messages || []);
+            } catch (e) {
+                console.error('Failed to load messages:', e);
+            }
+
+            // If Nautilus mode, set up WebSocket handlers for this conversation
+            const mode = document.getElementById('chat-agent-mode').value;
+            if (mode === 'nautilus' && nautilusClient && nautilusClient.connected) {
+                setupNautilusChatHandlers();
+            }
+        }
+
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="chat-empty-state">
+                        <span style="font-size:48px;">💬</span>
+                        <p>Send a message to start chatting</p>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = messages.map(m => {
+                if (m.metadata && m.metadata.tool_name) {
+                    return renderToolCard(m);
+                }
+                return `<div class="chat-bubble ${m.role}">${escapeHtml(m.content)}</div>`;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderToolCard(msg) {
+            const meta = msg.metadata || {};
+            return `
+                <div class="tool-card">
+                    <div class="tool-card-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <span>🔧</span> ${meta.tool_name || 'Tool'} <span style="font-size:10px; color:var(--text-tertiary);">(click to expand)</span>
+                    </div>
+                    <div class="tool-card-body">
+                        ${meta.tool_input ? `<div><strong>Input:</strong><pre>${escapeHtml(JSON.stringify(meta.tool_input, null, 2))}</pre></div>` : ''}
+                        ${msg.content ? `<div><strong>Output:</strong><pre>${escapeHtml(msg.content)}</pre></div>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function appendChatBubble(role, content, metadata) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            // Remove empty state if present
+            const empty = container.querySelector('.chat-empty-state');
+            if (empty) empty.remove();
+
+            if (metadata && metadata.tool_name) {
+                container.innerHTML += renderToolCard({ content, metadata });
+            } else {
+                container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+            }
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showThinkingIndicator() {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            // Remove any existing
+            const existing = container.querySelector('.thinking-indicator');
+            if (existing) existing.remove();
+            container.innerHTML += `
+                <div class="thinking-indicator">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    Agent is thinking...
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideThinkingIndicator() {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            const el = container.querySelector('.thinking-indicator');
+            if (el) el.remove();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = (input.value || '').trim();
+            if (!text || !activeConversationId) return;
+            input.value = '';
+
+            const mode = document.getElementById('chat-agent-mode').value;
+
+            // Show user message immediately
+            appendChatBubble('user', text);
+
+            if (mode === 'direct_llm') {
+                // Direct LLM mode — send through Flask
+                showThinkingIndicator();
+                try {
+                    const resp = await fetch(`${API_BASE}/chat/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            conversation_id: activeConversationId,
+                            message: text,
+                            feature_slot: 'chatbot',
+                        }),
+                    });
+                    const data = await resp.json();
+                    hideThinkingIndicator();
+                    if (data.success) {
+                        appendChatBubble('assistant', data.message.content);
+                    } else {
+                        appendChatBubble('system', 'Error: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    hideThinkingIndicator();
+                    appendChatBubble('system', 'Network error: ' + e.message);
+                }
+                // Refresh conversation list (title may have changed)
+                loadConversations();
+
+            } else if (mode === 'nautilus') {
+                // Nautilus WebSocket mode
+                if (!nautilusClient || !nautilusClient.connected) {
+                    appendChatBubble('system', 'Nautilus is not connected. Go to Agents Hub to connect.');
+                    return;
+                }
+                // Save user message to DB
+                saveChatMessages([{ role: 'user', content: text }]);
+                // Send to Nautilus
+                nautilusClient.sendMessage(nautilusClient.sessionId, text);
+                showThinkingIndicator();
+            }
+        }
+
+        function setupNautilusChatHandlers() {
+            if (!nautilusClient) return;
+
+            nautilusClient.onMessage = (msg) => {
+                hideThinkingIndicator();
+                appendChatBubble(msg.role || 'assistant', msg.content);
+                // Save to DB
+                saveChatMessages([{ role: msg.role || 'assistant', content: msg.content, metadata: msg.metadata }]);
+            };
+
+            nautilusClient.onThinking = () => {
+                showThinkingIndicator();
+            };
+
+            nautilusClient.onToolUse = (tool) => {
+                hideThinkingIndicator();
+                const content = tool.output ? JSON.stringify(tool.output) : 'Running...';
+                appendChatBubble('tool', content, { tool_name: tool.tool, tool_input: tool.input });
+                if (tool.status === 'completed') {
+                    saveChatMessages([{
+                        role: 'tool',
+                        content: content,
+                        metadata: { tool_name: tool.tool, tool_input: tool.input },
+                    }]);
+                }
+                if (tool.needsApproval) {
+                    // Show approval dialog
+                    if (confirm(`Nautilus wants to use tool "${tool.tool}". Allow?`)) {
+                        nautilusClient.approveToolUse(tool.requestId);
+                    } else {
+                        nautilusClient.denyToolUse(tool.requestId);
+                    }
+                }
+            };
+
+            nautilusClient.onError = (err) => {
+                hideThinkingIndicator();
+                appendChatBubble('system', 'Error: ' + err.message);
+            };
+
+            // Create a session if none exists
+            if (!nautilusClient.sessionId) {
+                nautilusClient.createSession({ conversation_id: activeConversationId });
+            }
+        }
+
+        async function saveChatMessages(messages) {
+            if (!activeConversationId) return;
+            try {
+                await fetch(`${API_BASE}/chat/messages/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        conversation_id: activeConversationId,
+                        messages: messages,
+                    }),
+                });
+            } catch (e) { console.error('Failed to save messages:', e); }
+        }
+
+        async function deleteConversation(convId) {
+            if (!confirm('Delete this conversation?')) return;
+            try {
+                await fetch(`${API_BASE}/chat/conversations/${convId}`, { method: 'DELETE', credentials: 'include' });
+                chatConversations = chatConversations.filter(c => c.conversation_id !== convId);
+                if (activeConversationId === convId) {
+                    activeConversationId = null;
+                    document.getElementById('chat-messages').innerHTML = `
+                        <div class="chat-empty-state">
+                            <span style="font-size:48px;">💬</span>
+                            <p>Select or create a conversation</p>
+                        </div>`;
+                    document.getElementById('chat-title').textContent = 'Select or create a conversation';
+                }
+                renderConversationList();
+            } catch (e) { console.error(e); }
+        }
+
+        function onChatAgentModeChange() {
+            const mode = document.getElementById('chat-agent-mode').value;
+            const indicator = document.getElementById('chat-model-indicator');
+            if (mode === 'direct_llm') {
+                const cfg = mcConfigs['chatbot'];
+                if (cfg && indicator) {
+                    indicator.textContent = `${cfg.provider}/${cfg.model}`;
+                    indicator.style.display = 'inline';
+                }
+            } else if (mode === 'nautilus') {
+                if (indicator) {
+                    indicator.textContent = 'Nautilus';
+                    indicator.style.display = 'inline';
+                }
+                if (nautilusClient && nautilusClient.connected && activeConversationId) {
+                    setupNautilusChatHandlers();
+                }
+            }
+        }
+
+
+        // ============================================
+        // AI WORKBENCH — Web Browse
+        // ============================================
+        let browseInitialized = false;
+
+        async function initWebBrowseTab() {
+            if (!browseInitialized) {
+                browseInitialized = true;
+                const cfg = mcConfigs['web_browsing'];
+                const indicator = document.getElementById('browse-model-indicator');
+                if (cfg && indicator) {
+                    indicator.textContent = `${cfg.provider}/${cfg.model}`;
+                    indicator.style.display = 'inline';
+                }
+                await loadBrowseHistory();
+            }
+        }
+
+        async function startResearch() {
+            const question = document.getElementById('browse-question').value.trim();
+            if (!question) return;
+
+            const progress = document.getElementById('browse-progress');
+            const results = document.getElementById('browse-results');
+            const btn = document.getElementById('browse-research-btn');
+
+            progress.style.display = 'block';
+            results.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Researching...';
+
+            // Animate progress steps
+            const steps = ['step-searching', 'step-fetching', 'step-analyzing'];
+            steps.forEach(s => {
+                document.getElementById(s).className = 'progress-step';
+            });
+            document.getElementById('step-searching').classList.add('active');
+
+            try {
+                // Start a timer to animate progress
+                setTimeout(() => {
+                    document.getElementById('step-searching').classList.remove('active');
+                    document.getElementById('step-searching').classList.add('done');
+                    document.getElementById('step-fetching').classList.add('active');
+                }, 2000);
+                setTimeout(() => {
+                    document.getElementById('step-fetching').classList.remove('active');
+                    document.getElementById('step-fetching').classList.add('done');
+                    document.getElementById('step-analyzing').classList.add('active');
+                }, 5000);
+
+                const resp = await fetch(`${API_BASE}/browse/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ question }),
+                });
+                const data = await resp.json();
+
+                steps.forEach(s => {
+                    const el = document.getElementById(s);
+                    el.classList.remove('active');
+                    el.classList.add('done');
+                });
+
+                if (data.success) {
+                    document.getElementById('browse-summary').textContent = data.summary;
+
+                    const sourcesEl = document.getElementById('browse-sources');
+                    sourcesEl.innerHTML = (data.sources || []).map((s, i) =>
+                        `<div style="margin:6px 0;">
+                            <a href="${s.url}" target="_blank" rel="noopener" style="color:var(--secondary); text-decoration:none;">
+                                [${i+1}] ${s.title || s.url}
+                            </a>
+                        </div>`
+                    ).join('');
+
+                    results.style.display = 'block';
+                } else {
+                    showAlert('web-browse', 'error', data.error || 'Research failed');
+                }
+            } catch (e) {
+                showAlert('web-browse', 'error', 'Network error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Research';
+                setTimeout(() => { progress.style.display = 'none'; }, 1000);
+            }
+        }
+
+        async function fetchSingleUrl() {
+            const url = document.getElementById('browse-fetch-url').value.trim();
+            if (!url) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/browse/fetch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ url }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('browse-fetch-content').textContent = data.content;
+                    document.getElementById('browse-fetch-result').style.display = 'block';
+                } else {
+                    showAlert('web-browse', 'error', data.error || 'Failed to fetch');
+                }
+            } catch (e) {
+                showAlert('web-browse', 'error', 'Network error');
+            }
+        }
+
+        async function loadBrowseHistory() {
+            try {
+                const resp = await fetch(`${API_BASE}/browse/history`, { credentials: 'include' });
+                const data = await resp.json();
+                const historyEl = document.getElementById('browse-history');
+                if (!historyEl) return;
+                const results = data.results || [];
+                if (results.length === 0) {
+                    historyEl.innerHTML = '<p style="color:var(--text-tertiary); font-size:13px;">No research history yet.</p>';
+                    return;
+                }
+                historyEl.innerHTML = results.map(r => `
+                    <div class="card" style="margin-bottom:8px; cursor:pointer;" onclick="this.querySelector('.hist-body').classList.toggle('open')">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong style="font-size:13px;">${escapeHtml(r.query)}</strong>
+                            <span style="font-size:11px; color:var(--text-tertiary);">${new Date(r.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div class="hist-body tool-card-body" style="margin-top:8px;">
+                            <p style="font-size:13px; white-space:pre-wrap;">${escapeHtml(r.ai_summary || '').substring(0, 300)}...</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+
+        // ============================================
+        // AI WORKBENCH — Utility
+        // ============================================
+        let utilityTools = [];
+        let selectedUtilityTool = null;
+        let utilityInitialized = false;
+
+        async function initUtilityTab() {
+            if (!utilityInitialized) {
+                utilityInitialized = true;
+                try {
+                    const resp = await fetch(`${API_BASE}/utility/tools`);
+                    const data = await resp.json();
+                    utilityTools = data.tools || [];
+                    renderUtilityTools();
+                } catch (e) { console.error('Failed to load utility tools:', e); }
+
+                const cfg = mcConfigs['utility'];
+                const indicator = document.getElementById('utility-model-indicator');
+                if (cfg && indicator) {
+                    indicator.textContent = `${cfg.provider}/${cfg.model}`;
+                    indicator.style.display = 'inline';
+                }
+            }
+        }
+
+        function renderUtilityTools() {
+            const grid = document.getElementById('utility-tools-grid');
+            if (!grid) return;
+            grid.innerHTML = utilityTools.map(t => `
+                <div class="tool-select-card ${selectedUtilityTool === t.id ? 'selected' : ''}"
+                     onclick="selectUtilityTool('${t.id}')">
+                    <div class="tool-emoji">${t.emoji}</div>
+                    <div class="tool-name">${t.name}</div>
+                    <div class="tool-desc">${t.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectUtilityTool(toolId) {
+            selectedUtilityTool = toolId;
+            const tool = utilityTools.find(t => t.id === toolId);
+            renderUtilityTools();
+
+            document.getElementById('utility-tool-title').textContent = tool ? tool.name : 'Select a tool';
+            const input = document.getElementById('utility-input');
+            input.disabled = false;
+            input.placeholder = tool ? tool.placeholder : 'Select a tool...';
+
+            document.getElementById('utility-run-btn').disabled = false;
+        }
+
+        async function runUtility() {
+            if (!selectedUtilityTool) return;
+            const prompt = document.getElementById('utility-input').value.trim();
+            if (!prompt) return;
+
+            const btn = document.getElementById('utility-run-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            try {
+                const resp = await fetch(`${API_BASE}/utility/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        tool: selectedUtilityTool,
+                        prompt: prompt,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('utility-output').textContent = data.content;
+                    document.getElementById('utility-output-card').style.display = 'block';
+                } else {
+                    showAlert('utility', 'error', data.error || 'Utility failed');
+                }
+            } catch (e) {
+                showAlert('utility', 'error', 'Network error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run';
+            }
+        }
+
+        function copyUtilityOutput() {
+            const text = document.getElementById('utility-output').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('utility', 'success', 'Copied to clipboard!');
+            }).catch(() => {
+                showAlert('utility', 'error', 'Failed to copy');
+            });
+        }
