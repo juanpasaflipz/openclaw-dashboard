@@ -4,6 +4,8 @@ A beautiful, modern web dashboard for configuring your personalized AI agent. Op
 
 ![Dashboard Preview](https://via.placeholder.com/1200x600/667eea/ffffff?text=OpenClaw+Dashboard)
 
+**[Documentation](https://docs.greenmonkey.dev)** | **[Dashboard](https://www.greenmonkey.dev)**
+
 ## ✨ Features
 
 - 🎨 **Modern UI** - Sleek design with glassmorphism effects and smooth animations
