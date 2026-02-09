@@ -45,6 +45,11 @@
                             <span class="nav-item-icon">📋</span>
                             <span>Overview</span>
                         </button>
+                        <button class="nav-item nav-item-nautilus" data-tab="ext-agents">
+                            <span class="nav-item-icon">🐙</span>
+                            <span>Nautilus AI</span>
+                            <span class="nav-nautilus-badge">NEW</span>
+                        </button>
                         <button class="nav-item" data-tab="llm">
                             <span class="nav-item-icon">🔌</span>
                             <span>LLM Connection</span>
@@ -125,10 +130,6 @@
                         <button class="nav-item" data-tab="model-config">
                             <span class="nav-item-icon">⚙️</span>
                             <span>Model Config</span>
-                        </button>
-                        <button class="nav-item" data-tab="ext-agents">
-                            <span class="nav-item-icon">🐙</span>
-                            <span>Agents Hub</span>
                         </button>
                     </div>
 
@@ -218,6 +219,49 @@
 
                 <div class="info-box">
                     <p>Green Monkey is a framework for creating a personalized AI agent with persistent memory and customized behavior. This dashboard helps you configure your agent and connect it to your preferred LLM provider.</p>
+                </div>
+
+                <!-- Nautilus AI Hero Banner -->
+                <div class="nautilus-hero" onclick="switchTab('ext-agents')" style="cursor:pointer;">
+                    <div class="nautilus-hero-glow"></div>
+                    <div class="nautilus-hero-content">
+                        <div class="nautilus-hero-icon">🐙</div>
+                        <div class="nautilus-hero-text">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <h3 style="margin:0; font-size:20px; color:white;">Nautilus AI Agent</h3>
+                                <span class="nautilus-hero-badge">Featured</span>
+                                <span id="nautilus-overview-status" class="nautilus-hero-status">
+                                    <span class="status-dot status-disconnected"></span>
+                                    Disconnected
+                                </span>
+                            </div>
+                            <p style="margin:6px 0 0; color:rgba(255,255,255,0.85); font-size:14px; line-height:1.5;">
+                                Connect to your personal AI assistant with real-time chat, tool execution, web search, file operations, and 3-tier memory — all via WebSocket.
+                            </p>
+                        </div>
+                        <div class="nautilus-hero-action">
+                            <button class="btn nautilus-hero-btn" onclick="event.stopPropagation(); switchTab('ext-agents');">
+                                Open Nautilus →
+                            </button>
+                        </div>
+                    </div>
+                    <div class="nautilus-hero-features">
+                        <div class="nautilus-hero-feature">
+                            <span>💬</span> Real-time Chat
+                        </div>
+                        <div class="nautilus-hero-feature">
+                            <span>🛠️</span> Tool Execution
+                        </div>
+                        <div class="nautilus-hero-feature">
+                            <span>🌐</span> Web Search
+                        </div>
+                        <div class="nautilus-hero-feature">
+                            <span>📁</span> File Operations
+                        </div>
+                        <div class="nautilus-hero-feature">
+                            <span>🧠</span> 3-Tier Memory
+                        </div>
+                    </div>
                 </div>
 
                 <!-- OpenClaw Setup CTA -->

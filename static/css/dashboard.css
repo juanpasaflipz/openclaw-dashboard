@@ -2007,6 +2007,158 @@
             font-size: 13px;
         }
 
+        /* Nautilus sidebar nav highlight */
+        .nav-item-nautilus {
+            background: linear-gradient(135deg, rgba(99, 91, 255, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
+            border: 1px solid rgba(99, 91, 255, 0.25);
+            border-radius: 8px !important;
+            margin: 4px 8px 6px !important;
+            padding: 10px 12px !important;
+            position: relative;
+        }
+
+        .nav-item-nautilus:hover {
+            background: linear-gradient(135deg, rgba(99, 91, 255, 0.2) 0%, rgba(56, 189, 248, 0.12) 100%) !important;
+            border-color: rgba(99, 91, 255, 0.4);
+        }
+
+        .nav-item-nautilus.active {
+            background: linear-gradient(135deg, rgba(99, 91, 255, 0.2) 0%, rgba(56, 189, 248, 0.15) 100%) !important;
+            border-color: var(--primary);
+        }
+
+        .nav-nautilus-badge {
+            margin-left: auto;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--primary);
+            color: white;
+            letter-spacing: 0.5px;
+            line-height: 1;
+        }
+
+        /* Nautilus hero banner on Overview */
+        .nautilus-hero {
+            position: relative;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e3a5f 100%);
+            border-radius: 16px;
+            padding: 28px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid rgba(99, 91, 255, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .nautilus-hero:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 91, 255, 0.25);
+        }
+
+        .nautilus-hero-glow {
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 91, 255, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .nautilus-hero-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nautilus-hero-icon {
+            font-size: 52px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .nautilus-hero-text {
+            flex: 1;
+        }
+
+        .nautilus-hero-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: rgba(99, 91, 255, 0.6);
+            color: white;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            backdrop-filter: blur(4px);
+        }
+
+        .nautilus-hero-status {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nautilus-hero-action {
+            flex-shrink: 0;
+        }
+
+        .nautilus-hero-btn {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            padding: 10px 24px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease !important;
+            white-space: nowrap;
+        }
+
+        .nautilus-hero-btn:hover {
+            background: rgba(255, 255, 255, 0.25) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .nautilus-hero-features {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+            flex-wrap: wrap;
+        }
+
+        .nautilus-hero-feature {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .nautilus-hero-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            .nautilus-hero-features {
+                justify-content: center;
+            }
+        }
+
         /* Featured agent card */
         .featured-agent-card {
             border: 1px solid var(--primary);
