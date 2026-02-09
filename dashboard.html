@@ -236,7 +236,7 @@
                                 </span>
                             </div>
                             <p style="margin:6px 0 0; color:rgba(255,255,255,0.85); font-size:14px; line-height:1.5;">
-                                Connect to your personal AI assistant with real-time chat, tool execution, web search, file operations, and 3-tier memory — all via WebSocket.
+                                Chat directly using your LLM API key, or connect to the Gateway for tool execution, web search, file operations, and 3-tier memory.
                             </p>
                         </div>
                         <div class="nautilus-hero-action">
@@ -247,16 +247,16 @@
                     </div>
                     <div class="nautilus-hero-features">
                         <div class="nautilus-hero-feature">
-                            <span>💬</span> Real-time Chat
+                            <span>💬</span> Direct LLM Chat
+                        </div>
+                        <div class="nautilus-hero-feature">
+                            <span>🔌</span> Gateway Mode
                         </div>
                         <div class="nautilus-hero-feature">
                             <span>🛠️</span> Tool Execution
                         </div>
                         <div class="nautilus-hero-feature">
                             <span>🌐</span> Web Search
-                        </div>
-                        <div class="nautilus-hero-feature">
-                            <span>📁</span> File Operations
                         </div>
                         <div class="nautilus-hero-feature">
                             <span>🧠</span> 3-Tier Memory
@@ -1793,6 +1793,18 @@
                         </div>
                         <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('utility')">Configure</button>
                     </div>
+
+                    <!-- Nautilus Config Card -->
+                    <div class="card model-config-card" data-slot="nautilus">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🐙</span>
+                            <div>
+                                <h3 style="margin:0;">Nautilus AI</h3>
+                                <p id="mc-nautilus-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('nautilus')">Configure</button>
+                    </div>
                 </div>
 
                 <!-- Inline Config Form (shown when Configure is clicked) -->
@@ -1850,51 +1862,120 @@
 
             <!-- ========== EXTERNAL AGENTS TAB ========== -->
             <div class="tab-content" id="ext-agents">
-                <h2>Agents Hub</h2>
-                <p style="color:var(--text-secondary); margin-bottom:20px;">Connect external AI agents. Nautilus is the featured agent — connect via WebSocket for real-time chat with tools.</p>
+                <h2>Nautilus AI</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">Chat with Nautilus using your own LLM, or connect to the advanced Gateway for tool execution and memory.</p>
 
-                <!-- Featured Agent: Nautilus -->
-                <div class="card featured-agent-card" id="nautilus-card">
-                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-                        <span style="font-size:36px;">🐙</span>
-                        <div style="flex:1;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <h3 style="margin:0;">Nautilus</h3>
-                                <span class="badge-featured">Featured</span>
-                                <span id="nautilus-status-dot" class="status-dot status-disconnected"></span>
+                <!-- Mode Toggle Bar -->
+                <div class="nautilus-mode-tabs">
+                    <button class="nautilus-mode-tab active" data-mode="direct" onclick="switchNautilusMode('direct')">
+                        Direct Mode
+                    </button>
+                    <button class="nautilus-mode-tab" data-mode="gateway" onclick="switchNautilusMode('gateway')">
+                        Gateway Mode <span class="badge-advanced">Advanced</span>
+                    </button>
+                </div>
+
+                <!-- ===== DIRECT MODE PANEL ===== -->
+                <div class="nautilus-mode-panel active" id="nautilus-direct-panel">
+                    <!-- Model Status Banner -->
+                    <div class="nautilus-model-banner" id="nautilus-model-banner">
+                        <div class="nautilus-model-banner-icon">🐙</div>
+                        <div class="nautilus-model-banner-info">
+                            <span class="nautilus-model-banner-label">Model</span>
+                            <span class="nautilus-model-banner-value" id="nautilus-model-status">Not configured</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="nautilus-configure-btn" onclick="switchTab('model-config'); setTimeout(()=>openModelConfigForm('nautilus'), 100);">Configure Model</button>
+                    </div>
+
+                    <!-- Direct Chat Layout -->
+                    <div class="chat-layout">
+                        <div class="chat-sidebar">
+                            <div class="chat-sidebar-header">
+                                <button class="btn btn-primary btn-sm" onclick="createNautilusConversation()" style="width:100%;">+ New Chat</button>
                             </div>
-                            <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">TypeScript ReAct agent with file-ops, bash, HTTP, web-search tools and 3-tier memory.</p>
+                            <div id="nautilus-conversation-list" class="chat-conversation-list">
+                                <p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="grid-2">
-                        <div>
-                            <label>WebSocket URL</label>
-                            <input type="text" id="nautilus-ws-url" value="ws://127.0.0.1:18789" placeholder="ws://host:port">
+                        <div class="chat-main">
+                            <div class="chat-header">
+                                <span id="nautilus-chat-title" style="font-weight:600;">Select or create a conversation</span>
+                                <span id="nautilus-model-indicator" class="model-indicator" style="display:none;"></span>
+                            </div>
+                            <div id="nautilus-chat-messages" class="chat-messages">
+                                <div class="chat-empty-state">
+                                    <span style="font-size:48px;">🐙</span>
+                                    <p>Start a conversation with Nautilus AI</p>
+                                </div>
+                            </div>
+                            <div class="chat-input-bar">
+                                <textarea id="nautilus-chat-input" placeholder="Message Nautilus..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNautilusDirectMessage();}"></textarea>
+                                <button class="btn btn-primary" onclick="sendNautilusDirectMessage()">Send</button>
+                            </div>
                         </div>
-                        <div>
-                            <label>Auth Mode</label>
-                            <select id="nautilus-auth-mode" onchange="onNautilusAuthModeChange()">
-                                <option value="none">None</option>
-                                <option value="pairing">Pairing Token</option>
-                                <option value="password">Password</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div id="nautilus-auth-field" style="display:none; margin-top:12px;">
-                        <label id="nautilus-auth-label">Token</label>
-                        <input type="password" id="nautilus-auth-value" placeholder="Enter token or password">
-                    </div>
-
-                    <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
-                        <button class="btn btn-primary" id="nautilus-connect-btn" onclick="connectNautilus()">Connect</button>
-                        <button class="btn btn-secondary" id="nautilus-disconnect-btn" onclick="disconnectNautilus()" style="display:none;">Disconnect</button>
-                        <button class="btn btn-secondary" onclick="seedNautilus()">Reset Config</button>
-                        <span id="nautilus-connect-status" style="font-size:13px; color:var(--text-tertiary);"></span>
                     </div>
                 </div>
 
+                <!-- ===== GATEWAY MODE PANEL ===== -->
+                <div class="nautilus-mode-panel" id="nautilus-gateway-panel">
+                    <div class="card featured-agent-card" id="nautilus-card">
+                        <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+                            <span style="font-size:36px;">🐙</span>
+                            <div style="flex:1;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <h3 style="margin:0;">Nautilus Gateway</h3>
+                                    <span class="badge-featured">Advanced</span>
+                                    <span id="nautilus-status-dot" class="status-dot status-disconnected"></span>
+                                </div>
+                                <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">Connect to OpenClaw Gateway for tool execution, web search, file operations, and 3-tier memory via WebSocket.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div>
+                                <label>WebSocket URL</label>
+                                <input type="text" id="nautilus-ws-url" value="ws://127.0.0.1:18789" placeholder="ws://host:port">
+                            </div>
+                            <div>
+                                <label>Auth Mode</label>
+                                <select id="nautilus-auth-mode" onchange="onNautilusAuthModeChange()">
+                                    <option value="none">None</option>
+                                    <option value="pairing">Pairing Token</option>
+                                    <option value="password">Password</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="nautilus-auth-field" style="display:none; margin-top:12px;">
+                            <label id="nautilus-auth-label">Token</label>
+                            <input type="password" id="nautilus-auth-value" placeholder="Enter token or password">
+                        </div>
+
+                        <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+                            <button class="btn btn-primary" id="nautilus-connect-btn" onclick="connectNautilus()">Connect</button>
+                            <button class="btn btn-secondary" id="nautilus-disconnect-btn" onclick="disconnectNautilus()" style="display:none;">Disconnect</button>
+                            <button class="btn btn-secondary" onclick="seedNautilus()">Reset Config</button>
+                            <span id="nautilus-connect-status" style="font-size:13px; color:var(--text-tertiary);"></span>
+                        </div>
+                    </div>
+
+                    <!-- Gateway Chat Area -->
+                    <div class="card" style="margin-top:16px;">
+                        <h3 style="margin-bottom:12px;">Gateway Chat</h3>
+                        <div id="gateway-chat-messages" class="chat-messages" style="height:300px; border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
+                            <div class="chat-empty-state">
+                                <span style="font-size:36px;">🔌</span>
+                                <p>Connect to Gateway to start chatting</p>
+                            </div>
+                        </div>
+                        <div class="chat-input-bar" style="border-top:none; padding:0;">
+                            <textarea id="gateway-chat-input" placeholder="Message via Gateway..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNautilusGatewayMessage();}"></textarea>
+                            <button class="btn btn-primary" onclick="sendNautilusGatewayMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Agents Section (always visible) -->
                 <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
                     <h3>Your Agents</h3>
                     <button class="btn btn-secondary btn-sm" onclick="showAddAgentForm()">+ Add Agent</button>

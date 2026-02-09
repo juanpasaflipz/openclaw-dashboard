@@ -2261,3 +2261,112 @@
                 border-bottom: 1px solid var(--border);
             }
         }
+
+        /* ========== Nautilus Mode Tabs ========== */
+        .nautilus-mode-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .nautilus-mode-tab {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nautilus-mode-tab:hover {
+            color: var(--text-primary);
+            background: var(--surface);
+        }
+
+        .nautilus-mode-tab.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .nautilus-mode-tab.active .badge-advanced {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        /* Mode panels */
+        .nautilus-mode-panel {
+            display: none;
+        }
+
+        .nautilus-mode-panel.active {
+            display: block;
+        }
+
+        /* Model status banner */
+        .nautilus-model-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .nautilus-model-banner-icon {
+            font-size: 24px;
+        }
+
+        .nautilus-model-banner-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nautilus-model-banner-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .nautilus-model-banner-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .nautilus-model-banner-value.configured {
+            color: var(--success);
+        }
+
+        .nautilus-model-banner-value.not-configured {
+            color: var(--text-tertiary);
+        }
+
+        /* Advanced badge */
+        .badge-advanced {
+            font-size: 9px;
+            padding: 2px 6px;
+            background: rgba(124, 115, 255, 0.15);
+            color: var(--primary-light);
+            border-radius: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }

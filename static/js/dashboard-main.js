@@ -4453,7 +4453,7 @@ Examples:
         }
 
         function updateModelConfigCards() {
-            ['chatbot', 'web_browsing', 'utility'].forEach(slot => {
+            ['chatbot', 'web_browsing', 'utility', 'nautilus'].forEach(slot => {
                 const el = document.getElementById(`mc-${slot}-status`);
                 if (!el) return;
                 const cfg = mcConfigs[slot];
@@ -4470,7 +4470,8 @@ Examples:
         function openModelConfigForm(slot) {
             document.getElementById('model-config-form').style.display = 'block';
             document.getElementById('mc-feature-slot').value = slot;
-            document.getElementById('mc-form-title').textContent = `Configure Model — ${slot.replace('_', ' ')}`;
+            const slotLabel = slot === 'nautilus' ? 'Nautilus AI' : slot.replace('_', ' ');
+            document.getElementById('mc-form-title').textContent = `Configure Model — ${slotLabel}`;
             document.getElementById('mc-test-result').textContent = '';
 
             // Pre-fill if config exists
@@ -4548,6 +4549,7 @@ Examples:
                 if (data.success) {
                     mcConfigs[slot] = data.config;
                     updateModelConfigCards();
+                    if (slot === 'nautilus') updateNautilusModelBanner();
                     showAlert('model-config', 'success', 'Model configuration saved!');
                     document.getElementById('model-config-form').style.display = 'none';
                 } else {
@@ -4594,7 +4596,27 @@ Examples:
         let extAgents = [];
 
         async function initExtAgentsTab() {
+            // Ensure model configs are loaded for the banner
+            if (Object.keys(mcConfigs).length === 0) {
+                try {
+                    const resp = await fetch(`${API_BASE}/model-config`, { credentials: 'include' });
+                    const data = await resp.json();
+                    mcConfigs = {};
+                    (data.configs || []).forEach(c => { mcConfigs[c.feature_slot] = c; });
+                } catch (e) { console.error('Failed to load model configs:', e); }
+            }
+            // Ensure providers are loaded
+            if (mcProviders.length === 0) {
+                try {
+                    const resp = await fetch(`${API_BASE}/model-config/providers`);
+                    const data = await resp.json();
+                    mcProviders = data.providers || [];
+                    populateMCProviderDropdown();
+                } catch (e) { console.error('Failed to load providers:', e); }
+            }
+            updateNautilusModelBanner();
             await loadExtAgents();
+            await loadNautilusConversations();
         }
 
         async function loadExtAgents() {
@@ -4798,6 +4820,317 @@ Examples:
                     sel.appendChild(opt);
                 }
             });
+        }
+
+
+        // ============================================
+        // NAUTILUS DIRECT MODE
+        // ============================================
+        let nautilusDirectConversations = [];
+        let nautilusActiveConversationId = null;
+
+        const NAUTILUS_SYSTEM_PROMPT = `You are Nautilus, a helpful and knowledgeable AI assistant. You are friendly, concise, and accurate. You help users with questions, writing, analysis, coding, and creative tasks. Always be clear and direct in your responses.`;
+
+        function switchNautilusMode(mode) {
+            document.querySelectorAll('.nautilus-mode-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nautilus-mode-panel').forEach(p => p.classList.remove('active'));
+
+            document.querySelector(`.nautilus-mode-tab[data-mode="${mode}"]`).classList.add('active');
+            document.getElementById(`nautilus-${mode}-panel`).classList.add('active');
+
+            if (mode === 'gateway') {
+                setupGatewayChatHandlers();
+            }
+        }
+
+        function updateNautilusModelBanner() {
+            const cfg = mcConfigs['nautilus'];
+            const statusEl = document.getElementById('nautilus-model-status');
+            const configBtn = document.getElementById('nautilus-configure-btn');
+            const indicatorEl = document.getElementById('nautilus-model-indicator');
+
+            if (cfg) {
+                statusEl.textContent = `${cfg.provider} / ${cfg.model}`;
+                statusEl.className = 'nautilus-model-banner-value configured';
+                if (configBtn) configBtn.textContent = 'Change Model';
+                if (indicatorEl) {
+                    indicatorEl.textContent = `${cfg.provider}/${cfg.model}`;
+                    indicatorEl.style.display = 'inline';
+                }
+            } else {
+                statusEl.textContent = 'Not configured';
+                statusEl.className = 'nautilus-model-banner-value not-configured';
+                if (configBtn) configBtn.textContent = 'Configure Model';
+                if (indicatorEl) indicatorEl.style.display = 'none';
+            }
+        }
+
+        async function loadNautilusConversations() {
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations?feature=nautilus`, { credentials: 'include' });
+                const data = await resp.json();
+                nautilusDirectConversations = data.conversations || [];
+                renderNautilusConversationList();
+            } catch (e) { console.error('Failed to load nautilus conversations:', e); }
+        }
+
+        function renderNautilusConversationList() {
+            const list = document.getElementById('nautilus-conversation-list');
+            if (!list) return;
+            if (nautilusDirectConversations.length === 0) {
+                list.innerHTML = '<p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>';
+                return;
+            }
+            list.innerHTML = nautilusDirectConversations.map(c => `
+                <div class="chat-conversation-item ${c.conversation_id === nautilusActiveConversationId ? 'active' : ''}"
+                     onclick="selectNautilusConversation('${c.conversation_id}')">
+                    <span class="conv-title">${escapeHtml(c.title)}</span>
+                    <span class="conv-delete" onclick="event.stopPropagation(); deleteNautilusConversation('${c.conversation_id}')">x</span>
+                </div>
+            `).join('');
+        }
+
+        async function createNautilusConversation() {
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        title: 'New Chat',
+                        feature: 'nautilus',
+                        agent_type: 'direct_llm',
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    nautilusDirectConversations.unshift(data.conversation);
+                    selectNautilusConversation(data.conversation.conversation_id);
+                    renderNautilusConversationList();
+                }
+            } catch (e) {
+                showAlert('ext-agents', 'error', 'Failed to create conversation');
+            }
+        }
+
+        async function selectNautilusConversation(convId) {
+            nautilusActiveConversationId = convId;
+            renderNautilusConversationList();
+
+            const conv = nautilusDirectConversations.find(c => c.conversation_id === convId);
+            const titleEl = document.getElementById('nautilus-chat-title');
+            if (titleEl) titleEl.textContent = conv ? conv.title : 'Chat';
+
+            try {
+                const resp = await fetch(`${API_BASE}/chat/conversations/${convId}/messages`, { credentials: 'include' });
+                const data = await resp.json();
+                renderNautilusMessages(data.messages || []);
+            } catch (e) {
+                console.error('Failed to load nautilus messages:', e);
+            }
+        }
+
+        function renderNautilusMessages(messages) {
+            const container = document.getElementById('nautilus-chat-messages');
+            if (!container) return;
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="chat-empty-state">
+                        <span style="font-size:48px;">🐙</span>
+                        <p>Send a message to start chatting with Nautilus</p>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = messages.map(m => {
+                return `<div class="chat-bubble ${m.role}">${escapeHtml(m.content)}</div>`;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendNautilusBubble(role, content) {
+            const container = document.getElementById('nautilus-chat-messages');
+            if (!container) return;
+            const empty = container.querySelector('.chat-empty-state');
+            if (empty) empty.remove();
+            container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showNautilusThinking() {
+            const container = document.getElementById('nautilus-chat-messages');
+            if (!container) return;
+            const existing = container.querySelector('.thinking-indicator');
+            if (existing) existing.remove();
+            container.innerHTML += `
+                <div class="thinking-indicator">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    Nautilus is thinking...
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideNautilusThinking() {
+            const container = document.getElementById('nautilus-chat-messages');
+            if (!container) return;
+            const el = container.querySelector('.thinking-indicator');
+            if (el) el.remove();
+        }
+
+        async function sendNautilusDirectMessage() {
+            const input = document.getElementById('nautilus-chat-input');
+            const text = (input.value || '').trim();
+            if (!text || !nautilusActiveConversationId) return;
+            input.value = '';
+
+            appendNautilusBubble('user', text);
+            showNautilusThinking();
+
+            try {
+                const resp = await fetch(`${API_BASE}/chat/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        conversation_id: nautilusActiveConversationId,
+                        message: text,
+                        feature_slot: 'nautilus',
+                        system_prompt: NAUTILUS_SYSTEM_PROMPT,
+                    }),
+                });
+                const data = await resp.json();
+                hideNautilusThinking();
+                if (data.success) {
+                    appendNautilusBubble('assistant', data.message.content);
+                } else {
+                    appendNautilusBubble('system', 'Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                hideNautilusThinking();
+                appendNautilusBubble('system', 'Network error: ' + e.message);
+            }
+            loadNautilusConversations();
+        }
+
+        async function deleteNautilusConversation(convId) {
+            if (!confirm('Delete this conversation?')) return;
+            try {
+                await fetch(`${API_BASE}/chat/conversations/${convId}`, { method: 'DELETE', credentials: 'include' });
+                nautilusDirectConversations = nautilusDirectConversations.filter(c => c.conversation_id !== convId);
+                if (nautilusActiveConversationId === convId) {
+                    nautilusActiveConversationId = null;
+                    const container = document.getElementById('nautilus-chat-messages');
+                    if (container) {
+                        container.innerHTML = `
+                            <div class="chat-empty-state">
+                                <span style="font-size:48px;">🐙</span>
+                                <p>Select or create a conversation</p>
+                            </div>`;
+                    }
+                    const titleEl = document.getElementById('nautilus-chat-title');
+                    if (titleEl) titleEl.textContent = 'Select or create a conversation';
+                }
+                renderNautilusConversationList();
+            } catch (e) { console.error(e); }
+        }
+
+        // Gateway Mode chat functions
+        function sendNautilusGatewayMessage() {
+            const input = document.getElementById('gateway-chat-input');
+            const text = (input.value || '').trim();
+            if (!text) return;
+            input.value = '';
+
+            if (!nautilusClient || !nautilusClient.connected) {
+                appendGatewayBubble('system', 'Gateway is not connected. Connect above first.');
+                return;
+            }
+
+            appendGatewayBubble('user', text);
+            nautilusClient.sendMessage(nautilusClient.sessionId, text);
+
+            // Show thinking
+            const container = document.getElementById('gateway-chat-messages');
+            if (container) {
+                const existing = container.querySelector('.thinking-indicator');
+                if (existing) existing.remove();
+                container.innerHTML += `
+                    <div class="thinking-indicator">
+                        <div class="dots"><span></span><span></span><span></span></div>
+                        Gateway is thinking...
+                    </div>`;
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function appendGatewayBubble(role, content, metadata) {
+            const container = document.getElementById('gateway-chat-messages');
+            if (!container) return;
+            const empty = container.querySelector('.chat-empty-state');
+            if (empty) empty.remove();
+
+            if (metadata && metadata.tool_name) {
+                container.innerHTML += renderToolCard({ content, metadata });
+            } else {
+                container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+            }
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function setupGatewayChatHandlers() {
+            if (!nautilusClient) return;
+
+            nautilusClient.onMessage = (msg) => {
+                const container = document.getElementById('gateway-chat-messages');
+                if (container) {
+                    const thinking = container.querySelector('.thinking-indicator');
+                    if (thinking) thinking.remove();
+                }
+                appendGatewayBubble(msg.role || 'assistant', msg.content);
+            };
+
+            nautilusClient.onThinking = () => {
+                const container = document.getElementById('gateway-chat-messages');
+                if (container) {
+                    const existing = container.querySelector('.thinking-indicator');
+                    if (existing) existing.remove();
+                    container.innerHTML += `
+                        <div class="thinking-indicator">
+                            <div class="dots"><span></span><span></span><span></span></div>
+                            Gateway is thinking...
+                        </div>`;
+                    container.scrollTop = container.scrollHeight;
+                }
+            };
+
+            nautilusClient.onToolUse = (tool) => {
+                const container = document.getElementById('gateway-chat-messages');
+                if (container) {
+                    const thinking = container.querySelector('.thinking-indicator');
+                    if (thinking) thinking.remove();
+                }
+                const content = tool.output ? JSON.stringify(tool.output) : 'Running...';
+                appendGatewayBubble('tool', content, { tool_name: tool.tool, tool_input: tool.input });
+                if (tool.needsApproval) {
+                    if (confirm(`Nautilus wants to use tool "${tool.tool}". Allow?`)) {
+                        nautilusClient.approveToolUse(tool.requestId);
+                    } else {
+                        nautilusClient.denyToolUse(tool.requestId);
+                    }
+                }
+            };
+
+            nautilusClient.onError = (err) => {
+                const container = document.getElementById('gateway-chat-messages');
+                if (container) {
+                    const thinking = container.querySelector('.thinking-indicator');
+                    if (thinking) thinking.remove();
+                }
+                appendGatewayBubble('system', 'Error: ' + err.message);
+            };
+
+            if (!nautilusClient.sessionId) {
+                nautilusClient.createSession({});
+            }
         }
 
 
