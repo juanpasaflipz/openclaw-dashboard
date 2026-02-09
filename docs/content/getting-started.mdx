@@ -31,7 +31,7 @@ Edit `.env` with your configuration:
 ```env
 SECRET_KEY=test-secret-key-change-in-production
 BASE_URL=http://localhost:5000
-DATABASE_URL=sqlite:///openclaw.db
+DATABASE_URL=sqlite:///greenmonkey.db
 
 # Stripe Test Keys (get from dashboard.stripe.com)
 STRIPE_SECRET_KEY=sk_test_your_test_key_here
@@ -108,17 +108,17 @@ Use Stripe test cards:
 - Verify webhook secret in `.env` matches the one from Stripe CLI
 
 ### Database error
-- Delete `openclaw.db` and run `python init_db.py` again
+- Delete `greenmonkey.db` and run `python init_db.py` again
 - Make sure SQLite is installed
 
 ## Useful Commands
 
 ```bash
 # Reset database (start fresh)
-rm openclaw.db && python init_db.py
+rm greenmonkey.db && python init_db.py
 
 # Check database contents
-sqlite3 openclaw.db "SELECT * FROM users;"
+sqlite3 greenmonkey.db "SELECT * FROM users;"
 
 # Test Stripe webhook locally
 stripe listen --forward-to localhost:5000/api/stripe/webhook

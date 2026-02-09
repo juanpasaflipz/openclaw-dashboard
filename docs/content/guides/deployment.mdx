@@ -81,7 +81,7 @@ Deploy the Green Monkey Dashboard to production.
 ```bash
 npm install -g vercel
 vercel login
-cd openclaw-dashboard
+cd greenmonkey-dashboard
 vercel
 ```
 
@@ -94,6 +94,7 @@ SECRET_KEY=<generate-random-64-char-string>
 BASE_URL=https://your-domain.vercel.app
 DATABASE_URL=<your-postgres-connection-string>
 STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 SENDGRID_API_KEY=SG...
 ```
@@ -128,7 +129,7 @@ brew install heroku/brew/heroku
 
 # Login and create app
 heroku login
-heroku create openclaw-dashboard
+heroku create greenmonkey-dashboard
 
 # Add PostgreSQL
 heroku addons:create heroku-postgresql:mini

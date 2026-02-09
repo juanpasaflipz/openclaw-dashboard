@@ -1,0 +1,225 @@
+---
+title: Channels
+---
+
+# Chat Channels
+
+Green Monkey integrates with multiple chat platforms, letting your AI agent communicate across messaging services simultaneously. Channels are organized by subscription tier.
+
+## Free Tier
+
+### Telegram
+
+Bot API integration via grammY. Supports group chats and direct messages.
+
+- **Setup:** Bot token from [@BotFather](https://t.me/botfather)
+- **Difficulty:** Easy
+- **Docs:** [Telegram Bot API](https://core.telegram.org/bots)
+
+**Quick start:**
+
+1. Message [@BotFather](https://t.me/botfather) on Telegram
+2. Create a new bot with `/newbot`
+3. Copy the bot token
+4. Paste it into the Channels tab in the dashboard
+
+### WebChat
+
+Gateway WebChat UI over WebSocket. No external setup needed.
+
+- **Setup:** None — works out of the box
+- **Difficulty:** Easy
+
+---
+
+## Starter Tier ($9/month)
+
+### Discord
+
+Bot API plus Gateway integration for servers, channels, and DMs.
+
+- **Setup:** Bot token + Application ID
+- **Difficulty:** Easy
+- **Docs:** [Discord Developer Portal](https://discord.com/developers/docs/intro)
+
+**Quick start:**
+
+1. Create an application at the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Go to **Bot** → **Add Bot**
+3. Copy the bot token and Application ID
+4. Invite the bot to your server with the OAuth2 URL generator
+5. Paste credentials into the dashboard
+
+### WhatsApp
+
+Uses the Baileys library with QR code pairing. Stores session state locally.
+
+- **Setup:** QR code authentication
+- **Difficulty:** Medium
+
+**Quick start:**
+
+1. Open the Channels tab and select WhatsApp
+2. Click **Connect** — a QR code appears
+3. Open WhatsApp on your phone → **Linked Devices** → **Link a Device**
+4. Scan the QR code
+
+### Slack
+
+Workspace applications via Bolt SDK.
+
+- **Setup:** OAuth with App Token + Bot Token
+- **Difficulty:** Medium
+- **Docs:** [Slack API](https://api.slack.com/start)
+
+**Quick start:**
+
+1. Create an app at [api.slack.com/apps](https://api.slack.com/apps)
+2. Enable **Socket Mode** and generate an App Token
+3. Add bot scopes under **OAuth & Permissions**
+4. Install the app to your workspace
+5. Copy the Bot Token and App Token into the dashboard
+
+### Signal
+
+Privacy-focused messaging via signal-cli.
+
+- **Setup:** Phone number required
+- **Difficulty:** Hard
+- **Docs:** [signal-cli](https://github.com/AsamK/signal-cli)
+
+**Quick start:**
+
+1. Install signal-cli on your server
+2. Register or link a phone number
+3. Enter the phone number in the dashboard
+
+---
+
+## Pro Tier ($29/month)
+
+### BlueBubbles (iMessage)
+
+Full iMessage support via a BlueBubbles macOS server.
+
+- **Setup:** Server URL + Password
+- **Difficulty:** Medium
+- **Docs:** [BlueBubbles](https://bluebubbles.app)
+
+**Requirements:**
+
+- A Mac running macOS (always-on)
+- BlueBubbles server installed and running
+- iMessage signed in on the Mac
+
+**Quick start:**
+
+1. Install BlueBubbles on your Mac from [bluebubbles.app](https://bluebubbles.app)
+2. Set up the server and note the URL and password
+3. Enter the Server URL and Password in the dashboard
+
+### Google Chat
+
+Google Chat API app via HTTP webhook.
+
+- **Setup:** OAuth with Credentials JSON
+- **Difficulty:** Medium
+- **Docs:** [Google Chat API](https://developers.google.com/chat)
+
+**Quick start:**
+
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com)
+2. Enable the Google Chat API
+3. Create OAuth credentials and download the JSON
+4. Upload the credentials JSON in the dashboard
+
+### Mattermost
+
+Bot API plus WebSocket for channels, groups, and DMs.
+
+- **Setup:** Server URL + Access Token
+- **Difficulty:** Medium
+- **Docs:** [Mattermost Developers](https://developers.mattermost.com)
+
+**Quick start:**
+
+1. Go to your Mattermost instance → **Integrations** → **Bot Accounts**
+2. Create a bot and copy the Access Token
+3. Enter the Server URL and Access Token in the dashboard
+
+---
+
+## Team Tier ($49/month)
+
+### Microsoft Teams
+
+Bot Framework integration with enterprise support.
+
+- **Setup:** OAuth with App ID + App Password
+- **Difficulty:** Hard
+- **Docs:** [Teams Bot Framework](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/what-are-bots)
+
+**Quick start:**
+
+1. Register a bot in the [Azure Bot Service](https://portal.azure.com)
+2. Create a Teams app in the Developer Portal
+3. Copy the App ID and App Password
+4. Enter credentials in the dashboard
+
+### Feishu / Lark
+
+Feishu bot via WebSocket.
+
+- **Setup:** App ID + App Secret
+- **Difficulty:** Hard
+- **Docs:** [Feishu Open Platform](https://open.feishu.cn/document/home/index)
+
+**Quick start:**
+
+1. Create an app on the [Feishu Open Platform](https://open.feishu.cn)
+2. Enable the bot capability
+3. Copy the App ID and App Secret into the dashboard
+
+### Matrix
+
+Decentralized chat via the Matrix protocol.
+
+- **Setup:** Homeserver URL + Access Token
+- **Difficulty:** Hard
+- **Docs:** [Matrix.org](https://matrix.org)
+
+**Quick start:**
+
+1. Create a bot account on your Matrix homeserver
+2. Generate an access token
+3. Enter the Homeserver URL and Access Token in the dashboard
+
+---
+
+## Channel Bundles
+
+Pre-packaged bundles for common use cases:
+
+| Bundle | Price | Channels |
+|--------|-------|----------|
+| **Chat Bundle** | $9/mo | Telegram, Discord, WhatsApp, Signal |
+| **Productivity Bundle** | $29/mo | Slack, Teams, Google Chat, Mattermost |
+| **Developer Bundle** | $29/mo | Matrix, Nostr, Nextcloud, Mattermost |
+| **Enterprise Bundle** | $49/mo | All channels |
+
+## Features
+
+- **Simultaneous operation** — Run multiple channels at the same time with automatic message routing
+- **Per-agent configuration** — Each agent can have different channel setups
+- **Connection testing** — Test your configuration before saving
+- **Subscription-based access** — Channels unlock based on your plan tier
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/channels/available` | GET | List available and locked channels for your tier |
+| `/api/channels/agent/<id>/config` | GET | Get configured channels for an agent |
+| `/api/channels/agent/<id>/connect` | POST | Connect a channel to an agent |
+| `/api/channels/agent/<id>/disconnect/<channel>` | POST | Disconnect a channel |
+| `/api/channels/test/<channel>` | POST | Test a channel configuration |

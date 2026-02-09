@@ -21,7 +21,7 @@ const navbar = (
         🐵 Green Monkey Docs
       </span>
     }
-    projectLink="https://github.com/yourusername/openclaw-dashboard"
+    projectLink="https://github.com/juanpasaflipz/openclaw-dashboard"
   />
 )
 
@@ -43,7 +43,7 @@ export default async function RootLayout({
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/yourusername/openclaw-dashboard/tree/main/docs"
+          docsRepositoryBase="https://github.com/juanpasaflipz/openclaw-dashboard/tree/main/docs"
           footer={footer}
           editLink="Edit this page on GitHub"
           sidebar={{ defaultMenuCollapseLevel: 1 }}
