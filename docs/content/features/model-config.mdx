@@ -1,0 +1,96 @@
+---
+title: Model Configuration
+---
+
+# Model Configuration
+
+Configure which language models your agent uses, including provider, model selection, and generation parameters.
+
+## LLM Providers
+
+Green Monkey supports multiple LLM providers. Select one in the **LLM Connection** tab:
+
+### Anthropic Claude
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+- Models: Claude 4, Claude 3.5 Sonnet, Claude 3 Haiku
+- Best for: Reasoning, long context, safety
+
+### OpenAI
+
+```env
+OPENAI_API_KEY=sk-...
+```
+
+- Models: GPT-4o, GPT-4, GPT-3.5 Turbo
+- Best for: General purpose, wide ecosystem
+
+### OpenRouter
+
+```env
+OPENROUTER_API_KEY=sk-or-...
+```
+
+- Access 100+ models through one API key
+- Best for: Flexibility, trying different models
+
+### Ollama (Local)
+
+```
+OLLAMA_URL=http://localhost:11434
+```
+
+- Models: Llama, Mistral, CodeLlama, etc.
+- Best for: Privacy, offline use, no API costs
+- Requires [Ollama](https://ollama.com) installed locally
+
+### Custom Provider
+
+For any OpenAI-compatible API:
+
+```env
+CUSTOM_API_URL=https://your-api.com/v1
+CUSTOM_API_KEY=your-key
+```
+
+## Generation Parameters
+
+Fine-tune how the model generates responses:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Temperature | 0.7 | Higher = more creative, lower = more focused |
+| Max Tokens | 4096 | Maximum length of the response |
+| Top P | 1.0 | Nucleus sampling threshold |
+
+## Testing Your Connection
+
+After configuring a provider:
+
+1. Click **Test Connection** in the LLM Connection tab
+2. The dashboard sends a test prompt to your provider
+3. A successful response confirms the connection is working
+4. If it fails, check your API key and network connection
+
+## Configuration File
+
+Settings are saved to `LLM_CONFIG.md`:
+
+```markdown
+# LLM Configuration
+
+- **Provider:** anthropic
+- **Model:** claude-3-5-sonnet-20241022
+- **Temperature:** 0.7
+- **Max Tokens:** 4096
+```
+
+## Tips
+
+- Start with a test/free-tier key to verify the setup
+- Use Ollama for development to avoid API costs
+- OpenRouter lets you switch models without changing API keys
+- Always use environment variables for API keys in production — never commit them to version control

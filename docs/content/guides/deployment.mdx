@@ -1,0 +1,181 @@
+---
+title: Deployment
+---
+
+# Deployment Guide
+
+Deploy the Green Monkey Dashboard to production.
+
+## Prerequisites
+
+1. **Stripe Account** — [stripe.com](https://stripe.com)
+2. **Email Service** — SendGrid, Mailgun, or AWS SES
+3. **Database** — Vercel Postgres, Supabase, or any PostgreSQL host
+4. **GitHub Account** — For deployment via Vercel
+
+## Deploy to Vercel
+
+### Step 1: Stripe Setup
+
+1. Create an account at [dashboard.stripe.com](https://dashboard.stripe.com)
+2. Go to **Developers → API keys**, copy your Secret key and Publishable key
+3. Set up a webhook:
+   - Go to **Developers → Webhooks → Add endpoint**
+   - URL: `https://your-domain.vercel.app/api/stripe/webhook`
+   - Events: `checkout.session.completed`
+   - Copy the webhook signing secret
+
+### Step 2: Email Service
+
+#### SendGrid (Recommended — free tier: 100 emails/day)
+
+1. Sign up at [sendgrid.com](https://sendgrid.com)
+2. Create an API key in **Settings → API Keys**
+3. Verify your sender email/domain
+4. Set `SENDGRID_API_KEY` in environment variables
+
+#### Mailgun
+
+1. Sign up at [mailgun.com](https://mailgun.com)
+2. Get API key from **Settings → API Security**
+3. Set `MAILGUN_API_KEY` and `MAILGUN_DOMAIN`
+
+#### AWS SES
+
+1. Set up SES and verify your domain
+2. Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+
+### Step 3: Database
+
+#### Vercel Postgres (Recommended)
+
+1. Go to **Vercel Dashboard → Storage → Create Database → Postgres**
+2. Copy the `POSTGRES_URL` connection string
+3. Vercel automatically sets this as `DATABASE_URL`
+
+#### Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **Project Settings → Database**
+3. Copy the connection string and set as `DATABASE_URL`
+
+#### Railway / Render
+
+1. Create a PostgreSQL database
+2. Copy the connection string
+3. Set as `DATABASE_URL`
+
+### Step 4: Deploy
+
+#### Via GitHub (Recommended)
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com)
+3. Click **Import Project**
+4. Select your repository
+5. Set environment variables (see Step 5)
+6. Click **Deploy**
+
+#### Via Vercel CLI
+
+```bash
+npm install -g vercel
+vercel login
+cd openclaw-dashboard
+vercel
+```
+
+### Step 5: Environment Variables
+
+Set these in **Vercel Dashboard → Settings → Environment Variables**:
+
+```
+SECRET_KEY=<generate-random-64-char-string>
+BASE_URL=https://your-domain.vercel.app
+DATABASE_URL=<your-postgres-connection-string>
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+SENDGRID_API_KEY=SG...
+```
+
+Generate a secret key:
+
+```python
+import secrets
+print(secrets.token_hex(32))
+```
+
+### Step 6: Initialize Database
+
+After the first deployment:
+
+```bash
+curl https://your-domain.vercel.app/api/admin/init-db
+```
+
+### Step 7: Verify
+
+1. Visit your deployed dashboard
+2. Test login with magic link
+3. Test buying credits with Stripe test card `4242 4242 4242 4242`
+4. Verify credits are added
+
+## Deploy to Heroku
+
+```bash
+# Install CLI
+brew install heroku/brew/heroku
+
+# Login and create app
+heroku login
+heroku create openclaw-dashboard
+
+# Add PostgreSQL
+heroku addons:create heroku-postgresql:mini
+
+# Set environment variables
+heroku config:set SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
+heroku config:set STRIPE_SECRET_KEY=sk_live_...
+heroku config:set STRIPE_WEBHOOK_SECRET=whsec_...
+heroku config:set SENDGRID_API_KEY=SG...
+
+# Deploy
+git push heroku main
+
+# Initialize database
+heroku run python init_db.py
+
+# Open
+heroku open
+```
+
+## Going Live
+
+When you're ready for production:
+
+1. **Stripe** — Switch from `sk_test_` to `sk_live_` keys. Update webhook endpoint.
+2. **Email** — Verify sender domain. Remove sandbox mode.
+3. **Database** — Upgrade to a paid plan. Set up backups. Enable connection pooling.
+4. **Monitoring** — Set up Sentry or similar for error tracking.
+
+## Troubleshooting
+
+### Magic links not sending
+- Check email service API key
+- Verify sender email is verified
+- Review server logs
+
+### Stripe webhooks failing
+- Verify webhook secret is correct
+- Check webhook URL is accessible
+- Review Stripe webhook logs
+
+### Database connection errors
+- Verify `DATABASE_URL` is correct
+- Check if the database is running
+- Ensure firewall allows connections
+
+### Credits not added after payment
+- Check Stripe webhook logs
+- Verify webhook endpoint is working
+- Check database for transaction records

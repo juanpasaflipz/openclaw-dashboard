@@ -1,0 +1,55 @@
+---
+title: Nautilus AI
+---
+
+# Nautilus AI
+
+Nautilus AI is the core intelligence layer of the Green Monkey Dashboard, offering two distinct modes for interacting with language models.
+
+## Dual-Mode Architecture
+
+Nautilus provides a tabbed interface with two modes:
+
+### Direct LLM Mode
+
+Send prompts directly to your configured language model with no middleware. This gives you raw, unfiltered access to the AI.
+
+- Choose from multiple providers (Anthropic Claude, OpenAI, OpenRouter, Ollama)
+- Select specific models per provider
+- Adjust temperature and token limits
+- View raw responses in real time
+
+### Gateway Mode
+
+Route prompts through the Green Monkey agent gateway for orchestrated, multi-step interactions. The gateway adds:
+
+- Persistent memory across sessions
+- Tool access (web search, file operations, etc.)
+- Behavioral guidelines from your `SOUL.md`
+- Context from your `USER.md` and `IDENTITY.md`
+
+## Supported Providers
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| Anthropic | Claude 4, Claude 3.5 Sonnet | Best for reasoning and long context |
+| OpenAI | GPT-4o, GPT-4, GPT-3.5 Turbo | Wide ecosystem support |
+| OpenRouter | 100+ models | Single API key for multiple providers |
+| Ollama | Llama, Mistral, etc. | Run locally, no API key needed |
+| Custom | Any OpenAI-compatible API | For self-hosted or niche providers |
+
+## Configuration
+
+1. Navigate to the **LLM Connection** tab in the dashboard
+2. Select your provider
+3. Enter your API key
+4. Choose a default model
+5. Click **Test Connection** to verify
+
+The configuration is saved to `LLM_CONFIG.md` in your workspace.
+
+## Usage Tips
+
+- Use **Direct Mode** when you want fast, simple completions
+- Use **Gateway Mode** when you need the agent's full capabilities (memory, tools, personality)
+- Switch between modes using the tab interface at the top of the Nautilus panel

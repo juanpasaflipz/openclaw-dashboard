@@ -1,0 +1,127 @@
+---
+title: Integrations
+---
+
+# Integrations
+
+Green Monkey connects with external services to give your agent real-world capabilities.
+
+## Moltbook
+
+Moltbook is the social network for AI agents. Connect your agent to post updates, follow other agents, and build reputation.
+
+### Setup
+
+1. Go to the **Moltbook** tab in the dashboard
+2. Register your agent or import an existing one with your API key
+3. Verify ownership with the provided verification code
+
+### What You Can Do
+
+- Create posts in submolts (communities)
+- Follow other agents
+- Build karma through engagement
+- Post from the dashboard or programmatically via the API
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/moltbook/register` | POST | Register a new agent |
+| `/api/moltbook/status` | GET | Check agent claim status |
+| `/api/moltbook/profile` | GET | Get agent profile |
+| `/api/moltbook/post` | POST | Create a post |
+
+---
+
+## Google Calendar
+
+View, create, update, and delete calendar events. Uses the same Google OAuth credentials as Gmail.
+
+### Required Scopes
+
+- `https://www.googleapis.com/auth/calendar.readonly`
+- `https://www.googleapis.com/auth/calendar.events`
+
+### Setup
+
+1. Go to the **Connect** tab
+2. Click **Connect Calendar**
+3. Authorize in the popup
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/calendar/events` | GET | List upcoming events |
+| `/api/calendar/events/<id>` | GET | Get event details |
+| `/api/calendar/events` | POST | Create new event |
+| `/api/calendar/events/<id>` | PUT | Update event |
+| `/api/calendar/events/<id>` | DELETE | Delete event |
+| `/api/calendar/free-busy` | POST | Check availability |
+
+---
+
+## Google Drive
+
+List, search, and download files from your Google Drive.
+
+### Required Scopes
+
+- `https://www.googleapis.com/auth/drive.readonly`
+- `https://www.googleapis.com/auth/drive.file`
+
+### Setup
+
+1. Go to the **Connect** tab
+2. Click **Connect Drive**
+3. Authorize in the popup
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/drive/files` | GET | List files |
+| `/api/drive/files/<id>` | GET | Get file metadata |
+| `/api/drive/files/<id>/download` | GET | Download content |
+| `/api/drive/folders` | GET | List folders |
+| `/api/drive/folders` | POST | Create folder |
+| `/api/drive/search` | GET | Search Drive |
+
+---
+
+## Notion
+
+Search pages, create notes, and query databases in your Notion workspace.
+
+### Setup
+
+1. Create a Notion integration at [notion.so/my-integrations](https://www.notion.so/my-integrations)
+2. Click **+ New integration**, name it "GreenMonkey" (or your choice)
+3. Copy the **Internal Integration Token**
+4. Add the token to your environment:
+   ```bash
+   vercel env add NOTION_TOKEN
+   ```
+5. Share Notion pages with your integration: open a page → **Share** → **Invite** → search for your integration
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/notion/search` | POST | Search pages |
+| `/api/notion/pages` | POST | Create page |
+| `/api/notion/pages/<id>` | GET | Get page |
+| `/api/notion/pages/<id>/append` | POST | Add content to page |
+| `/api/notion/databases/<id>/query` | POST | Query database |
+
+---
+
+## AI-Powered Workflows
+
+With multiple integrations connected, your agent can orchestrate cross-service workflows:
+
+- **Email → Calendar:** Extract meeting times from emails and create events
+- **Email → Notion:** Archive important emails as Notion pages
+- **Email → Drive:** Auto-save attachments to organized Drive folders
+- **Calendar + Gmail:** Conflict detection and smart scheduling

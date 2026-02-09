@@ -1,0 +1,58 @@
+---
+title: Green Monkey Dashboard
+---
+
+# Green Monkey Dashboard
+
+A modern web dashboard for configuring your personalized AI agent. Green Monkey is a framework for creating AI agents with persistent memory, customized behavior, and LLM connectivity.
+
+## What is Green Monkey?
+
+Green Monkey Dashboard gives you a sleek, browser-based interface to configure every aspect of your AI agent — from its personality and memory to the LLM provider it uses and the tools it has access to.
+
+## Key Features
+
+- **Modern UI** — Glassmorphism design with smooth animations
+- **LLM Connection** — Connect to Anthropic Claude, OpenAI, OpenRouter, Ollama, or custom providers
+- **AI Identity** — Define your AI's name, personality, and behavior
+- **Nautilus AI** — Direct LLM access and gateway-based agent orchestration
+- **Chat Bot** — Conversational AI interface
+- **Web Research** — Browse and research the web through your agent
+- **Integrations** — Google Calendar, Drive, Notion, and Moltbook
+- **Security & Safety** — Guardrails for privacy protection and action confirmations
+- **Auto-Save** — All configurations saved to markdown files
+- **Responsive** — Works on desktop, tablet, and mobile
+
+## Quick Links
+
+- [Getting Started](/getting-started) — Install and run the dashboard in minutes
+- [Installation](/installation) — Detailed setup and configuration
+- [Features](/features/nautilus-ai) — Explore what the dashboard can do
+- [Deployment](/guides/deployment) — Deploy to Vercel or Heroku
+- [Security](/guides/security) — Best practices for keeping your data safe
+
+## Configuration Files
+
+All settings are stored as markdown files in your workspace:
+
+| File | Purpose |
+|------|---------|
+| `LLM_CONFIG.md` | AI provider and API credentials |
+| `IDENTITY.md` | AI personality and identity |
+| `USER.md` | Your information and preferences |
+| `SOUL.md` | Behavioral guidelines |
+| `TOOLS.md` | Environment-specific settings |
+| `SECURITY.md` | Safety guardrails and privacy settings |
+
+## API Endpoints
+
+The dashboard exposes a REST API for programmatic access:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/config/<filename>` | GET | Read a configuration file |
+| `/api/config/<filename>` | POST | Save a configuration file |
+| `/api/status` | GET | Get configuration status |
+| `/api/test-connection` | POST | Test LLM connection |
+| `/api/moltbook/register` | POST | Register agent with Moltbook |
+| `/api/moltbook/status` | GET | Check agent claim status |

@@ -1,0 +1,110 @@
+---
+title: Security
+---
+
+# Security Best Practices
+
+Keep your Green Monkey Dashboard and AI agent secure.
+
+## Sensitive Files
+
+**Never commit these files to version control:**
+
+| File | Contains |
+|------|----------|
+| `LLM_CONFIG.md` | API keys |
+| `USER.md` | Personal information |
+| `SECURITY.md` | Privacy settings |
+| `MOLTBOOK_CONFIG.md` | Agent credentials |
+| `.env` | All secrets |
+
+The `.gitignore` file should already exclude these. Verify before pushing.
+
+## Security Features
+
+The dashboard includes optional safety guardrails you can configure:
+
+### Session Isolation
+
+Separate sessions per contact to prevent context leakage between different conversations.
+
+### External Action Confirmations
+
+Require approval before your agent sends emails, posts to social media, or makes API calls.
+
+### Tool Restrictions
+
+Sandbox or disable potentially risky operations:
+- Web browsing
+- File operations
+- Code execution
+
+### Privacy Protection
+
+- Prevent external logging of conversations
+- Block credential exposure in outputs
+- Limit data sharing with third parties
+
+### Model Safety Warnings
+
+Alert when using small models without sandboxing, which may be more susceptible to prompt injection.
+
+## Environment Variables
+
+Always use environment variables for secrets in production:
+
+```bash
+# Good - secrets in environment
+STRIPE_SECRET_KEY=sk_live_...
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Bad - secrets in code
+# Never hardcode API keys in source files
+```
+
+## Production Checklist
+
+- [ ] Set a strong `SECRET_KEY` (64+ characters)
+- [ ] Use environment variables for all secrets
+- [ ] Enable HTTPS (automatic on Vercel/Heroku)
+- [ ] Verify Stripe webhook signatures
+- [ ] Set CORS origins in production
+- [ ] Use Stripe test mode until fully tested
+- [ ] Add rate limiting to auth endpoints
+- [ ] Monitor failed login attempts
+- [ ] Set up error logging (Sentry, etc.)
+
+## Agent Safety
+
+Your AI agent has access to personal data. Follow these guidelines:
+
+### Internal vs External Actions
+
+**Safe to do freely (no confirmation needed):**
+- Read files, explore, organize, learn
+- Search the web, check calendars
+- Work within the workspace
+
+**Require confirmation:**
+- Sending emails, tweets, public posts
+- Anything that leaves the machine
+- Anything uncertain
+
+### Group Chat Safety
+
+In group chats, the agent should:
+- Never share private data from `USER.md` or `MEMORY.md`
+- Only load `MEMORY.md` in direct (main session) chats
+- Participate without dominating the conversation
+
+### Memory Security
+
+- `MEMORY.md` contains personal context — only load in main sessions
+- Daily memory files (`memory/YYYY-MM-DD.md`) are raw logs — review for sensitive content
+- Never exfiltrate private data
+
+## Reporting Issues
+
+If you discover a security vulnerability:
+- Open a private issue on GitHub
+- Do not disclose publicly until a fix is available

@@ -1,0 +1,149 @@
+---
+title: Installation
+---
+
+# Installation & Setup
+
+Detailed guide for installing and configuring the Green Monkey Dashboard.
+
+## What is the Dashboard?
+
+The Green Monkey Dashboard is a web interface that makes it easy to configure your personalized AI agent without manually editing markdown files.
+
+## Quick Install
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/openclaw-dashboard.git
+cd openclaw-dashboard
+```
+
+### 2. Install Dependencies
+
+Using the requirements file:
+
+```bash
+pip3 install --user -r requirements.txt
+```
+
+Or install manually:
+
+```bash
+pip3 install --user Flask flask-cors
+```
+
+> **Note:** If you see a PATH warning, add this to your shell profile:
+> ```bash
+> export PATH="$HOME/.local/bin:$PATH"
+> ```
+
+### 3. Start the Server
+
+```bash
+python3 server.py
+```
+
+You should see:
+
+```
+============================================================
+🦅 Green Monkey Dashboard Server
+============================================================
+Base directory: /path/to/openclaw
+Server starting on http://localhost:5000
+Open your browser and navigate to: http://localhost:5000
+============================================================
+```
+
+Or use the launch script:
+
+```bash
+./start-dashboard.sh
+```
+
+### 4. Open in Browser
+
+Navigate to [http://localhost:5000](http://localhost:5000).
+
+## Using the Dashboard
+
+The dashboard has several tabs:
+
+### Overview
+
+See your configuration progress and quick access to start setup.
+
+### Identity
+
+Configure your AI's personality:
+
+- **Name** — What should your AI be called?
+- **Creature** — What kind of being is it? (AI assistant, digital familiar, etc.)
+- **Vibe** — Personality traits (warm, witty, professional)
+- **Emoji** — A signature emoji
+- **Avatar** — Optional image URL or path
+
+### User Info
+
+Tell your AI about yourself:
+
+- Your name and preferred name
+- Pronouns
+- Timezone
+- Notes about your preferences and interests
+
+### Soul & Behavior
+
+Edit the core behavioral guidelines that define how your AI acts. The defaults are thoughtfully crafted, but fully customizable.
+
+### Tools & Setup
+
+Add environment-specific notes like:
+
+- Camera names and locations
+- SSH hosts
+- Preferred voices for text-to-speech
+- Device nicknames
+
+### Export Config
+
+Preview all your generated configuration files.
+
+## Generated Files
+
+The dashboard manages these files in your Green Monkey directory:
+
+| File | Content |
+|------|---------|
+| `IDENTITY.md` | Your AI's identity |
+| `USER.md` | Information about you |
+| `SOUL.md` | Behavioral guidelines |
+| `TOOLS.md` | Environment-specific settings |
+
+## Troubleshooting
+
+### Port 5000 Already in Use
+
+Change the port in `server.py`:
+
+```python
+app.run(host='0.0.0.0', port=8000, debug=True)
+```
+
+### Server Not Accessible
+
+Make sure your firewall allows connections on port 5000.
+
+### Changes Not Saving
+
+Check that you have write permissions in the Green Monkey directory.
+
+## Next Steps
+
+After configuring your setup:
+
+1. Review the generated markdown files
+2. Delete `BOOTSTRAP.md` (you won't need it anymore)
+3. Follow the [Deployment Guide](/guides/deployment) for production
+4. Connect your AI to your preferred messaging platform
