@@ -193,7 +193,7 @@ def register_stripe_routes(app):
                 if user:
                     # Get plan tier from metadata or subscription items
                     subscription_id = subscription['id']
-                    tier = subscription.get('metadata', {}).get('tier', 'starter')
+                    tier = subscription.get('metadata', {}).get('tier', 'pro')
 
                     # Activate subscription
                     user.stripe_subscription_id = subscription_id

@@ -897,39 +897,15 @@ def initialize_database():
         if SubscriptionPlan.query.first() is None:
             plans = [
                 SubscriptionPlan(
-                    tier='starter',
-                    name='Starter Plan',
-                    price_monthly_cents=900,  # $9/month
-                    unlimited_posts=False,
-                    max_agents=3,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=False,
-                    team_members=1,
-                    priority_support=False
-                ),
-                SubscriptionPlan(
                     tier='pro',
                     name='Pro Plan',
-                    price_monthly_cents=2900,  # $29/month
-                    unlimited_posts=True,  # Note: Moltbook has 30-min limit for all users
-                    max_agents=5,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=True,
-                    team_members=1,
-                    priority_support=True
-                ),
-                SubscriptionPlan(
-                    tier='team',
-                    name='Team Plan',
-                    price_monthly_cents=4900,  # $49/month
+                    price_monthly_cents=1500,  # $15/month (beta pricing)
                     unlimited_posts=True,
-                    max_agents=10,  # 10 agents for $49
+                    max_agents=999,
                     scheduled_posting=True,
                     analytics=True,
                     api_access=True,
-                    team_members=3,  # 3 team members
+                    team_members=3,
                     priority_support=True
                 )
             ]
@@ -938,7 +914,7 @@ def initialize_database():
                 db.session.add(plan)
 
             db.session.commit()
-            messages.append('✅ Seeded subscription plans')
+            messages.append('✅ Seeded subscription plans (2-tier model: Free + Pro)')
         else:
             messages.append('ℹ️  Subscription plans already exist')
 
@@ -1020,8 +996,7 @@ def migrate_subscription_columns():
 @app.route('/api/admin/update-pricing', methods=['POST'])
 def update_pricing():
     """
-    Update subscription plan pricing in database
-    Use this when changing pricing tiers
+    Update Pro plan pricing in database
     """
     try:
         data = request.get_json() or {}
@@ -1030,27 +1005,102 @@ def update_pricing():
         if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
             return jsonify({'error': 'Unauthorized'}), 401
 
-        # Update Team plan pricing from $79 to $49
-        team_plan = SubscriptionPlan.query.filter_by(tier='team').first()
-        if team_plan:
-            team_plan.price_monthly_cents = 4900  # $49/month
-            team_plan.max_agents = 10
-            team_plan.team_members = 3
+        pro_plan = SubscriptionPlan.query.filter_by(tier='pro').first()
+        if pro_plan:
+            new_price = data.get('price_cents', 1500)
+            old_price = pro_plan.price_monthly_cents
+            pro_plan.price_monthly_cents = new_price
+            pro_plan.max_agents = 999
+            pro_plan.team_members = 3
+            pro_plan.unlimited_posts = True
+            pro_plan.scheduled_posting = True
+            pro_plan.analytics = True
+            pro_plan.api_access = True
+            pro_plan.priority_support = True
             db.session.commit()
 
             return jsonify({
                 'success': True,
-                'message': 'Pricing updated successfully',
+                'message': 'Pro plan pricing updated',
                 'updated': {
-                    'tier': 'team',
-                    'old_price': '$79/month',
-                    'new_price': '$49/month',
-                    'max_agents': 10,
+                    'tier': 'pro',
+                    'old_price': f'${old_price/100:.2f}/month',
+                    'new_price': f'${new_price/100:.2f}/month',
+                    'max_agents': 999,
                     'team_members': 3
                 }
             })
         else:
-            return jsonify({'error': 'Team plan not found'}), 404
+            return jsonify({'error': 'Pro plan not found'}), 404
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/migrate-to-two-tier', methods=['POST'])
+def migrate_to_two_tier():
+    """
+    Migration endpoint: collapse 4-tier model (free/starter/pro/team) to 2-tier (free/pro).
+    - Deactivates starter and team plans
+    - Updates pro plan to $15/month (beta pricing)
+    - Migrates users on starter/team to pro
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        results = []
+
+        # Deactivate starter and team plans
+        for tier in ('starter', 'team'):
+            plan = SubscriptionPlan.query.filter_by(tier=tier).first()
+            if plan:
+                plan.is_active = False
+                results.append(f'Deactivated {tier} plan')
+
+        # Update pro plan
+        pro_plan = SubscriptionPlan.query.filter_by(tier='pro').first()
+        if pro_plan:
+            pro_plan.price_monthly_cents = 1500
+            pro_plan.max_agents = 999
+            pro_plan.team_members = 3
+            pro_plan.unlimited_posts = True
+            pro_plan.is_active = True
+            results.append('Updated pro plan to $15/month (beta pricing)')
+        else:
+            # Create pro plan if it doesn't exist
+            pro_plan = SubscriptionPlan(
+                tier='pro',
+                name='Pro Plan',
+                price_monthly_cents=1500,
+                unlimited_posts=True,
+                max_agents=999,
+                scheduled_posting=True,
+                analytics=True,
+                api_access=True,
+                team_members=3,
+                priority_support=True,
+                is_active=True
+            )
+            db.session.add(pro_plan)
+            results.append('Created pro plan at $15/month (beta pricing)')
+
+        # Migrate users on starter/team to pro
+        migrated = User.query.filter(
+            User.subscription_tier.in_(['starter', 'team'])
+        ).update({User.subscription_tier: 'pro'}, synchronize_session='fetch')
+        results.append(f'Migrated {migrated} users from starter/team to pro')
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Migration to 2-tier model complete',
+            'details': results
+        })
 
     except Exception as e:
         db.session.rollback()
@@ -1071,15 +1121,6 @@ def update_stripe_ids():
 
         updates = []
 
-        # Update Starter plan
-        if 'starter_price_id' in data:
-            starter = SubscriptionPlan.query.filter_by(tier='starter').first()
-            if starter:
-                starter.stripe_price_id = data['starter_price_id']
-                if 'starter_product_id' in data:
-                    starter.stripe_product_id = data['starter_product_id']
-                updates.append('Starter')
-
         # Update Pro plan
         if 'pro_price_id' in data:
             pro = SubscriptionPlan.query.filter_by(tier='pro').first()
@@ -1088,15 +1129,6 @@ def update_stripe_ids():
                 if 'pro_product_id' in data:
                     pro.stripe_product_id = data['pro_product_id']
                 updates.append('Pro')
-
-        # Update Team plan
-        if 'team_price_id' in data:
-            team = SubscriptionPlan.query.filter_by(tier='team').first()
-            if team:
-                team.stripe_price_id = data['team_price_id']
-                if 'team_product_id' in data:
-                    team.stripe_product_id = data['team_product_id']
-                updates.append('Team')
 
         if updates:
             db.session.commit()

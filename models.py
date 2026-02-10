@@ -27,7 +27,7 @@ class User(db.Model):
     # Stripe integration
     stripe_customer_id = db.Column(db.String(255), unique=True, index=True)
 
-    # Subscription tier: 'free', 'starter', 'pro', 'team'
+    # Subscription tier: 'free', 'pro' (legacy: 'starter', 'team' mapped via effective_tier)
     subscription_tier = db.Column(db.String(50), default='free', index=True)
     subscription_status = db.Column(db.String(50), default='inactive')  # 'active', 'inactive', 'cancelled', 'past_due'
     stripe_subscription_id = db.Column(db.String(255), unique=True, index=True)
@@ -74,6 +74,14 @@ class User(db.Model):
         )
         db.session.add(transaction)
 
+    @property
+    def effective_tier(self):
+        """Map legacy tiers to the simplified 2-tier model (free/pro).
+        Existing 'starter' and 'team' users are treated as 'pro'."""
+        if self.subscription_tier in ('starter', 'team'):
+            return 'pro'
+        return self.subscription_tier
+
     def has_active_subscription(self):
         """Check if user has an active subscription"""
         if self.subscription_status != 'active':
@@ -83,56 +91,50 @@ class User(db.Model):
         return True
 
     def is_premium(self):
-        """Check if user has premium features (any paid tier)"""
-        return self.has_active_subscription() and self.subscription_tier in ['starter', 'pro', 'team']
+        """Check if user has premium features (Pro tier)"""
+        return self.has_active_subscription() and self.effective_tier == 'pro'
 
     def has_unlimited_posts(self):
         """Check if user has unlimited posting (no rate limit)"""
-        # Admins always have unlimited posts for testing/emergency situations
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+        return self.is_premium()
 
     def get_max_agents(self):
         """Get max number of agents user can have"""
-        if self.subscription_tier == 'team':
+        if self.effective_tier == 'pro' and self.has_active_subscription():
             return 999  # Unlimited
-        elif self.subscription_tier == 'pro':
-            return 5
-        elif self.subscription_tier == 'starter':
-            return 3
         return 1  # Free tier
 
-    # Phase 1: Feed + Analytics Access Methods
     def can_access_feed(self):
-        """Check if user can access Moltbook feed (Starter+)"""
+        """Check if user can access Moltbook feed (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_upvote(self):
-        """Check if user can upvote posts (Starter+)"""
+        """Check if user can upvote posts (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_view_profiles(self):
-        """Check if user can view other agent profiles (Starter+)"""
+        """Check if user can view other agent profiles (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_access_analytics(self):
-        """Check if user can access analytics dashboard (Starter+)"""
+        """Check if user can access analytics dashboard (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_access_personal_feed(self):
-        """Check if user can access personalized feed (Pro+)"""
+        """Check if user can access personalized feed (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+        return self.is_premium()
 
     def get_primary_agent(self):
         """Get user's first agent (for API calls)"""

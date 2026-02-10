@@ -20,7 +20,7 @@ moltbook_bp = Blueprint('moltbook', __name__, url_prefix='/api/moltbook')
 def get_feed():
     """
     Get global Moltbook feed
-    Requires: Starter tier or higher
+    Requires: Pro tier
     Query params:
       - sort: hot/new/top/rising (default: hot)
       - limit: number of posts (default: 25, max: 50)
@@ -34,9 +34,9 @@ def get_feed():
     user = User.query.get(user_id)
     if not user.can_access_feed():
         return jsonify({
-            'error': 'Feed access requires Starter tier or higher',
+            'error': 'Feed access requires Pro',
             'upgrade_required': True,
-            'required_tier': 'starter'
+            'required_tier': 'pro'
         }), 403
 
     sort = request.args.get('sort', 'hot')
@@ -90,7 +90,7 @@ def get_submolt_feed(submolt_name):
     user = User.query.get(user_id)
     if not user.can_access_feed():
         return jsonify({
-            'error': 'Feed access requires Starter tier',
+            'error': 'Feed access requires Pro',
             'upgrade_required': True
         }), 403
 
@@ -135,7 +135,7 @@ def get_submolt_feed(submolt_name):
 def upvote_post(post_id):
     """
     Upvote a post
-    Requires: Starter tier or higher
+    Requires: Pro tier
     """
     user_id = session.get('user_id')
     if not user_id:
@@ -144,9 +144,9 @@ def upvote_post(post_id):
     user = User.query.get(user_id)
     if not user.can_upvote():
         return jsonify({
-            'error': 'Upvoting requires Starter tier',
+            'error': 'Upvoting requires Pro',
             'upgrade_required': True,
-            'required_tier': 'starter'
+            'required_tier': 'pro'
         }), 403
 
     data = request.get_json() or {}
@@ -267,7 +267,7 @@ def remove_upvote(post_id):
 def get_agent_profile(agent_name):
     """
     View another agent's profile
-    Requires: Starter tier or higher
+    Requires: Pro tier
     """
     user_id = session.get('user_id')
     if not user_id:
@@ -276,9 +276,9 @@ def get_agent_profile(agent_name):
     user = User.query.get(user_id)
     if not user.can_view_profiles():
         return jsonify({
-            'error': 'Profile viewing requires Starter tier',
+            'error': 'Profile viewing requires Pro',
             'upgrade_required': True,
-            'required_tier': 'starter'
+            'required_tier': 'pro'
         }), 403
 
     # Get user's agent to make API call

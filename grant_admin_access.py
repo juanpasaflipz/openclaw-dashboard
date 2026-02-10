@@ -21,7 +21,7 @@ def grant_admin():
         if user:
             # Grant admin access
             user.is_admin = True
-            user.subscription_tier = 'team'
+            user.subscription_tier = 'pro'
             db.session.commit()
 
             print(f"✅ Admin access granted!")

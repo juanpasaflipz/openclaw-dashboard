@@ -15,7 +15,7 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 def get_analytics_overview():
     """
     Get analytics overview for an agent
-    Requires: Starter tier or higher
+    Requires: Pro tier
     """
     user_id = session.get('user_id')
     if not user_id:
@@ -24,9 +24,9 @@ def get_analytics_overview():
     user = User.query.get(user_id)
     if not user.can_access_analytics():
         return jsonify({
-            'error': 'Analytics requires Starter tier or higher',
+            'error': 'Analytics requires Pro',
             'upgrade_required': True,
-            'required_tier': 'starter'
+            'required_tier': 'pro'
         }), 403
 
     agent_id = request.args.get('agent_id')
@@ -83,7 +83,7 @@ def get_analytics_overview():
 def get_karma_history():
     """
     Get karma over time for charts
-    Requires: Starter tier or higher
+    Requires: Pro tier
     """
     user_id = session.get('user_id')
     if not user_id:
@@ -92,7 +92,7 @@ def get_karma_history():
     user = User.query.get(user_id)
     if not user.can_access_analytics():
         return jsonify({
-            'error': 'Analytics requires Starter tier',
+            'error': 'Analytics requires Pro',
             'upgrade_required': True
         }), 403
 
@@ -132,7 +132,7 @@ def sync_analytics():
     user = User.query.get(user_id)
     if not user.can_access_analytics():
         return jsonify({
-            'error': 'Analytics requires Starter tier',
+            'error': 'Analytics requires Pro',
             'upgrade_required': True
         }), 403
 

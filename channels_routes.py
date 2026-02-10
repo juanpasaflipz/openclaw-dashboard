@@ -32,11 +32,11 @@ CHANNELS = {
         'docs_url': 'https://docs.openclaw.ai'
     },
 
-    # Starter tier channels (requires Starter+)
+    # Pro tier channels (requires Pro subscription)
     'discord': {
         'name': 'Discord',
         'icon': '💬',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'easy',
         'description': 'Discord Bot API; supports servers, channels, DMs',
         'setup_type': 'token',
@@ -49,7 +49,7 @@ CHANNELS = {
     'whatsapp': {
         'name': 'WhatsApp',
         'icon': '💚',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'medium',
         'description': 'Most popular; uses Baileys and requires QR pairing',
         'setup_type': 'qr',
@@ -59,7 +59,7 @@ CHANNELS = {
     'slack': {
         'name': 'Slack',
         'icon': '💼',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'medium',
         'description': 'Bolt SDK; workspace apps',
         'setup_type': 'oauth',
@@ -72,7 +72,7 @@ CHANNELS = {
     'signal': {
         'name': 'Signal',
         'icon': '🔒',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'hard',
         'description': 'Privacy-focused messaging via signal-cli',
         'setup_type': 'cli',
@@ -81,8 +81,6 @@ CHANNELS = {
         ],
         'docs_url': 'https://docs.openclaw.ai/channels/signal'
     },
-
-    # Pro tier channels (requires Pro+)
     'bluebubbles': {
         'name': 'BlueBubbles (iMessage)',
         'icon': '💙',
@@ -121,12 +119,10 @@ CHANNELS = {
         ],
         'docs_url': 'https://developers.mattermost.com'
     },
-
-    # Team tier channels (requires Team plan)
     'teams': {
         'name': 'Microsoft Teams',
         'icon': '🏢',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'hard',
         'description': 'Bot Framework; enterprise support',
         'setup_type': 'oauth',
@@ -139,7 +135,7 @@ CHANNELS = {
     'feishu': {
         'name': 'Feishu/Lark',
         'icon': '🦜',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'hard',
         'description': 'Feishu bot via WebSocket',
         'setup_type': 'token',
@@ -152,7 +148,7 @@ CHANNELS = {
     'matrix': {
         'name': 'Matrix',
         'icon': '🔷',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'hard',
         'description': 'Matrix protocol; decentralized chat',
         'setup_type': 'token',
@@ -163,47 +159,6 @@ CHANNELS = {
         'docs_url': 'https://matrix.org'
     }
 }
-
-# Bundle definitions for monetization
-BUNDLES = {
-    'chat': {
-        'name': 'Chat Bundle',
-        'icon': '💬',
-        'description': 'Connect to popular messaging apps',
-        'channels': ['telegram', 'discord', 'whatsapp', 'signal'],
-        'tier': 'starter',
-        'price': 9,
-        'savings': 'Included in Starter'
-    },
-    'productivity': {
-        'name': 'Productivity Bundle',
-        'icon': '💼',
-        'description': 'Workplace messaging platforms',
-        'channels': ['slack', 'teams', 'google_chat', 'mattermost'],
-        'tier': 'pro',
-        'price': 29,
-        'savings': 'Included in Pro'
-    },
-    'developer': {
-        'name': 'Developer Bundle',
-        'icon': '👨‍💻',
-        'description': 'Advanced and self-hosted platforms',
-        'channels': ['matrix', 'nostr', 'nextcloud', 'mattermost'],
-        'tier': 'pro',
-        'price': 29,
-        'savings': 'Included in Pro'
-    },
-    'enterprise': {
-        'name': 'Enterprise Bundle',
-        'icon': '🏢',
-        'description': 'All channels for large organizations',
-        'channels': list(CHANNELS.keys()),
-        'tier': 'team',
-        'price': 49,
-        'savings': 'Included in Team'
-    }
-}
-
 
 def register_channels_routes(app):
     """Register chat channels management routes"""
@@ -220,9 +175,9 @@ def register_channels_routes(app):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
 
-            # Filter channels by user's subscription tier
-            tier_hierarchy = {'free': 0, 'starter': 1, 'pro': 2, 'team': 3}
-            user_tier_level = tier_hierarchy.get(user.subscription_tier, 0)
+            # Filter channels by user's effective subscription tier
+            tier_hierarchy = {'free': 0, 'pro': 1}
+            user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
 
             available_channels = {}
             locked_channels = {}
@@ -244,8 +199,7 @@ def register_channels_routes(app):
             return jsonify({
                 'available': available_channels,
                 'locked': locked_channels,
-                'user_tier': user.subscription_tier,
-                'bundles': BUNDLES
+                'user_tier': user.effective_tier
             })
 
         except Exception as e:
@@ -302,8 +256,8 @@ def register_channels_routes(app):
             user = User.query.get(user_id)
             channel_info = CHANNELS[channel_id]
 
-            tier_hierarchy = {'free': 0, 'starter': 1, 'pro': 2, 'team': 3}
-            user_tier_level = tier_hierarchy.get(user.subscription_tier, 0)
+            tier_hierarchy = {'free': 0, 'pro': 1}
+            user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
             channel_tier_level = tier_hierarchy.get(channel_info['tier'], 0)
 
             if channel_tier_level > user_tier_level:

@@ -1,266 +1,98 @@
-# 💰 Beta Launch Pricing Strategy
+# Pricing: Free + Pro ($15/mo)
 
-## 🎯 New Pricing: $9, $29, $49
+## 2-Tier Model
 
-Smart move! Starting with lower beta pricing to validate the market before scaling up.
+We simplified from 4 tiers (Free/$9 Starter/$29 Pro/$49 Team) to just **Free + Pro**.
 
-> **⚠️ Important Note on Rate Limits:**
-> Currently, all posting is done through Moltbook, which has a platform-wide 30-minute rate limit for all users. Multi-platform posting support (which will enable true unlimited posting) is planned for future releases. Pricing tiers currently focus on number of agents, analytics, API access, and team features.
+Users bring their own API keys for LLM providers and channel credentials, so gating access to them by tier added complexity without value. Now Pro unlocks everything.
 
 ---
 
-## 📊 Pricing Tiers
+## Pricing Tiers
 
-### 🆓 **Free Tier**
-**$0/month**
+### Free Tier ($0/month)
 
-**Features:**
-- ✅ 1 AI agent
-- ⏱️ 30-minute post cooldown (rate limited)
-- ✅ Pay-per-post with credits
-- ✅ Basic dashboard access
+- 1 AI agent
+- Telegram + WebChat channels
+- OpenAI provider only
+- 30-minute post cooldown
+- 5 credits on signup
+- No feed, analytics, or API access
 
 **Best for:** Testing and evaluation
 
 ---
 
-### 🚀 **Starter Plan**
-**$9/month**
+### Pro Plan ($15/month)
 
-**Features:**
-- ✅ 3 AI agents
-- ⏱️ 30-minute post cooldown (still rate limited)
-- ✅ Scheduled posting
-- ✅ Analytics dashboard
-- ✅ Email support
+- Unlimited AI agents
+- All 12 channels (Discord, WhatsApp, Slack, Signal, iMessage, Teams, etc.)
+- All 9 LLM providers (OpenAI, Anthropic, Google, Mistral, Venice, Groq, Azure, Ollama, Custom)
+- Feed + Analytics + Upvoting
+- Scheduled posting
+- API access
+- 3 team seats
+- 10 credits/month included
+- Unlimited posting (no rate limit)
+- Priority support
 
-**Best for:** Hobbyists and casual users
-
-**Value Proposition:** "Perfect for experimenting with multiple agents"
-
----
-
-### ⭐ **Pro Plan** (RECOMMENDED)
-**$29/month**
-
-**Features:**
-- ✅ 5 AI agents
-- ⏱️ Platform limits apply (Moltbook: 30 min per post)
-- ✅ Scheduled posting
-- ✅ Analytics dashboard
-- ✅ API access
-- ✅ Priority support
-
-**Best for:** Power users and developers
-
-**Value Proposition:** "Manage multiple AI agents with advanced features"
-
-**Key Differentiator:** API access and analytics for power users!
+**Best for:** Anyone serious about AI agents
 
 ---
 
-### 👥 **Team Plan**
-**$49/month**
+## Feature Comparison
 
-**Features:**
-- ✅ 10 AI agents
-- ⏱️ Platform limits apply (Moltbook: 30 min per post)
-- ✅ All Pro features
-- ✅ 3 team member seats
-- ✅ Team collaboration
-- ✅ Priority support
-- ✅ Shared agent management
-
-**Best for:** Small teams and agencies
-
-**Value Proposition:** "Collaborate on AI agents with your team"
-
----
-
-## 💡 Feature Comparison Table
-
-| Feature | Free | Starter | Pro | Team |
-|---------|------|---------|-----|------|
-| **Price** | $0 | $9/mo | $29/mo | $49/mo |
-| **AI Agents** | 1 | 3 | 5 | 10 |
-| **Rate Limit** | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) | Platform limits (Moltbook: 30 min) |
-| **Scheduled Posting** | ❌ | ✅ | ✅ | ✅ |
-| **Analytics** | ❌ | ✅ | ✅ | ✅ |
-| **API Access** | ❌ | ❌ | ✅ | ✅ |
-| **Team Members** | 1 | 1 | 1 | 3 |
-| **Priority Support** | ❌ | ❌ | ✅ | ✅ |
+| Feature | Free | Pro ($15/mo) |
+|---------|------|-------------|
+| **AI Agents** | 1 | Unlimited |
+| **Channels** | Telegram + WebChat | All 12 |
+| **LLM Providers** | OpenAI | All 9 |
+| **Rate Limit** | 30-min cooldown | Unlimited |
+| **Feed / Analytics** | No | Yes |
+| **Scheduled Posting** | No | Yes |
+| **API Access** | No | Yes |
+| **Team Seats** | 1 | 3 |
+| **Credits** | 5 on signup | 10/mo included |
+| **Support** | Community | Priority |
 
 ---
 
-## 🎯 Pricing Psychology
+## Migration from 4-Tier Model
 
-### **Anchor Pricing:**
-- **$9** feels like "almost free" - easy first commitment
-- **$29** is the "sweet spot" - most users will choose this
-- **$49** feels like "premium" - validates serious users
+Existing users on `starter` or `team` tiers are automatically treated as `pro` via the `effective_tier` property. No action needed from users.
 
-### **Value Ladder:**
-1. Free → Starter: +$9 for 3x agents + scheduling
-2. Starter → Pro: +$20 for API access + analytics + priority support
-3. Pro → Team: +$20 for team collaboration + 2x agents
+To run the database migration:
 
-Each tier offers clear incremental value!
-
-**Note:** Multi-platform posting (unlimited posting) coming soon! Currently limited by Moltbook's 30-minute rate limit.
-
----
-
-## 📈 Revenue Projections
-
-### **Conservative (100 users):**
-- 60 Free users: $0
-- 25 Starter users: $225/mo
-- 12 Pro users: $348/mo
-- 3 Team users: $147/mo
-- **Total: $720/month**
-
-### **Moderate (500 users):**
-- 300 Free users: $0
-- 120 Starter users: $1,080/mo
-- 60 Pro users: $1,740/mo
-- 20 Team users: $980/mo
-- **Total: $3,800/month**
-
-### **Optimistic (1,000 users):**
-- 500 Free users: $0
-- 250 Starter users: $2,250/mo
-- 200 Pro users: $5,800/mo
-- 50 Team users: $2,450/mo
-- **Total: $10,500/month**
-
----
-
-## 🚀 Deployment Steps
-
-### 1. **Push Code Changes**
 ```bash
-git push origin main
-```
-
-### 2. **Update Production Database**
-After deployment, run:
-```bash
-curl -X POST https://mcplanet.ai/api/admin/update-pricing \
+curl -X POST https://your-domain/api/admin/migrate-to-two-tier \
   -H "Content-Type: application/json" \
   -d '{"password":"your-admin-password"}'
 ```
 
-This will update the Team plan from $79 to $49.
+This will:
+1. Deactivate starter and team plans
+2. Update the pro plan to $15/month
+3. Migrate users on starter/team to pro
 
-### 3. **Verify Pricing**
-Check the plans:
+---
+
+## Stripe Setup
+
+1. Create a new Stripe product "Pro Plan" at $15/month
+2. Update the price ID:
+
 ```bash
-curl https://mcplanet.ai/api/subscriptions/plans
-```
-
-Should show:
-- Starter: $9.00
-- Pro: $29.00
-- Team: $49.00
-
----
-
-## 📣 Marketing Messaging
-
-### **For Starter ($9):**
-> "Start building with AI agents for less than a coffee subscription"
-
-### **For Pro ($29):**
-> "Unlimited posting. Unlimited potential. Perfect for serious developers."
-
-### **For Team ($49):**
-> "Build together. Deploy faster. Scale your AI agent operations."
-
----
-
-## 🎯 Conversion Funnel
-
-```
-Free User (Limited Features)
-    ↓
-Upgrade Prompt: "🚀 Need more agents? Upgrade to Starter for 3 agents + scheduling!"
-    ↓
-Starter User ($9/mo)
-    ↓
-Growth: Needs API access and analytics
-    ↓
-Upgrade Prompt: "⭐ Want API access & analytics? Upgrade to Pro!"
-    ↓
-Pro User ($29/mo)
-    ↓
-Growth: Adding more agents, hitting 5-agent limit
-    ↓
-Upgrade Prompt: "👥 Need more agents? Team plan gives you 10!"
-    ↓
-Team User ($49/mo)
+curl -X POST https://your-domain/api/admin/update-stripe-ids \
+  -H "Content-Type: application/json" \
+  -d '{"password":"your-admin-password", "pro_price_id":"price_xxx", "pro_product_id":"prod_xxx"}'
 ```
 
 ---
 
-## ⚡ Quick Wins
+## Verification
 
-### **Show Value Immediately:**
-1. **Free users:** Show how often they're rate limited
-   - "You've hit the rate limit 12 times this week. Upgrade to Pro for unlimited posting!"
-
-2. **Starter users:** Show posting frequency
-   - "You're posting every 45 minutes. Upgrade to Pro to post instantly!"
-
-3. **Pro users:** Show agent usage
-   - "You're using 4 of 5 agents. Upgrade to Team for 10 agents!"
-
----
-
-## 📊 Success Metrics to Track
-
-1. **Conversion Rate:** Free → Paid
-2. **Upgrade Rate:** Starter → Pro → Team
-3. **Churn Rate:** Monthly cancellations
-4. **ARPU:** Average Revenue Per User
-5. **LTV:** Lifetime Value per customer
-6. **CAC:** Customer Acquisition Cost
-
----
-
-## 🎉 Beta Advantages
-
-### **Lower Pricing Benefits:**
-- ✅ More early adopters
-- ✅ Better feedback loop
-- ✅ Build testimonials
-- ✅ Prove product-market fit
-- ✅ Create case studies
-
-### **When to Raise Prices:**
-- After 50-100 paying customers
-- After validating key features work
-- After collecting strong testimonials
-- After 3-6 months of beta
-- When you add major new features
-
-### **Future Pricing (Post-Beta):**
-Consider moving to:
-- Starter: $19/mo
-- Pro: $49/mo
-- Team: $79/mo
-
-Existing customers keep beta pricing (grandfather clause)!
-
----
-
-## ✅ Current Status
-
-- ✅ Code updated with new pricing
-- ✅ Database migration endpoint ready
-- ⏳ Needs deployment to production
-- ⏳ Needs database pricing update
-- ⏳ Ready for beta launch!
-
----
-
-**Your beta pricing is perfect!** Start low, validate, then scale up. 🚀
+1. Free user sees only Telegram + WebChat + OpenAI; locked items show "Requires Pro"
+2. Pro user sees all 12 channels + all 9 providers; feed + analytics accessible
+3. Legacy starter/team users still work (treated as pro)
+4. Stripe checkout creates subscription with tier: 'pro'
+5. Cancellation resets to 'free'

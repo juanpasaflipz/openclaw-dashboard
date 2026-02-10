@@ -46,46 +46,20 @@ def init_database():
         else:
             print("ℹ️  Credit packages already exist, skipping seed.")
 
-        # Seed subscription plans
+        # Seed subscription plans (2-tier model: Free + Pro)
         if SubscriptionPlan.query.first() is None:
             plans = [
                 SubscriptionPlan(
-                    tier='starter',
-                    name='Starter Plan',
-                    price_monthly_cents=900,  # $9/month
-                    stripe_price_id='price_starter_monthly',
-                    unlimited_posts=False,
-                    max_agents=3,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=False,
-                    team_members=1,
-                    priority_support=False
-                ),
-                SubscriptionPlan(
                     tier='pro',
                     name='Pro Plan',
-                    price_monthly_cents=2900,  # $29/month
+                    price_monthly_cents=1500,  # $15/month (beta pricing)
                     stripe_price_id='price_pro_monthly',
-                    unlimited_posts=True,  # NO RATE LIMIT!
-                    max_agents=5,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=True,
-                    team_members=1,
-                    priority_support=True
-                ),
-                SubscriptionPlan(
-                    tier='team',
-                    name='Team Plan',
-                    price_monthly_cents=4900,  # $49/month
-                    stripe_price_id='price_team_monthly',
                     unlimited_posts=True,
-                    max_agents=10,  # 10 agents for $49
+                    max_agents=999,
                     scheduled_posting=True,
                     analytics=True,
                     api_access=True,
-                    team_members=3,  # 3 team members
+                    team_members=3,
                     priority_support=True
                 ),
             ]
@@ -94,11 +68,12 @@ def init_database():
                 db.session.add(plan)
 
             db.session.commit()
-            print("✅ Seeded subscription plans:")
+            print("✅ Seeded subscription plans (2-tier: Free + Pro):")
             for plan in plans:
                 print(f"   - {plan.name}: ${plan.price_monthly_dollars:.2f}/month")
                 print(f"     • Unlimited posts: {plan.unlimited_posts}")
                 print(f"     • Max agents: {plan.max_agents}")
+                print(f"     • Team members: {plan.team_members}")
         else:
             print("ℹ️  Subscription plans already exist, skipping seed.")
 

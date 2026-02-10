@@ -197,7 +197,7 @@ class TestSubscriptionWebhooks:
                         'status': 'active',
                         'current_period_end': future_time,
                         'metadata': {
-                            'tier': 'team'  # Upgraded tier
+                            'tier': 'pro'  # Upgraded tier
                         }
                     }
                 }
@@ -214,7 +214,7 @@ class TestSubscriptionWebhooks:
 
             # Verify subscription was updated
             db.session.refresh(premium_user)
-            assert premium_user.subscription_tier == 'team'
+            assert premium_user.subscription_tier == 'pro'
             assert premium_user.subscription_status == 'active'
 
     @patch('stripe.Webhook.construct_event')

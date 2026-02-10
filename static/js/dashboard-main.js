@@ -2538,16 +2538,12 @@ Examples:
 
             const tierColors = {
                 'free': 'rgba(107,114,128,0.2)',
-                'starter': 'rgba(59,130,246,0.2)',
-                'pro': 'rgba(139,92,246,0.2)',
-                'team': 'rgba(236,72,153,0.2)'
+                'pro': 'rgba(139,92,246,0.2)'
             };
 
             const tierEmojis = {
                 'free': '🆓',
-                'starter': '🚀',
-                'pro': '⭐',
-                'team': '👥'
+                'pro': '💎'
             };
 
             container.innerHTML = subscriptionPlans.map(plan => {
@@ -2596,9 +2592,15 @@ Examples:
             }).join('');
         }
 
+        function getEffectiveTier(tier) {
+            // Map legacy tiers to simplified 2-tier model
+            if (tier === 'starter' || tier === 'team') return 'pro';
+            return tier || 'free';
+        }
+
         function getTierLevel(tier) {
-            const levels = { 'free': 0, 'starter': 1, 'pro': 2, 'team': 3 };
-            return levels[tier] || 0;
+            const levels = { 'free': 0, 'pro': 1 };
+            return levels[getEffectiveTier(tier)] || 0;
         }
 
         async function subscribeToPlan(planId) {
@@ -2681,13 +2683,12 @@ Examples:
             const badge = document.getElementById('subscription-tier-badge');
             const tierEmojis = {
                 'free': '🆓 Free',
-                'starter': '🚀 Starter',
-                'pro': '⭐ Pro',
-                'team': '👥 Team'
+                'pro': '💎 Pro'
             };
 
+            const effectiveTier = getEffectiveTier(currentUser.subscription_tier);
             if (badge) {
-                badge.textContent = tierEmojis[currentUser.subscription_tier || 'free'];
+                badge.textContent = tierEmojis[effectiveTier] || tierEmojis['free'];
             }
 
             // Update current subscription card
@@ -2698,15 +2699,13 @@ Examples:
             if (tierName) {
                 const planNames = {
                     'free': 'Free Tier',
-                    'starter': 'Starter Plan',
-                    'pro': 'Pro Plan',
-                    'team': 'Team Plan'
+                    'pro': 'Pro Plan'
                 };
-                tierName.textContent = planNames[currentUser.subscription_tier || 'free'];
+                tierName.textContent = planNames[effectiveTier] || planNames['free'];
             }
 
             if (details) {
-                if (userData.subscription_status === 'active' && currentUser.subscription_tier !== 'free') {
+                if (userData.subscription_status === 'active' && effectiveTier !== 'free') {
                     const expiresAt = new Date(userData.subscription_expires_at).toLocaleDateString();
                     details.textContent = `Active • Renews on ${expiresAt}`;
                     if (manageBtn) manageBtn.style.display = 'block';
@@ -2779,15 +2778,15 @@ Examples:
         function initFeedTab() {
             console.log('📖 Initializing Feed tab');
 
-            // Check if user can access feed
+            // Check if user can access feed (Pro only)
             if (!currentUser || !currentUser.subscription_tier) {
                 document.getElementById('feed-upgrade-prompt').style.display = 'block';
                 document.getElementById('feed-content').style.display = 'none';
                 return;
             }
 
-            const tier = currentUser.subscription_tier;
-            if (tier === 'free' || !['starter', 'pro', 'team'].includes(tier)) {
+            const tier = getEffectiveTier(currentUser.subscription_tier);
+            if (tier !== 'pro') {
                 document.getElementById('feed-upgrade-prompt').style.display = 'block';
                 document.getElementById('feed-content').style.display = 'none';
             } else {
@@ -3041,15 +3040,15 @@ Examples:
         function initAnalyticsTab() {
             console.log('📊 Initializing Analytics tab');
 
-            // Check tier access
+            // Check tier access (Pro only)
             if (!currentUser || !currentUser.subscription_tier) {
                 document.getElementById('analytics-upgrade-prompt').style.display = 'block';
                 document.getElementById('analytics-content').style.display = 'none';
                 return;
             }
 
-            const tier = currentUser.subscription_tier;
-            if (tier === 'free' || !['starter', 'pro', 'team'].includes(tier)) {
+            const tier = getEffectiveTier(currentUser.subscription_tier);
+            if (tier !== 'pro') {
                 document.getElementById('analytics-upgrade-prompt').style.display = 'block';
                 document.getElementById('analytics-content').style.display = 'none';
             } else {
@@ -3328,38 +3327,29 @@ Examples:
                 return;
             }
 
-            const { available, locked, user_tier, bundles } = data;
+            const { available, locked, user_tier } = data;
 
-            // Organize channels by tier
+            // Organize channels by tier (2-tier: free + pro)
             const tiers = {
                 free: [],
-                starter: [],
-                pro: [],
-                team: []
+                pro: []
             };
 
             // Add available channels
             Object.values(available).forEach(channel => {
-                if (tiers[channel.tier]) {
-                    tiers[channel.tier].push({ ...channel, isLocked: false });
-                }
+                const effectiveTier = (channel.tier === 'free') ? 'free' : 'pro';
+                tiers[effectiveTier].push({ ...channel, isLocked: false });
             });
 
             // Add locked channels
             Object.values(locked).forEach(channel => {
-                if (tiers[channel.tier]) {
-                    tiers[channel.tier].push({ ...channel, isLocked: true });
-                }
+                const effectiveTier = (channel.tier === 'free') ? 'free' : 'pro';
+                tiers[effectiveTier].push({ ...channel, isLocked: true });
             });
 
             // Render each tier
             renderTierChannels('freeChannels', tiers.free, user_tier);
-            renderTierChannels('starterChannels', tiers.starter, user_tier);
             renderTierChannels('proChannels', tiers.pro, user_tier);
-            renderTierChannels('teamChannels', tiers.team, user_tier);
-
-            // Render bundles
-            renderBundles(bundles, user_tier);
         }
 
         function renderTierChannels(containerId, channels, userTier) {
@@ -3401,7 +3391,7 @@ Examples:
                     <div class="channel-status">
                         <div class="channel-status-dot ${isConnected ? 'connected' : ''}"></div>
                         <span class="channel-status-text">
-                            ${isConnected ? 'Connected' : (channel.isLocked ? `Requires ${channel.tier} tier` : 'Not connected')}
+                            ${isConnected ? 'Connected' : (channel.isLocked ? 'Requires Pro' : 'Not connected')}
                         </span>
                     </div>
                     <button class="channel-connect-btn ${isConnected ? 'connected' : ''} ${channel.isLocked ? 'locked' : ''}" ${channel.isLocked ? 'disabled' : ''}>
@@ -3411,32 +3401,7 @@ Examples:
             `;
         }
 
-        function renderBundles(bundles, userTier) {
-            const container = document.getElementById('bundlesGrid');
-            if (!container) return;
-
-            container.innerHTML = Object.entries(bundles).map(([id, bundle]) => `
-                <div class="bundle-card" data-bundle-id="${id}">
-                    <div class="bundle-header">
-                        <div class="bundle-icon">${bundle.icon}</div>
-                        <div class="bundle-info">
-                            <h4>${bundle.name}</h4>
-                            <div class="bundle-price">$${bundle.price}/mo</div>
-                        </div>
-                    </div>
-                    <p class="bundle-description">${bundle.description}</p>
-                    <div class="bundle-channels">
-                        ${bundle.channels.slice(0, 6).map(ch => `
-                            <span class="bundle-channel-tag">${ch}</span>
-                        `).join('')}
-                        ${bundle.channels.length > 6 ? `<span class="bundle-channel-tag">+${bundle.channels.length - 6} more</span>` : ''}
-                    </div>
-                    <button class="bundle-cta" onclick="upgradeToBundle('${id}')">
-                        Get ${bundle.name} →
-                    </button>
-                </div>
-            `).join('');
-        }
+        // Bundles removed — simplified to 2-tier model (Free + Pro)
 
         function openChannelModal(channel) {
             // Create modal HTML
@@ -3680,38 +3645,29 @@ Examples:
                 return;
             }
 
-            const { available, locked, user_tier, bundles } = data;
+            const { available, locked, user_tier } = data;
 
-            // Organize providers by tier
+            // Organize providers by tier (2-tier: free + pro)
             const tiers = {
                 free: [],
-                starter: [],
-                pro: [],
-                team: []
+                pro: []
             };
 
             // Add available providers
             Object.values(available).forEach(provider => {
-                if (tiers[provider.tier]) {
-                    tiers[provider.tier].push({ ...provider, isLocked: false });
-                }
+                const effectiveTier = (provider.tier === 'free') ? 'free' : 'pro';
+                tiers[effectiveTier].push({ ...provider, isLocked: false });
             });
 
             // Add locked providers
             Object.values(locked).forEach(provider => {
-                if (tiers[provider.tier]) {
-                    tiers[provider.tier].push({ ...provider, isLocked: true });
-                }
+                const effectiveTier = (provider.tier === 'free') ? 'free' : 'pro';
+                tiers[effectiveTier].push({ ...provider, isLocked: true });
             });
 
             // Render each tier
             renderTierProviders('freeProviders', tiers.free, user_tier);
-            renderTierProviders('starterProviders', tiers.starter, user_tier);
             renderTierProviders('proProviders', tiers.pro, user_tier);
-            renderTierProviders('teamProviders', tiers.team, user_tier);
-
-            // Render bundles
-            renderProviderBundles(bundles, user_tier);
         }
 
         function renderTierProviders(containerId, providers, userTier) {
@@ -3777,7 +3733,7 @@ Examples:
                     <div class="provider-status">
                         <div class="provider-status-dot ${isConnected ? 'connected' : ''}"></div>
                         <span class="provider-status-text">
-                            ${isConnected ? 'Connected' : (provider.isLocked ? `Requires ${provider.tier} tier` : 'Not connected')}
+                            ${isConnected ? 'Connected' : (provider.isLocked ? 'Requires Pro' : 'Not connected')}
                         </span>
                     </div>
                     <button class="provider-connect-btn ${isConnected ? 'connected' : ''} ${provider.isLocked ? 'locked' : ''}" ${provider.isLocked ? 'disabled' : ''}>
@@ -3787,31 +3743,7 @@ Examples:
             `;
         }
 
-        function renderProviderBundles(bundles, userTier) {
-            const container = document.getElementById('providerBundlesGrid');
-            if (!container) return;
-
-            container.innerHTML = Object.entries(bundles).map(([id, bundle]) => `
-                <div class="bundle-card" data-bundle-id="${id}">
-                    <div class="bundle-header">
-                        <div class="bundle-icon">${bundle.icon}</div>
-                        <div class="bundle-info">
-                            <h4>${bundle.name}</h4>
-                            <div class="bundle-price">$${bundle.price}/mo <span style="font-size: 12px; opacity: 0.8;">(Save ${bundle.savings})</span></div>
-                        </div>
-                    </div>
-                    <p class="bundle-description">${bundle.description}</p>
-                    <div class="bundle-channels">
-                        ${bundle.providers.slice(0, 4).map(providerId => {
-                            const provider = providersData?.available[providerId] || providersData?.locked[providerId];
-                            return provider ? `<span class="bundle-channel-tag">${provider.icon} ${provider.name}</span>` : '';
-                        }).join('')}
-                        ${bundle.providers.length > 4 ? `<span class="bundle-channel-tag">+${bundle.providers.length - 4} more</span>` : ''}
-                    </div>
-                    <button class="bundle-cta" onclick="upgradeToBundle('${id}')">Get ${bundle.name}</button>
-                </div>
-            `).join('');
-        }
+        // Provider bundles removed — simplified to 2-tier model (Free + Pro)
 
         function openProviderModal(provider) {
             // Create modal HTML

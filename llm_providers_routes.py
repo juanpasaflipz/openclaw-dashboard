@@ -29,11 +29,11 @@ PROVIDERS = {
         'pricing_url': 'https://openai.com/api/pricing/'
     },
 
-    # Starter tier providers (requires Starter+)
+    # Pro tier providers (requires Pro subscription)
     'venice': {
         'name': 'Venice AI',
         'icon': '🏛️',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'easy',
         'description': 'Privacy-first, uncensored AI with competitive pricing',
         'setup_type': 'api_key',
@@ -53,7 +53,7 @@ PROVIDERS = {
     'groq': {
         'name': 'Groq',
         'icon': '⚡',
-        'tier': 'starter',
+        'tier': 'pro',
         'difficulty': 'easy',
         'description': 'Ultra-fast inference with open source models',
         'setup_type': 'api_key',
@@ -70,7 +70,6 @@ PROVIDERS = {
         'benefits': ['Fastest inference', 'Free tier available', 'Open source models']
     },
 
-    # Pro tier providers (requires Pro+)
     'anthropic': {
         'name': 'Anthropic Claude',
         'icon': '🧠',
@@ -129,11 +128,10 @@ PROVIDERS = {
         'benefits': ['EU-based', 'Specialized models', 'Function calling']
     },
 
-    # Team tier providers (requires Team plan)
     'azure': {
         'name': 'Azure OpenAI',
         'icon': '☁️',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'medium',
         'description': 'Enterprise OpenAI via Azure with SLA guarantees',
         'setup_type': 'complex',
@@ -152,7 +150,7 @@ PROVIDERS = {
     'ollama': {
         'name': 'Ollama (Self-hosted)',
         'icon': '🦙',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'medium',
         'description': 'Run models locally with Ollama',
         'setup_type': 'endpoint',
@@ -170,7 +168,7 @@ PROVIDERS = {
     'custom': {
         'name': 'Custom Endpoint',
         'icon': '🔧',
-        'tier': 'team',
+        'tier': 'pro',
         'difficulty': 'hard',
         'description': 'Connect to any OpenAI-compatible API endpoint',
         'setup_type': 'custom',
@@ -184,39 +182,6 @@ PROVIDERS = {
         'benefits': ['Maximum flexibility', 'Any provider', 'Custom deployments']
     }
 }
-
-# Bundle definitions for monetization
-BUNDLES = {
-    'privacy': {
-        'name': 'Privacy Bundle',
-        'icon': '🔒',
-        'description': 'Privacy-first AI providers with no censorship',
-        'providers': ['venice', 'ollama', 'groq'],
-        'channels': ['signal', 'matrix'],
-        'tier': 'starter',
-        'price': 9,
-        'savings': 'Included in Starter'
-    },
-    'poweruser': {
-        'name': 'Power User Bundle',
-        'icon': '⚡',
-        'description': 'Best models from all major providers',
-        'providers': ['openai', 'anthropic', 'google', 'mistral', 'venice'],
-        'tier': 'pro',
-        'price': 29,
-        'savings': 'Included in Pro'
-    },
-    'enterprise': {
-        'name': 'Enterprise Bundle',
-        'icon': '🏢',
-        'description': 'All providers including Azure and self-hosted',
-        'providers': list(PROVIDERS.keys()),
-        'tier': 'team',
-        'price': 49,
-        'savings': 'Included in Team'
-    }
-}
-
 
 def register_llm_providers_routes(app):
     """Register LLM provider management routes"""
@@ -233,9 +198,9 @@ def register_llm_providers_routes(app):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
 
-            # Filter providers by user's subscription tier
-            tier_hierarchy = {'free': 0, 'starter': 1, 'pro': 2, 'team': 3}
-            user_tier_level = tier_hierarchy.get(user.subscription_tier, 0)
+            # Filter providers by user's effective subscription tier
+            tier_hierarchy = {'free': 0, 'pro': 1}
+            user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
 
             available_providers = {}
             locked_providers = {}
@@ -257,8 +222,7 @@ def register_llm_providers_routes(app):
             return jsonify({
                 'available': available_providers,
                 'locked': locked_providers,
-                'user_tier': user.subscription_tier,
-                'bundles': BUNDLES
+                'user_tier': user.effective_tier
             })
 
         except Exception as e:
@@ -315,8 +279,8 @@ def register_llm_providers_routes(app):
             user = User.query.get(user_id)
             provider_info = PROVIDERS[provider_id]
 
-            tier_hierarchy = {'free': 0, 'starter': 1, 'pro': 2, 'team': 3}
-            user_tier_level = tier_hierarchy.get(user.subscription_tier, 0)
+            tier_hierarchy = {'free': 0, 'pro': 1}
+            user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
             provider_tier_level = tier_hierarchy.get(provider_info['tier'], 0)
 
             if provider_tier_level > user_tier_level:

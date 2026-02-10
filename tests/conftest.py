@@ -125,7 +125,7 @@ def admin_user(app, db_session):
         email='admin@example.com',
         created_at=datetime.utcnow(),
         credit_balance=1000,
-        subscription_tier='team',
+        subscription_tier='pro',
         subscription_status='active',
         is_admin=True
     )
