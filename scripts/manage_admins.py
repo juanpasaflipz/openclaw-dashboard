@@ -2,6 +2,10 @@
 Admin management utility
 Promote or demote users to/from admin role
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from server import app
 from models import db, User
 import sys
@@ -60,14 +64,14 @@ def show_usage():
 Green Monkey Admin Management Utility
 
 Usage:
-    python manage_admins.py list                    - List all admins
-    python manage_admins.py promote <email>         - Promote user to admin
-    python manage_admins.py demote <email>          - Remove admin privileges
+    python scripts/manage_admins.py list                    - List all admins
+    python scripts/manage_admins.py promote <email>         - Promote user to admin
+    python scripts/manage_admins.py demote <email>          - Remove admin privileges
 
 Examples:
-    python manage_admins.py list
-    python manage_admins.py promote user@example.com
-    python manage_admins.py demote user@example.com
+    python scripts/manage_admins.py list
+    python scripts/manage_admins.py promote user@example.com
+    python scripts/manage_admins.py demote user@example.com
     """)
 
 if __name__ == '__main__':

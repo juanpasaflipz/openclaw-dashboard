@@ -66,82 +66,41 @@ db.init_app(app)
 from rate_limiter import init_limiter
 limiter = init_limiter(app)
 
-# Register authentication routes
-from auth_routes import register_auth_routes
+# Register all route modules
+from routes import (
+    register_auth_routes, register_stripe_routes,
+    moltbook_bp, analytics_bp,
+    register_agent_routes, register_setup_routes,
+    register_channels_routes, register_llm_providers_routes,
+    register_oauth_routes, register_gmail_routes,
+    register_calendar_routes, register_drive_routes,
+    register_notion_routes, register_binance_routes,
+    register_binance_actions_routes, register_agent_actions_routes,
+    register_model_config_routes, register_external_agents_routes,
+    register_chatbot_routes, register_web_browsing_routes,
+    register_utility_routes,
+)
+
 register_auth_routes(app)
-
-# Register Stripe/payment routes
-from stripe_routes import register_stripe_routes
 register_stripe_routes(app)
-
-# Register Phase 1 routes (Feed + Analytics)
-from moltbook_routes import moltbook_bp
-from analytics_routes import analytics_bp
 app.register_blueprint(moltbook_bp)
 app.register_blueprint(analytics_bp)
-
-# Register agent management routes
-from agent_routes import register_agent_routes
 register_agent_routes(app)
-
-# Register setup wizard routes
-from setup_routes import register_setup_routes
 register_setup_routes(app)
-
-# Register chat channels routes
-from channels_routes import register_channels_routes
 register_channels_routes(app)
-
-# Register LLM providers routes
-from llm_providers_routes import register_llm_providers_routes
 register_llm_providers_routes(app)
-
-# Register OAuth routes for superpowers
-from oauth_routes import register_oauth_routes
 register_oauth_routes(app)
-
-# Register Gmail routes
-from gmail_routes import register_gmail_routes
 register_gmail_routes(app)
-
-# Register Calendar routes
-from calendar_routes import register_calendar_routes
 register_calendar_routes(app)
-
-# Register Drive routes
-from drive_routes import register_drive_routes
 register_drive_routes(app)
-
-# Register Notion routes
-from notion_routes import register_notion_routes
 register_notion_routes(app)
-
-# Register Binance routes
-from binance_routes import register_binance_routes
 register_binance_routes(app)
-
-# Register Binance agent action routes
-from binance_actions_routes import register_binance_actions_routes
 register_binance_actions_routes(app)
-
-# Register AI Agent Actions routes
-from agent_actions_routes import register_agent_actions_routes
 register_agent_actions_routes(app)
-
-# Register AI Workbench routes
-from model_config_routes import register_model_config_routes
 register_model_config_routes(app)
-
-from external_agents_routes import register_external_agents_routes
 register_external_agents_routes(app)
-
-from chatbot_routes import register_chatbot_routes
 register_chatbot_routes(app)
-
-from web_browsing_routes import register_web_browsing_routes
 register_web_browsing_routes(app)
-
-from utility_routes import register_utility_routes
 register_utility_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)

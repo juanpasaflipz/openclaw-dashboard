@@ -4,9 +4,9 @@ Routes for AI-powered email operations with approval queue
 """
 from flask import Blueprint, request, jsonify, session
 from models import db, User, Agent, AgentAction, Superpower
-from gmail_routes import get_gmail_service
-from calendar_routes import get_calendar_service
-from drive_routes import get_drive_service
+from .gmail_routes import get_gmail_service
+from .calendar_routes import get_calendar_service
+from .drive_routes import get_drive_service
 from datetime import datetime
 import json
 import os

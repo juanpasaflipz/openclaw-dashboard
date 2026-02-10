@@ -1,6 +1,10 @@
 """
 Initialize the database with tables and seed data
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from server import app
 from models import db, CreditPackage, SubscriptionPlan
 

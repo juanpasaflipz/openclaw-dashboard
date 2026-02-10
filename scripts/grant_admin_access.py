@@ -3,8 +3,12 @@
 Script to grant admin access to d.chosen.juan.1@gmail.com
 
 Run this after the database migration is complete:
-    python3 grant_admin_access.py
+    python3 scripts/grant_admin_access.py
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import os
 from models import db, User
 from server import app
