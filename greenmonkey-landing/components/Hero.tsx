@@ -35,7 +35,7 @@ export default function Hero() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="https://app.greenmonkey.dev/register" className="btn-primary text-lg px-8 py-3.5">
+          <a href="https://app.greenmonkey.dev" className="btn-primary text-lg px-8 py-3.5">
             Get Started Free
           </a>
           <a href="https://docs.greenmonkey.dev" className="btn-secondary text-lg px-8 py-3.5">

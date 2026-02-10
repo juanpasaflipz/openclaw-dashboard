@@ -10,7 +10,7 @@ export default function CTASection() {
           Free to start, no credit card required.
         </p>
         <a
-          href="https://app.greenmonkey.dev/register"
+          href="https://app.greenmonkey.dev"
           className="btn-primary text-lg px-10 py-4"
         >
           Get Started Free

@@ -106,7 +106,7 @@ export const PRICING = {
     price: "$0",
     period: "forever",
     cta: "Get Started Free",
-    ctaLink: "https://app.greenmonkey.dev/register",
+    ctaLink: "https://app.greenmonkey.dev",
     features: [
       "1 AI agent",
       "Telegram + WebChat channels",
@@ -122,7 +122,7 @@ export const PRICING = {
     period: "/mo",
     badge: "BETA PRICING",
     cta: "Upgrade to Pro",
-    ctaLink: "https://app.greenmonkey.dev/register",
+    ctaLink: "https://app.greenmonkey.dev",
     features: [
       "Unlimited AI agents",
       "All 12 channels",
