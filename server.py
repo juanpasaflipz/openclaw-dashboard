@@ -116,6 +116,14 @@ register_drive_routes(app)
 from notion_routes import register_notion_routes
 register_notion_routes(app)
 
+# Register Binance routes
+from binance_routes import register_binance_routes
+register_binance_routes(app)
+
+# Register Binance agent action routes
+from binance_actions_routes import register_binance_actions_routes
+register_binance_actions_routes(app)
+
 # Register AI Agent Actions routes
 from agent_actions_routes import register_agent_actions_routes
 register_agent_actions_routes(app)

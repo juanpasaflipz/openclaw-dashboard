@@ -3994,6 +3994,36 @@ Examples:
                     if (gmailBtn) gmailBtn.classList.remove('connected');
                 }
 
+                // Update Binance status
+                const binanceService = services.find(s => s.service_type === 'binance');
+                const binanceStatus = document.getElementById('binance-status');
+                const binanceConnectForm = document.getElementById('binance-connect-form');
+                const binanceControls = document.getElementById('binance-controls');
+
+                if (binanceService && binanceService.is_enabled) {
+                    if (binanceStatus) binanceStatus.textContent = '✅ Connected';
+                    if (binanceStatus) binanceStatus.classList.add('connected');
+                    if (binanceConnectForm) binanceConnectForm.style.display = 'none';
+                    if (binanceControls) binanceControls.style.display = 'block';
+
+                    // Update trading toggle state from config
+                    const config = binanceService.config ? (typeof binanceService.config === 'string' ? JSON.parse(binanceService.config) : binanceService.config) : {};
+                    const tradingToggle = document.getElementById('binance-trading-toggle');
+                    const tradingStatus = document.getElementById('binance-trading-status');
+                    const toggleKnob = document.getElementById('binance-toggle-knob');
+                    if (tradingToggle) tradingToggle.checked = config.trading_enabled || false;
+                    if (tradingStatus) tradingStatus.textContent = config.trading_enabled ? 'Trading enabled (approval required)' : 'Read-only mode';
+                    if (toggleKnob && config.trading_enabled) {
+                        toggleKnob.style.transform = 'translateX(20px)';
+                        toggleKnob.parentElement.previousElementSibling.nextElementSibling.style.background = '#10b981';
+                    }
+                } else {
+                    if (binanceStatus) binanceStatus.textContent = 'Not Connected';
+                    if (binanceStatus) binanceStatus.classList.remove('connected');
+                    if (binanceConnectForm) binanceConnectForm.style.display = 'block';
+                    if (binanceControls) binanceControls.style.display = 'none';
+                }
+
             } catch (error) {
                 console.error('Error loading connected services:', error);
             }
@@ -4006,7 +4036,8 @@ Examples:
                 'drive': '📁',
                 'notion': '📝',
                 'slack': '💬',
-                'github': '🐙'
+                'github': '🐙',
+                'binance': '💰'
             };
             return icons[serviceType] || '🔌';
         }
@@ -4139,6 +4170,169 @@ Examples:
             }
         }
 
+        // ========================================
+        // BINANCE FUNCTIONS
+        // ========================================
+
+        async function connectBinance() {
+            const apiKey = document.getElementById('binance-api-key').value.trim();
+            const apiSecret = document.getElementById('binance-api-secret').value.trim();
+            const testnet = document.getElementById('binance-testnet').checked;
+
+            if (!apiKey || !apiSecret) {
+                alert('Please enter both API key and API secret.');
+                return;
+            }
+
+            const btn = document.getElementById('binance-connect-btn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Connecting...';
+
+            try {
+                const response = await fetch('/api/binance/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        api_secret: apiSecret,
+                        testnet: testnet
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Binance ${testnet ? 'testnet ' : ''}connected! ${data.total_assets} assets found.`);
+                    // Clear form
+                    document.getElementById('binance-api-key').value = '';
+                    document.getElementById('binance-api-secret').value = '';
+                    loadConnectedServices();
+                } else {
+                    alert(`Failed to connect: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error connecting Binance:', error);
+                alert(`Failed to connect Binance: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        async function toggleBinanceTrading(enabled) {
+            const endpoint = enabled ? '/api/binance/enable-trading' : '/api/binance/disable-trading';
+            const tradingStatus = document.getElementById('binance-trading-status');
+            const toggleKnob = document.getElementById('binance-toggle-knob');
+            const toggleBg = toggleKnob ? toggleKnob.parentElement.previousElementSibling.nextElementSibling : null;
+
+            try {
+                const response = await fetch(endpoint, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (tradingStatus) tradingStatus.textContent = enabled ? 'Trading enabled (approval required)' : 'Read-only mode';
+                    if (toggleKnob) toggleKnob.style.transform = enabled ? 'translateX(20px)' : 'translateX(0)';
+                    if (toggleBg) toggleBg.style.background = enabled ? '#10b981' : 'var(--border)';
+                } else {
+                    // Revert toggle
+                    const toggle = document.getElementById('binance-trading-toggle');
+                    if (toggle) toggle.checked = !enabled;
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                const toggle = document.getElementById('binance-trading-toggle');
+                if (toggle) toggle.checked = !enabled;
+                alert(`Failed to update trading: ${error.message}`);
+            }
+        }
+
+        async function loadBinancePortfolio() {
+            const container = document.getElementById('binance-portfolio-view');
+            container.style.display = 'block';
+            container.innerHTML = '<div style="text-align: center; padding: 16px; color: var(--text-tertiary);">Loading portfolio...</div>';
+
+            try {
+                const response = await fetch('/api/binance/portfolio');
+                const data = await response.json();
+
+                if (!data.success) {
+                    container.innerHTML = `<div style="padding: 12px; color: #ef4444; font-size: 13px;">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                const holdings = data.portfolio.holdings || [];
+                if (holdings.length === 0) {
+                    container.innerHTML = '<div style="padding: 12px; color: var(--text-tertiary); font-size: 13px;">No holdings found.</div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div style="margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 8px 12px; background: rgba(0,0,0,0.3); font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase;">
+                            <div>Asset</div>
+                            <div style="text-align: right;">Available</div>
+                            <div style="text-align: right;">Total</div>
+                        </div>
+                        ${holdings.map(h => `
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 13px;">
+                                <div style="font-weight: 600; color: var(--text-primary);">${h.currency}</div>
+                                <div style="text-align: right; color: var(--text-secondary);">${parseFloat(h.free).toFixed(6)}</div>
+                                <div style="text-align: right; color: var(--text-primary);">${parseFloat(h.total).toFixed(6)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `<div style="padding: 12px; color: #ef4444; font-size: 13px;">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadBinancePrices() {
+            const container = document.getElementById('binance-prices-view');
+            container.style.display = 'block';
+            container.innerHTML = '<div style="text-align: center; padding: 16px; color: var(--text-tertiary);">Loading prices...</div>';
+
+            try {
+                const response = await fetch('/api/binance/prices');
+                const data = await response.json();
+
+                if (!data.success) {
+                    container.innerHTML = `<div style="padding: 12px; color: #ef4444; font-size: 13px;">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                const tickers = data.tickers || [];
+                if (tickers.length === 0) {
+                    container.innerHTML = '<div style="padding: 12px; color: var(--text-tertiary); font-size: 13px;">No price data available.</div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div style="margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 8px 12px; background: rgba(0,0,0,0.3); font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase;">
+                            <div>Pair</div>
+                            <div style="text-align: right;">Price</div>
+                            <div style="text-align: right;">24h</div>
+                        </div>
+                        ${tickers.map(t => {
+                            const changeColor = t.change_percent >= 0 ? '#10b981' : '#ef4444';
+                            const changeSign = t.change_percent >= 0 ? '+' : '';
+                            return `
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 13px;">
+                                    <div style="font-weight: 600; color: var(--text-primary);">${t.symbol}</div>
+                                    <div style="text-align: right; color: var(--text-primary);">$${parseFloat(t.last).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                    <div style="text-align: right; color: ${changeColor}; font-weight: 600;">${changeSign}${parseFloat(t.change_percent).toFixed(2)}%</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `<div style="padding: 12px; color: #ef4444; font-size: 13px;">Error: ${error.message}</div>`;
+            }
+        }
+
         // Handle OAuth callback redirect with tab parameter
         const urlParams = new URLSearchParams(window.location.search);
         const tabParam = urlParams.get('tab');
@@ -4179,7 +4373,7 @@ Examples:
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                             <div>
                                 <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
-                                    ${action.action_type === 'send_email' ? '📧 Send Email' : action.action_type}
+                                    ${action.action_type === 'send_email' ? '📧 Send Email' : action.action_type === 'place_order' ? '💰 Trade Order' : action.action_type}
                                 </div>
                                 <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">
                                     ${action.agent ? action.agent.avatar_emoji + ' ' + action.agent.name : 'AI Agent'} • ${formatTimeAgo(action.created_at)}
@@ -4209,6 +4403,14 @@ Examples:
                                     <div><strong>To:</strong> ${action.action_data.to}</div>
                                     <div><strong>Subject:</strong> ${action.action_data.subject}</div>
                                     <div style="margin-top: 8px; white-space: pre-wrap;">${action.action_data.body}</div>
+                                </div>
+                            ` : action.action_type === 'place_order' ? `
+                                <div style="color: rgba(255, 255, 255, 0.85); font-size: 13px;">
+                                    <div><strong>Symbol:</strong> ${action.action_data.symbol}</div>
+                                    <div><strong>Side:</strong> <span style="color: ${action.action_data.side === 'buy' ? '#10b981' : '#ef4444'}; font-weight: 600;">${action.action_data.side.toUpperCase()}</span></div>
+                                    <div><strong>Type:</strong> ${action.action_data.order_type}</div>
+                                    <div><strong>Amount:</strong> ${action.action_data.amount}</div>
+                                    ${action.action_data.price ? `<div><strong>Price:</strong> $${action.action_data.price}</div>` : ''}
                                 </div>
                             ` : JSON.stringify(action.action_data, null, 2)}
                         </div>
@@ -4472,7 +4674,7 @@ Examples:
 
             try {
                 const resp = await fetch(`${API_BASE}/model-config/${slot}`, {
-                    method: 'PUT',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(payload),

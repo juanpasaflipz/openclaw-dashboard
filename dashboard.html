@@ -1493,6 +1493,83 @@
                     </button>
                 </div>
 
+                <!-- Binance Card -->
+                <div class="service-card" data-service="binance">
+                    <div class="service-card-header">
+                        <div class="service-icon">💰</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Binance</h4>
+                            <span class="service-category">Do</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="binance-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Crypto trading superpower. View your portfolio, check prices, and propose trades through the approval queue. Read-only by default — trading requires explicit opt-in.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View portfolio balances</li>
+                            <li>Check crypto prices</li>
+                            <li>Propose trades (requires approval)</li>
+                            <li>No withdrawal access</li>
+                        </ul>
+                    </div>
+
+                    <!-- Connect Form (shown when not connected) -->
+                    <div id="binance-connect-form">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">API Key</label>
+                            <input type="text" id="binance-api-key" placeholder="Your Binance API key"
+                                   style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">API Secret</label>
+                            <input type="password" id="binance-api-secret" placeholder="Your Binance API secret"
+                                   style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+                                <input type="checkbox" id="binance-testnet" style="cursor: pointer;">
+                                Use Testnet (sandbox mode for testing)
+                            </label>
+                        </div>
+                        <div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 6px; font-size: 12px; color: rgba(255, 165, 0, 0.9);">
+                            Only enable <strong>Read</strong> + <strong>Spot Trading</strong> permissions on Binance. Never enable withdrawals.
+                        </div>
+                        <button class="service-connect-btn" id="binance-connect-btn" onclick="connectBinance()">
+                            🚀 Connect Binance
+                        </button>
+                    </div>
+
+                    <!-- Controls (shown when connected) -->
+                    <div id="binance-controls" style="display: none;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <button class="btn btn-secondary" onclick="loadBinancePortfolio()" style="flex: 1; padding: 8px 12px; font-size: 13px;">
+                                📊 View Portfolio
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadBinancePrices()" style="flex: 1; padding: 8px 12px; font-size: 13px;">
+                                📈 Major Prices
+                            </button>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 6px; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Trading</div>
+                                <div style="font-size: 11px; color: var(--text-tertiary);" id="binance-trading-status">Read-only mode</div>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                                <input type="checkbox" id="binance-trading-toggle" onchange="toggleBinanceTrading(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 12px; transition: 0.3s;"></span>
+                                <span id="binance-toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s;"></span>
+                            </label>
+                        </div>
+                        <div id="binance-portfolio-view" style="display: none;"></div>
+                        <div id="binance-prices-view" style="display: none;"></div>
+                    </div>
+                </div>
+
                 <!-- More services placeholder -->
                 <div style="margin-top: 32px; padding: 24px; text-align: center; background: rgba(99, 91, 255, 0.1); border-radius: 12px; border: 2px dashed rgba(99, 91, 255, 0.3);">
                     <h4 style="margin: 0 0 8px 0;">More Services Coming Soon</h4>

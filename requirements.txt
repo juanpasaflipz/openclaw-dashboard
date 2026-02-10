@@ -18,6 +18,9 @@ google-api-python-client==2.116.0
 # Anthropic API for AI agent actions
 anthropic>=0.40.0
 
+# Crypto exchange API (Binance + 100+ exchanges)
+ccxt>=4.0.0
+
 # Web browsing / content extraction
 beautifulsoup4==4.12.2
 lxml==5.1.0

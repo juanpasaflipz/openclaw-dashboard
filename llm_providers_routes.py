@@ -70,6 +70,27 @@ PROVIDERS = {
         'benefits': ['Fastest inference', 'Free tier available', 'Open source models']
     },
 
+    'xai': {
+        'name': 'xAI Grok',
+        'icon': '🚀',
+        'tier': 'pro',
+        'difficulty': 'easy',
+        'description': 'Grok models from xAI with fast reasoning capabilities',
+        'setup_type': 'api_key',
+        'fields': [
+            {'key': 'api_key', 'label': 'API Key', 'type': 'password', 'required': True, 'help': 'Get from console.x.ai'}
+        ],
+        'models': [
+            {'id': 'grok-4-1-fast-reasoning', 'name': 'Grok 4.1 Fast Reasoning', 'context': '128K', 'recommended': True},
+            {'id': 'grok-3-fast', 'name': 'Grok 3 Fast', 'context': '128K'},
+            {'id': 'grok-3-mini-fast', 'name': 'Grok 3 Mini Fast', 'context': '128K'},
+            {'id': 'grok-2-latest', 'name': 'Grok 2', 'context': '128K'}
+        ],
+        'docs_url': 'https://docs.x.ai',
+        'pricing_url': 'https://x.ai/api',
+        'benefits': ['Fast reasoning', 'Real-time knowledge', 'OpenAI-compatible']
+    },
+
     'anthropic': {
         'name': 'Anthropic Claude',
         'icon': '🧠',

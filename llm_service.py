@@ -36,6 +36,10 @@ PROVIDER_DEFAULTS = {
         'endpoint': 'https://api.together.xyz/v1/chat/completions',
         'models': ['meta-llama/Llama-3.3-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'Qwen/Qwen2.5-72B-Instruct-Turbo'],
     },
+    'xai': {
+        'endpoint': 'https://api.x.ai/v1/chat/completions',
+        'models': ['grok-4-1-fast-reasoning', 'grok-3-fast', 'grok-3-mini-fast', 'grok-2-latest'],
+    },
     'openrouter': {
         'endpoint': 'https://openrouter.ai/api/v1/chat/completions',
         'models': ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-pro-1.5', 'meta-llama/llama-3.1-70b-instruct'],

@@ -344,6 +344,49 @@ Write a clear, professional reply. Be concise and helpful."""
                     superpower.usage_count += 1
                     superpower.last_used = datetime.utcnow()
 
+            elif action.action_type == 'place_order' and action.service_type == 'binance':
+                from binance_service import place_order, is_trading_enabled
+
+                # Verify trading is still enabled
+                if not is_trading_enabled(user_id):
+                    action.status = 'failed'
+                    action.error_message = 'Trading is not enabled'
+                    db.session.commit()
+                    return jsonify({'error': 'Trading is not enabled. Enable it in Binance settings.'}), 400
+
+                # Parse action data
+                trade_data = json.loads(action.action_data)
+
+                # Execute the trade
+                result, error = place_order(
+                    user_id=user_id,
+                    symbol=trade_data['symbol'],
+                    side=trade_data['side'],
+                    order_type=trade_data['order_type'],
+                    amount=trade_data['amount'],
+                    price=trade_data.get('price'),
+                )
+
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                # Mark as executed
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps(result)
+
+                # Update superpower usage
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id,
+                    service_type='binance'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
             db.session.commit()
 
             return jsonify({

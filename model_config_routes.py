@@ -28,7 +28,7 @@ def register_model_config_routes(app):
             return jsonify({'config': None, 'configured': False})
         return jsonify({'config': config.to_dict(), 'configured': True})
 
-    @app.route('/api/model-config/<feature_slot>', methods=['PUT'])
+    @app.route('/api/model-config/<feature_slot>', methods=['PUT', 'POST'])
     def save_model_config(feature_slot):
         user_id = session.get('user_id')
         if not user_id:
