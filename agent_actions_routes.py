@@ -5,6 +5,8 @@ Routes for AI-powered email operations with approval queue
 from flask import Blueprint, request, jsonify, session
 from models import db, User, Agent, AgentAction, Superpower
 from gmail_routes import get_gmail_service
+from calendar_routes import get_calendar_service
+from drive_routes import get_drive_service
 from datetime import datetime
 import json
 import os
@@ -382,6 +384,214 @@ Write a clear, professional reply. Be concise and helpful."""
                 superpower = Superpower.query.filter_by(
                     user_id=user_id,
                     service_type='binance'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
+            elif action.action_type == 'create_event' and action.service_type == 'calendar':
+                service, error = get_calendar_service(user_id)
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                event_data = json.loads(action.action_data)
+
+                event_body = {
+                    'summary': event_data.get('summary', 'Untitled Event'),
+                    'start': event_data.get('start', {}),
+                    'end': event_data.get('end', {}),
+                }
+                if event_data.get('description'):
+                    event_body['description'] = event_data['description']
+                if event_data.get('location'):
+                    event_body['location'] = event_data['location']
+                if event_data.get('attendees'):
+                    event_body['attendees'] = [{'email': e} for e in event_data['attendees']]
+
+                created_event = service.events().insert(
+                    calendarId='primary',
+                    body=event_body,
+                    sendUpdates='all' if event_data.get('attendees') else 'none'
+                ).execute()
+
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps({
+                    'event_id': created_event['id'],
+                    'html_link': created_event.get('htmlLink', '')
+                })
+
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id, service_type='calendar'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
+            elif action.action_type == 'update_event' and action.service_type == 'calendar':
+                service, error = get_calendar_service(user_id)
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                event_data = json.loads(action.action_data)
+                event_id = event_data.get('event_id')
+
+                if not event_id:
+                    action.status = 'failed'
+                    action.error_message = 'event_id required'
+                    db.session.commit()
+                    return jsonify({'error': 'event_id required'}), 400
+
+                update_body = {}
+                if event_data.get('summary'):
+                    update_body['summary'] = event_data['summary']
+                if event_data.get('description'):
+                    update_body['description'] = event_data['description']
+                if event_data.get('start'):
+                    update_body['start'] = event_data['start']
+                if event_data.get('end'):
+                    update_body['end'] = event_data['end']
+                if event_data.get('location'):
+                    update_body['location'] = event_data['location']
+
+                updated_event = service.events().patch(
+                    calendarId='primary',
+                    eventId=event_id,
+                    body=update_body
+                ).execute()
+
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps({
+                    'event_id': updated_event['id'],
+                    'html_link': updated_event.get('htmlLink', '')
+                })
+
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id, service_type='calendar'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
+            elif action.action_type == 'delete_event' and action.service_type == 'calendar':
+                service, error = get_calendar_service(user_id)
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                event_data = json.loads(action.action_data)
+                event_id = event_data.get('event_id')
+
+                if not event_id:
+                    action.status = 'failed'
+                    action.error_message = 'event_id required'
+                    db.session.commit()
+                    return jsonify({'error': 'event_id required'}), 400
+
+                service.events().delete(
+                    calendarId='primary',
+                    eventId=event_id
+                ).execute()
+
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps({'deleted_event_id': event_id})
+
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id, service_type='calendar'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
+            elif action.action_type == 'create_folder' and action.service_type == 'drive':
+                service, error = get_drive_service(user_id)
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                folder_data = json.loads(action.action_data)
+
+                file_metadata = {
+                    'name': folder_data.get('name', 'Untitled Folder'),
+                    'mimeType': 'application/vnd.google-apps.folder'
+                }
+                if folder_data.get('parent_id'):
+                    file_metadata['parents'] = [folder_data['parent_id']]
+
+                created_folder = service.files().create(
+                    body=file_metadata,
+                    fields='id, name, webViewLink'
+                ).execute()
+
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps({
+                    'folder_id': created_folder['id'],
+                    'name': created_folder.get('name', ''),
+                    'web_link': created_folder.get('webViewLink', '')
+                })
+
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id, service_type='drive'
+                ).first()
+                if superpower:
+                    superpower.usage_count = (superpower.usage_count or 0) + 1
+                    superpower.last_used = datetime.utcnow()
+
+            elif action.action_type == 'upload_file' and action.service_type == 'drive':
+                service, error = get_drive_service(user_id)
+                if error:
+                    action.status = 'failed'
+                    action.error_message = error
+                    db.session.commit()
+                    return jsonify({'error': error}), 400
+
+                from googleapiclient.http import MediaInMemoryUpload
+
+                file_data = json.loads(action.action_data)
+
+                file_metadata = {
+                    'name': file_data.get('name', 'untitled.txt'),
+                }
+                if file_data.get('parent_id'):
+                    file_metadata['parents'] = [file_data['parent_id']]
+
+                content = file_data.get('content', '')
+                mime_type = file_data.get('mime_type', 'text/plain')
+                media = MediaInMemoryUpload(
+                    content.encode('utf-8'),
+                    mimetype=mime_type,
+                    resumable=False
+                )
+
+                created_file = service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id, name, webViewLink'
+                ).execute()
+
+                action.status = 'executed'
+                action.executed_at = datetime.utcnow()
+                action.result_data = json.dumps({
+                    'file_id': created_file['id'],
+                    'name': created_file.get('name', ''),
+                    'web_link': created_file.get('webViewLink', '')
+                })
+
+                superpower = Superpower.query.filter_by(
+                    user_id=user_id, service_type='drive'
                 ).first()
                 if superpower:
                     superpower.usage_count = (superpower.usage_count or 0) + 1

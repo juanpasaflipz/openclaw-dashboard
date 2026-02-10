@@ -34,58 +34,154 @@
             custom: []
         };
 
-        // Navigation switching
-        document.querySelectorAll('.nav-item').forEach(navItem => {
+        // ===== Tab-to-group mapping =====
+        const TAB_GROUP_MAP = {
+            'overview': null,
+            'ext-agents': 'agents',
+            'agents': 'agents',
+            'identity': 'agents',
+            'user': 'agents',
+            'soul': 'agents',
+            'tools': 'agents',
+            'security': 'agents',
+            'chatbot': 'workbench',
+            'web-browse': 'workbench',
+            'utility': 'workbench',
+            'model-config': 'workbench',
+            'llm': 'workbench',
+            'connect': 'integrations',
+            'channels': 'integrations',
+            'actions': 'integrations',
+            'providers': 'integrations',
+            'moltbook': 'social',
+            'feed': 'social',
+            'analytics': 'social',
+            'subscription': 'account',
+            'export': 'account',
+            'admin': 'account'
+        };
+
+        // Navigation click handlers (top-level + dropdown items)
+        document.querySelectorAll('.topnav-item[data-tab], .topnav-dropdown-item[data-tab]').forEach(navItem => {
             navItem.addEventListener('click', () => {
                 const targetTab = navItem.dataset.tab;
                 switchTab(targetTab);
+                closeAllDropdowns();
+                closeMobileMenu();
             });
         });
 
         function switchTab(tabName) {
-            document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+            // Clear all active states
+            document.querySelectorAll('.topnav-item').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.topnav-dropdown-item').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.topnav-dropdown-toggle').forEach(t => t.classList.remove('group-active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(tabName).classList.add('active');
-
-            if (tabName === 'export') {
-                loadPreviews();
+            // Activate the clicked dropdown item (if any)
+            const dropdownItem = document.querySelector(`.topnav-dropdown-item[data-tab="${tabName}"]`);
+            if (dropdownItem) {
+                dropdownItem.classList.add('active');
             }
 
-            if (tabName === 'moltbook') {
-                loadMoltbookState();
+            // Activate the top-level item (for overview or standalone)
+            const topItem = document.querySelector(`.topnav-item[data-tab="${tabName}"]`);
+            if (topItem) {
+                topItem.classList.add('active');
             }
 
-            if (tabName === 'agents') {
-                loadAgents();
+            // Highlight parent group toggle
+            const group = TAB_GROUP_MAP[tabName];
+            if (group) {
+                const groupDropdown = document.querySelector(`.topnav-dropdown[data-group="${group}"]`);
+                if (groupDropdown) {
+                    const toggle = groupDropdown.querySelector('.topnav-dropdown-toggle');
+                    if (toggle) toggle.classList.add('group-active');
+                }
             }
 
-            if (tabName === 'feed') {
-                initFeedTab();
-            }
+            // Show the tab content
+            const tabContent = document.getElementById(tabName);
+            if (tabContent) tabContent.classList.add('active');
 
-            if (tabName === 'analytics') {
-                initAnalyticsTab();
-            }
-
-            // AI Workbench tabs
-            if (tabName === 'chatbot') {
-                initChatTab();
-            }
-            if (tabName === 'web-browse') {
-                initWebBrowseTab();
-            }
-            if (tabName === 'utility') {
-                initUtilityTab();
-            }
-            if (tabName === 'model-config') {
-                initModelConfigTab();
-            }
-            if (tabName === 'ext-agents') {
-                initExtAgentsTab();
-            }
+            // Tab-specific init calls
+            if (tabName === 'export') loadPreviews();
+            if (tabName === 'moltbook') loadMoltbookState();
+            if (tabName === 'agents') loadAgents();
+            if (tabName === 'feed') initFeedTab();
+            if (tabName === 'analytics') initAnalyticsTab();
+            if (tabName === 'chatbot') initChatTab();
+            if (tabName === 'web-browse') initWebBrowseTab();
+            if (tabName === 'utility') initUtilityTab();
+            if (tabName === 'model-config') initModelConfigTab();
+            if (tabName === 'ext-agents') initExtAgentsTab();
         }
+
+        // ===== Dropdown hover behavior (desktop) =====
+        document.querySelectorAll('.topnav-dropdown').forEach(dropdown => {
+            let closeTimeout;
+
+            dropdown.addEventListener('mouseenter', () => {
+                if (window.innerWidth <= 768) return;
+                clearTimeout(closeTimeout);
+                closeAllDropdowns();
+                dropdown.querySelector('.topnav-dropdown-menu').classList.add('open');
+            });
+
+            dropdown.addEventListener('mouseleave', () => {
+                if (window.innerWidth <= 768) return;
+                closeTimeout = setTimeout(() => {
+                    dropdown.querySelector('.topnav-dropdown-menu').classList.remove('open');
+                }, 200);
+            });
+
+            // Click toggle for mobile / accessibility
+            const toggle = dropdown.querySelector('.topnav-dropdown-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', (e) => {
+                    if (window.innerWidth > 768) return;
+                    e.stopPropagation();
+                    const menu = dropdown.querySelector('.topnav-dropdown-menu');
+                    const isOpen = menu.classList.contains('open');
+                    closeAllDropdowns();
+                    if (!isOpen) menu.classList.add('open');
+                });
+            }
+        });
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.topnav-dropdown-menu').forEach(m => m.classList.remove('open'));
+        }
+
+        function closeMobileMenu() {
+            const links = document.getElementById('topnav-links');
+            const hamburger = document.getElementById('topnav-hamburger');
+            if (links) links.classList.remove('open');
+            if (hamburger) hamburger.classList.remove('open');
+        }
+
+        // Hamburger toggle
+        document.getElementById('topnav-hamburger')?.addEventListener('click', () => {
+            const links = document.getElementById('topnav-links');
+            const hamburger = document.getElementById('topnav-hamburger');
+            links.classList.toggle('open');
+            hamburger.classList.toggle('open');
+        });
+
+        // Click outside to close dropdowns
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.topnav-dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+
+        // Cleanup on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeMobileMenu();
+                closeAllDropdowns();
+            }
+        });
 
         // LLM Provider Selection
         document.querySelectorAll('.provider-card').forEach(card => {
@@ -2257,7 +2353,7 @@ Examples:
                 // Show admin tab if user is admin
                 const adminTabButton = document.getElementById('admin-tab-button');
                 if (currentUser.is_admin) {
-                    adminTabButton.style.display = 'inline-block';
+                    adminTabButton.style.display = 'flex';
                     console.log('✅ Admin access granted');
                 } else {
                     adminTabButton.style.display = 'none';
@@ -2659,19 +2755,7 @@ Examples:
         }
 
         function showSubscriptionTab() {
-            // Switch to subscription tab
-            const tabs = document.querySelectorAll('.tab');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-
-            const subTab = document.querySelector('.tab[data-tab="subscription"]');
-            const subContent = document.getElementById('subscription');
-
-            if (subTab) subTab.classList.add('active');
-            if (subContent) subContent.classList.add('active');
-
+            switchTab('subscription');
             // Load plans if not loaded
             if (subscriptionPlans.length === 0) {
                 loadSubscriptionPlans();

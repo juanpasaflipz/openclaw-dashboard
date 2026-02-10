@@ -27,198 +27,158 @@
         </p>
     </div>
 
-    <div class="container">
-        <div class="app-layout">
-            <!-- Left Sidebar Navigation -->
-            <aside class="sidebar">
-                <div style="padding: 20px 16px; border-bottom: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-size: 24px;">🐵</span>
-                        <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">Green Monkey</span>
+    <!-- Top Navigation Bar -->
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <div class="topnav-brand">
+                <span style="font-size: 22px;">🐵</span>
+                <span class="topnav-brand-text">Green Monkey</span>
+            </div>
+
+            <button class="topnav-hamburger" id="topnav-hamburger" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+
+            <div class="topnav-links" id="topnav-links">
+                <button class="topnav-item active" data-tab="overview">Overview</button>
+
+                <div class="topnav-dropdown" data-group="agents">
+                    <button class="topnav-item topnav-dropdown-toggle">Agents <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="ext-agents">
+                            <span class="topnav-dropdown-icon">🐙</span> Nautilus AI <span class="nav-nautilus-badge">NEW</span>
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="agents">
+                            <span class="topnav-dropdown-icon">🤖</span> My Agents
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="identity">
+                            <span class="topnav-dropdown-icon">👤</span> Identity
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="user">
+                            <span class="topnav-dropdown-icon">📝</span> User Info
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="soul">
+                            <span class="topnav-dropdown-icon">✨</span> Soul &amp; Behavior
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="tools">
+                            <span class="topnav-dropdown-icon">🛠️</span> Tools
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="security">
+                            <span class="topnav-dropdown-icon">🔒</span> Security
+                        </button>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-tertiary); margin: 0;">AI Agent Management</p>
                 </div>
 
-                <nav>
-                    <div class="nav-section">
-                        <button class="nav-item active" data-tab="overview">
-                            <span class="nav-item-icon">📋</span>
-                            <span>Overview</span>
+                <div class="topnav-dropdown" data-group="workbench">
+                    <button class="topnav-item topnav-dropdown-toggle">Workbench <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="chatbot">
+                            <span class="topnav-dropdown-icon">💬</span> Chat Bot
                         </button>
-                        <button class="nav-item nav-item-nautilus" data-tab="ext-agents">
-                            <span class="nav-item-icon">🐙</span>
-                            <span>Nautilus AI</span>
-                            <span class="nav-nautilus-badge">NEW</span>
+                        <button class="topnav-dropdown-item" data-tab="web-browse">
+                            <span class="topnav-dropdown-icon">🌐</span> Web Browse
                         </button>
-                        <button class="nav-item" data-tab="llm">
-                            <span class="nav-item-icon">🔌</span>
-                            <span>LLM Connection</span>
+                        <button class="topnav-dropdown-item" data-tab="utility">
+                            <span class="topnav-dropdown-icon">🧰</span> Utility
                         </button>
-                        <button class="nav-item" data-tab="identity">
-                            <span class="nav-item-icon">👤</span>
-                            <span>Identity</span>
+                        <button class="topnav-dropdown-item" data-tab="model-config">
+                            <span class="topnav-dropdown-icon">⚙️</span> Model Config
                         </button>
-                        <button class="nav-item" data-tab="user">
-                            <span class="nav-item-icon">📝</span>
-                            <span>User Info</span>
-                        </button>
-                        <button class="nav-item" data-tab="soul">
-                            <span class="nav-item-icon">✨</span>
-                            <span>Soul & Behavior</span>
-                        </button>
-                        <button class="nav-item" data-tab="tools">
-                            <span class="nav-item-icon">🛠️</span>
-                            <span>Tools</span>
-                        </button>
-                        <button class="nav-item" data-tab="security">
-                            <span class="nav-item-icon">🔒</span>
-                            <span>Security</span>
+                        <button class="topnav-dropdown-item" data-tab="llm">
+                            <span class="topnav-dropdown-icon">🔌</span> LLM Connection
                         </button>
                     </div>
+                </div>
 
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <div class="nav-section-title">Integrations</div>
-                        <button class="nav-item" data-tab="moltbook">
-                            <span class="nav-item-icon">🦞</span>
-                            <span>Moltbook</span>
+                <div class="topnav-dropdown" data-group="integrations">
+                    <button class="topnav-item topnav-dropdown-toggle">Integrations <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="connect">
+                            <span class="topnav-dropdown-icon">🔌</span> Connect
                         </button>
-                        <button class="nav-item" data-tab="feed">
-                            <span class="nav-item-icon">📖</span>
-                            <span>Feed</span>
+                        <button class="topnav-dropdown-item" data-tab="channels">
+                            <span class="topnav-dropdown-icon">💬</span> Channels
                         </button>
-                        <button class="nav-item" data-tab="analytics">
-                            <span class="nav-item-icon">📊</span>
-                            <span>Analytics</span>
-                        </button>
-                        <button class="nav-item" data-tab="channels">
-                            <span class="nav-item-icon">💬</span>
-                            <span>Channels</span>
-                        </button>
-                        <button class="nav-item" data-tab="providers">
-                            <span class="nav-item-icon">🤖</span>
-                            <span>Providers</span>
-                        </button>
-                        <button class="nav-item" data-tab="connect">
-                            <span class="nav-item-icon">🔌</span>
-                            <span>Connect</span>
-                        </button>
-                        <button class="nav-item" data-tab="actions">
-                            <span class="nav-item-icon">✅</span>
-                            <span>Actions</span>
+                        <button class="topnav-dropdown-item" data-tab="actions">
+                            <span class="topnav-dropdown-icon">✅</span> Actions
                             <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
                         </button>
-                    </div>
-
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <div class="nav-section-title">AI Workbench</div>
-                        <button class="nav-item" data-tab="chatbot">
-                            <span class="nav-item-icon">💬</span>
-                            <span>Chat Bot</span>
-                        </button>
-                        <button class="nav-item" data-tab="web-browse">
-                            <span class="nav-item-icon">🌐</span>
-                            <span>Web Browse</span>
-                        </button>
-                        <button class="nav-item" data-tab="utility">
-                            <span class="nav-item-icon">🧰</span>
-                            <span>Utility</span>
-                        </button>
-                        <button class="nav-item" data-tab="model-config">
-                            <span class="nav-item-icon">⚙️</span>
-                            <span>Model Config</span>
+                        <button class="topnav-dropdown-item" data-tab="providers">
+                            <span class="topnav-dropdown-icon">🤖</span> Providers
                         </button>
                     </div>
+                </div>
 
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <button class="nav-item" data-tab="subscription">
-                            <span class="nav-item-icon">💎</span>
-                            <span>Subscription</span>
+                <div class="topnav-dropdown" data-group="social">
+                    <button class="topnav-item topnav-dropdown-toggle">Social <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="moltbook">
+                            <span class="topnav-dropdown-icon">🦞</span> Moltbook
                         </button>
-                        <button class="nav-item" data-tab="agents">
-                            <span class="nav-item-icon">🤖</span>
-                            <span>My Agents</span>
+                        <button class="topnav-dropdown-item" data-tab="feed">
+                            <span class="topnav-dropdown-icon">📖</span> Feed
                         </button>
-                        <button class="nav-item" id="admin-tab-button" data-tab="admin" style="display: none;">
-                            <span class="nav-item-icon">🔐</span>
-                            <span>Admin</span>
-                        </button>
-                        <button class="nav-item" data-tab="export">
-                            <span class="nav-item-icon">💾</span>
-                            <span>Export</span>
+                        <button class="topnav-dropdown-item" data-tab="analytics">
+                            <span class="topnav-dropdown-icon">📊</span> Analytics
                         </button>
                     </div>
+                </div>
 
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <a href="https://docs.greenmonkey.dev" target="_blank" rel="noopener noreferrer" class="nav-item" style="text-decoration: none; color: inherit;">
-                            <span class="nav-item-icon">📖</span>
-                            <span>Docs</span>
-                            <span style="margin-left: auto; font-size: 11px; color: var(--text-tertiary);">↗</span>
-                        </a>
+                <div class="topnav-dropdown" data-group="account">
+                    <button class="topnav-item topnav-dropdown-toggle">Account <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="subscription">
+                            <span class="topnav-dropdown-icon">💎</span> Subscription
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="export">
+                            <span class="topnav-dropdown-icon">💾</span> Export
+                        </button>
+                        <button class="topnav-dropdown-item" id="admin-tab-button" data-tab="admin" style="display: none;">
+                            <span class="topnav-dropdown-icon">🔐</span> Admin
+                        </button>
                     </div>
-                </nav>
-            </aside>
+                </div>
 
+                <a href="https://docs.greenmonkey.dev" target="_blank" rel="noopener noreferrer" class="topnav-item topnav-docs-link">
+                    Docs <span style="font-size: 10px; margin-left: 2px;">↗</span>
+                </a>
+            </div>
+
+            <div class="topnav-right">
+                <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
+                    🔐 Login
+                </button>
+                <div id="user-info" style="display: none; align-items: center; gap: 12px;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 10px; color: var(--text-tertiary);">Logged in as</div>
+                        <div id="user-email" style="font-weight: 500; font-size: 12px; color: var(--text-primary);"></div>
+                    </div>
+                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span id="subscription-tier-badge" style="font-weight: 600; font-size: 12px;"></span>
+                        <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 3px 8px; font-size: 10px;">
+                            Upgrade
+                        </button>
+                    </div>
+                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span id="credit-balance" style="font-weight: 600; font-size: 13px;">0</span>
+                        <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 3px 8px; font-size: 10px;">
+                            + Buy
+                        </button>
+                    </div>
+                    <button onclick="logout()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="app-layout">
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Top Header Bar -->
-                <header class="header">
-                    <div class="header-title">
-                        <span class="monkey-logo">🐵</span>
-                        <h1>Dashboard</h1>
-                    </div>
-
-                    <!-- Auth & User Info -->
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <!-- Login button (hidden when logged in) -->
-                        <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
-                            🔐 Login
-                        </button>
-
-                        <!-- User info (shown when logged in) -->
-                        <div id="user-info" style="display: none; align-items: center; gap: 16px;">
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Logged in as</div>
-                                <div id="user-email" style="font-weight: 500; font-size: 13px; color: var(--text-primary);"></div>
-                            </div>
-
-                            <div style="height: 24px; width: 1px; background: var(--border);"></div>
-
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Subscription</div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span id="subscription-tier-badge" style="font-weight: 600; font-size: 13px;"></span>
-                                    <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">
-                                        Upgrade
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style="height: 24px; width: 1px; background: var(--border);"></div>
-
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Credits</div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span id="credit-balance" style="font-weight: 600; font-size: 14px;">0</span>
-                                    <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 4px 10px; font-size: 11px;">
-                                        + Buy
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;">
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </header>
 
                 <!-- Content Wrapper -->
                 <div class="content-wrapper">

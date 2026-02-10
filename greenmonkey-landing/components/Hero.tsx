@@ -14,32 +14,35 @@ export default function Hero() {
           BETA
         </div>
 
-        {/* Logo + Title */}
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 tracking-tight">
-          <img src="/logo.webp" alt="Green Monkey" className="inline-block w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mr-3 align-middle" />
+        {/* Headline */}
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 tracking-tight leading-tight">
+          <span className="text-text-primary">Autonomous AI agents that </span>
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Green Monkey
+            actually do work
           </span>
+          <span className="text-text-primary"> &mdash; safely.</span>
         </h1>
 
-        {/* Tagline */}
-        <p className="text-2xl sm:text-3xl font-semibold text-text-primary mb-4">
-          AI Agent Management, Simplified
-        </p>
-
-        {/* Subtext */}
-        <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-10">
-          Deploy your AI agents across 12 platforms with 9 LLM providers.
-          Bring your own API keys. One dashboard to rule them all.
+        {/* Subheadline */}
+        <p className="text-lg sm:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+          Green Monkey lets you deploy AI agents that plan, execute approved
+          actions, and report back transparently. No black boxes. No runaway
+          automation.
         </p>
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="https://app.greenmonkey.dev" className="btn-primary text-lg px-8 py-3.5">
-            Get Started Free
+          <a
+            href="https://app.greenmonkey.dev"
+            className="btn-primary text-lg px-8 py-3.5"
+          >
+            Try the GitHub Agent Demo
           </a>
-          <a href="https://docs.greenmonkey.dev" className="btn-secondary text-lg px-8 py-3.5">
-            View Docs
+          <a
+            href="https://github.com/openclaw"
+            className="btn-secondary text-lg px-8 py-3.5"
+          >
+            Run Locally
           </a>
         </div>
       </div>
