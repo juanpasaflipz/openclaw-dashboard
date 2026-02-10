@@ -39,7 +39,7 @@ export default function Hero() {
             Try the GitHub Agent Demo
           </a>
           <a
-            href="https://github.com/openclaw"
+            href="https://github.com/juanpasaflipz/openclaw-dashboard"
             className="btn-secondary text-lg px-8 py-3.5"
           >
             Run Locally
