@@ -6,10 +6,13 @@ Public API:
     execute_tool(name, uid, args) → dict result
     get_tools_system_prompt(uid)  → str for LLM system prompt
 """
+import base64
 import json
 import os
 import requests as http_requests
 from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from models import db, Superpower
 
 
@@ -482,6 +485,326 @@ def _exec_get_binance_prices(user_id, params):
 
 
 # ---------------------------------------------------------------------------
+# Write tool executors
+# ---------------------------------------------------------------------------
+
+# --- Gmail writes ---
+def _exec_send_email(user_id, params):
+    from routes.gmail_routes import get_gmail_service
+    service, err = get_gmail_service(user_id)
+    if err:
+        return {'error': err}
+    to = params.get('to', '')
+    subject = params.get('subject', '')
+    body = params.get('body', '')
+    if not to or not subject or not body:
+        return {'error': 'to, subject, and body are required'}
+    try:
+        message = MIMEMultipart()
+        message['to'] = to
+        message['subject'] = subject
+        message.attach(MIMEText(body, 'plain'))
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+        sent = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+        return {'success': True, 'message_id': sent.get('id'), 'to': to, 'subject': subject}
+    except Exception as e:
+        return {'error': str(e)[:200]}
+
+
+def _exec_reply_to_email(user_id, params):
+    from routes.gmail_routes import get_gmail_service
+    service, err = get_gmail_service(user_id)
+    if err:
+        return {'error': err}
+    email_id = params.get('email_id', '')
+    body = params.get('body', '')
+    if not email_id or not body:
+        return {'error': 'email_id and body are required'}
+    try:
+        original = service.users().messages().get(userId='me', id=email_id, format='metadata',
+                                                   metadataHeaders=['Subject', 'From', 'To', 'Message-ID']).execute()
+        headers = {h['name']: h['value'] for h in original.get('payload', {}).get('headers', [])}
+        reply_to = headers.get('From', '')
+        subject = headers.get('Subject', '')
+        if not subject.lower().startswith('re:'):
+            subject = f'Re: {subject}'
+        message_id = headers.get('Message-ID', '')
+
+        msg = MIMEMultipart()
+        msg['to'] = reply_to
+        msg['subject'] = subject
+        if message_id:
+            msg['In-Reply-To'] = message_id
+            msg['References'] = message_id
+        msg.attach(MIMEText(body, 'plain'))
+        raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode('utf-8')
+        sent = service.users().messages().send(userId='me', body={'raw': raw_message, 'threadId': original.get('threadId')}).execute()
+        return {'success': True, 'message_id': sent.get('id'), 'to': reply_to, 'subject': subject}
+    except Exception as e:
+        return {'error': str(e)[:200]}
+
+
+# --- Calendar writes ---
+def _exec_create_calendar_event(user_id, params):
+    from routes.calendar_routes import get_calendar_service
+    service, err = get_calendar_service(user_id)
+    if err:
+        return {'error': err}
+    summary = params.get('summary', '')
+    start = params.get('start', '')
+    end = params.get('end', '')
+    if not summary or not start or not end:
+        return {'error': 'summary, start, and end are required'}
+    try:
+        event = {
+            'summary': summary,
+            'start': {'dateTime': start, 'timeZone': params.get('timeZone', 'UTC')},
+            'end': {'dateTime': end, 'timeZone': params.get('timeZone', 'UTC')},
+        }
+        if params.get('description'):
+            event['description'] = params['description']
+        if params.get('location'):
+            event['location'] = params['location']
+        created = service.events().insert(calendarId='primary', body=event).execute()
+        return {'success': True, 'event_id': created.get('id'), 'summary': summary,
+                'start': start, 'end': end, 'link': created.get('htmlLink', '')}
+    except Exception as e:
+        return {'error': str(e)[:200]}
+
+
+def _exec_delete_calendar_event(user_id, params):
+    from routes.calendar_routes import get_calendar_service
+    service, err = get_calendar_service(user_id)
+    if err:
+        return {'error': err}
+    event_id = params.get('event_id', '')
+    if not event_id:
+        return {'error': 'event_id is required'}
+    try:
+        service.events().delete(calendarId='primary', eventId=event_id).execute()
+        return {'success': True, 'deleted_event_id': event_id}
+    except Exception as e:
+        return {'error': str(e)[:200]}
+
+
+# --- Drive writes ---
+def _exec_create_drive_folder(user_id, params):
+    from routes.drive_routes import get_drive_service
+    service, err = get_drive_service(user_id)
+    if err:
+        return {'error': err}
+    name = params.get('name', '')
+    if not name:
+        return {'error': 'name is required'}
+    try:
+        folder_metadata = {'name': name, 'mimeType': 'application/vnd.google-apps.folder'}
+        if params.get('parent_id'):
+            folder_metadata['parents'] = [params['parent_id']]
+        folder = service.files().create(body=folder_metadata, fields='id, name, webViewLink').execute()
+        return {'success': True, 'folder_id': folder.get('id'), 'name': folder.get('name'),
+                'link': folder.get('webViewLink', '')}
+    except Exception as e:
+        return {'error': str(e)[:200]}
+
+
+# --- Notion writes ---
+def _exec_create_notion_page(user_id, params):
+    from routes.notion_routes import get_notion_headers
+    headers, err = get_notion_headers(user_id)
+    if err:
+        return {'error': err}
+    parent_id = params.get('parent_id', '')
+    title = params.get('title', '')
+    if not parent_id or not title:
+        return {'error': 'parent_id and title are required'}
+    page_data = {
+        'parent': {'page_id': parent_id},
+        'properties': {
+            'title': {'title': [{'text': {'content': title}}]}
+        }
+    }
+    if params.get('content'):
+        page_data['children'] = [{
+            'object': 'block', 'type': 'paragraph',
+            'paragraph': {'rich_text': [{'text': {'content': params['content']}}]}
+        }]
+    resp = http_requests.post('https://api.notion.com/v1/pages', headers=headers, json=page_data, timeout=15)
+    if not resp.ok:
+        return {'error': f'Notion API error ({resp.status_code}): {resp.text[:200]}'}
+    result = resp.json()
+    return {'success': True, 'page_id': result.get('id'), 'url': result.get('url', ''), 'title': title}
+
+
+# --- GitHub writes ---
+def _exec_create_github_issue(user_id, params):
+    from routes.github_routes import get_github_headers
+    headers, err = get_github_headers(user_id)
+    if err:
+        return {'error': err}
+    owner = params.get('owner', '')
+    repo = params.get('repo', '')
+    title = params.get('title', '')
+    if not owner or not repo or not title:
+        return {'error': 'owner, repo, and title are required'}
+    payload = {'title': title}
+    if params.get('body'):
+        payload['body'] = params['body']
+    if params.get('labels'):
+        payload['labels'] = params['labels']
+    resp = http_requests.post(f'https://api.github.com/repos/{owner}/{repo}/issues',
+                               headers=headers, json=payload, timeout=15)
+    if not resp.ok:
+        return {'error': f'GitHub API error ({resp.status_code}): {resp.text[:200]}'}
+    issue = resp.json()
+    return {'success': True, 'issue_number': issue.get('number'), 'title': issue.get('title'),
+            'url': issue.get('html_url', '')}
+
+
+def _exec_create_github_comment(user_id, params):
+    from routes.github_routes import get_github_headers
+    headers, err = get_github_headers(user_id)
+    if err:
+        return {'error': err}
+    owner = params.get('owner', '')
+    repo = params.get('repo', '')
+    issue_number = params.get('issue_number')
+    body = params.get('body', '')
+    if not owner or not repo or not issue_number or not body:
+        return {'error': 'owner, repo, issue_number, and body are required'}
+    resp = http_requests.post(f'https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments',
+                               headers=headers, json={'body': body}, timeout=15)
+    if not resp.ok:
+        return {'error': f'GitHub API error ({resp.status_code}): {resp.text[:200]}'}
+    comment = resp.json()
+    return {'success': True, 'comment_id': comment.get('id'), 'url': comment.get('html_url', '')}
+
+
+# --- Slack writes ---
+def _exec_send_slack_message(user_id, params):
+    from routes.slack_routes import get_slack_headers
+    headers, err = get_slack_headers(user_id)
+    if err:
+        return {'error': err}
+    channel_id = params.get('channel_id', '')
+    text = params.get('text', '')
+    if not channel_id or not text:
+        return {'error': 'channel_id and text are required'}
+    resp = http_requests.post('https://slack.com/api/chat.postMessage',
+                               headers=headers, json={'channel': channel_id, 'text': text}, timeout=15)
+    data = resp.json()
+    if not data.get('ok'):
+        return {'error': data.get('error', 'Slack API error')}
+    return {'success': True, 'channel': channel_id, 'message_ts': data.get('ts')}
+
+
+# --- Discord writes ---
+def _exec_send_discord_message(user_id, params):
+    from routes.discord_routes import get_discord_headers
+    headers, err = get_discord_headers(user_id)
+    if err:
+        return {'error': err}
+    channel_id = params.get('channel_id', '')
+    content = params.get('content', '')
+    if not channel_id or not content:
+        return {'error': 'channel_id and content are required'}
+    resp = http_requests.post(f'https://discord.com/api/v10/channels/{channel_id}/messages',
+                               headers=headers, json={'content': content}, timeout=15)
+    if not resp.ok:
+        return {'error': f'Discord API error ({resp.status_code})'}
+    msg = resp.json()
+    return {'success': True, 'message_id': msg.get('id'), 'channel_id': channel_id}
+
+
+# --- Telegram writes ---
+def _exec_send_telegram_message(user_id, params):
+    sp = _superpower(user_id, 'telegram')
+    if not sp:
+        return {'error': 'Telegram not connected'}
+    token = sp.access_token_encrypted
+    chat_id = params.get('chat_id', '')
+    text = params.get('text', '')
+    if not chat_id or not text:
+        return {'error': 'chat_id and text are required'}
+    resp = http_requests.post(f'https://api.telegram.org/bot{token}/sendMessage',
+                               json={'chat_id': chat_id, 'text': text}, timeout=15)
+    if not resp.ok:
+        return {'error': f'Telegram API error ({resp.status_code})'}
+    data = resp.json()
+    if not data.get('ok'):
+        return {'error': data.get('description', 'Telegram API error')}
+    sp.last_used = datetime.utcnow()
+    db.session.commit()
+    result_msg = data.get('result', {})
+    return {'success': True, 'message_id': result_msg.get('message_id'), 'chat_id': chat_id}
+
+
+# --- Todoist writes ---
+def _exec_create_todoist_task(user_id, params):
+    from routes.todoist_routes import get_todoist_headers
+    headers, err = get_todoist_headers(user_id)
+    if err:
+        return {'error': err}
+    content = params.get('content', '')
+    if not content:
+        return {'error': 'content is required'}
+    payload = {'content': content}
+    if params.get('project_id'):
+        payload['project_id'] = params['project_id']
+    if params.get('due_string'):
+        payload['due_string'] = params['due_string']
+    if params.get('priority'):
+        payload['priority'] = params['priority']
+    resp = http_requests.post('https://api.todoist.com/rest/v2/tasks',
+                               headers=headers, json=payload, timeout=15)
+    if not resp.ok:
+        return {'error': f'Todoist API error ({resp.status_code})'}
+    task = resp.json()
+    return {'success': True, 'task_id': task.get('id'), 'content': task.get('content'),
+            'url': task.get('url', '')}
+
+
+def _exec_complete_todoist_task(user_id, params):
+    from routes.todoist_routes import get_todoist_headers
+    headers, err = get_todoist_headers(user_id)
+    if err:
+        return {'error': err}
+    task_id = params.get('task_id', '')
+    if not task_id:
+        return {'error': 'task_id is required'}
+    resp = http_requests.post(f'https://api.todoist.com/rest/v2/tasks/{task_id}/close',
+                               headers=headers, timeout=15)
+    if resp.status_code == 204:
+        return {'success': True, 'task_id': task_id, 'status': 'completed'}
+    if not resp.ok:
+        return {'error': f'Todoist API error ({resp.status_code})'}
+    return {'success': True, 'task_id': task_id, 'status': 'completed'}
+
+
+# --- Spotify writes ---
+def _exec_spotify_play(user_id, params):
+    from routes.spotify_routes import get_spotify_headers
+    headers, err = get_spotify_headers(user_id)
+    if err:
+        return {'error': err}
+    payload = {}
+    uri = params.get('uri', '')
+    if uri:
+        if ':track:' in uri:
+            payload['uris'] = [uri]
+        else:
+            payload['context_uri'] = uri
+    resp = http_requests.put('https://api.spotify.com/v1/me/player/play',
+                              headers=headers, json=payload if payload else None, timeout=15)
+    if resp.status_code == 204:
+        return {'success': True, 'action': 'playback started', 'uri': uri or 'resumed current'}
+    if resp.status_code == 403:
+        return {'error': 'Spotify Premium required for playback control'}
+    if not resp.ok:
+        return {'error': f'Spotify API error ({resp.status_code}): {resp.text[:200]}'}
+    return {'success': True, 'action': 'playback started', 'uri': uri or 'resumed current'}
+
+
+# ---------------------------------------------------------------------------
 # TOOL_REGISTRY
 # ---------------------------------------------------------------------------
 
@@ -670,6 +993,165 @@ TOOL_REGISTRY = {
                              }, 'required': []}),
         'required_service': 'binance',
         'execute': _exec_get_binance_prices,
+    },
+
+    # ===================================================================
+    # WRITE TOOLS
+    # ===================================================================
+
+    # -- Gmail writes --
+    'send_email': {
+        'schema': _fn_schema('send_email', 'Send an email from the user\'s Gmail account.',
+                             {'type': 'object', 'properties': {
+                                 'to': {'type': 'string', 'description': 'Recipient email address'},
+                                 'subject': {'type': 'string', 'description': 'Email subject line'},
+                                 'body': {'type': 'string', 'description': 'Email body text'},
+                             }, 'required': ['to', 'subject', 'body']}),
+        'required_service': 'gmail',
+        'execute': _exec_send_email,
+    },
+    'reply_to_email': {
+        'schema': _fn_schema('reply_to_email', 'Reply to an existing email in the user\'s Gmail. Automatically sets reply headers and thread.',
+                             {'type': 'object', 'properties': {
+                                 'email_id': {'type': 'string', 'description': 'Gmail message ID of the email to reply to'},
+                                 'body': {'type': 'string', 'description': 'Reply body text'},
+                             }, 'required': ['email_id', 'body']}),
+        'required_service': 'gmail',
+        'execute': _exec_reply_to_email,
+    },
+
+    # -- Calendar writes --
+    'create_calendar_event': {
+        'schema': _fn_schema('create_calendar_event', 'Create a new event on the user\'s Google Calendar.',
+                             {'type': 'object', 'properties': {
+                                 'summary': {'type': 'string', 'description': 'Event title'},
+                                 'start': {'type': 'string', 'description': 'Start time in ISO 8601 format (e.g. 2025-06-15T10:00:00-05:00)'},
+                                 'end': {'type': 'string', 'description': 'End time in ISO 8601 format (e.g. 2025-06-15T11:00:00-05:00)'},
+                                 'description': {'type': 'string', 'description': 'Event description (optional)'},
+                                 'location': {'type': 'string', 'description': 'Event location (optional)'},
+                             }, 'required': ['summary', 'start', 'end']}),
+        'required_service': 'calendar',
+        'execute': _exec_create_calendar_event,
+    },
+    'delete_calendar_event': {
+        'schema': _fn_schema('delete_calendar_event', 'Delete an event from the user\'s Google Calendar.',
+                             {'type': 'object', 'properties': {
+                                 'event_id': {'type': 'string', 'description': 'Google Calendar event ID'},
+                             }, 'required': ['event_id']}),
+        'required_service': 'calendar',
+        'execute': _exec_delete_calendar_event,
+    },
+
+    # -- Drive writes --
+    'create_drive_folder': {
+        'schema': _fn_schema('create_drive_folder', 'Create a new folder in the user\'s Google Drive.',
+                             {'type': 'object', 'properties': {
+                                 'name': {'type': 'string', 'description': 'Folder name'},
+                                 'parent_id': {'type': 'string', 'description': 'Parent folder ID (optional, defaults to root)'},
+                             }, 'required': ['name']}),
+        'required_service': 'drive',
+        'execute': _exec_create_drive_folder,
+    },
+
+    # -- Notion writes --
+    'create_notion_page': {
+        'schema': _fn_schema('create_notion_page', 'Create a new page in the user\'s Notion workspace.',
+                             {'type': 'object', 'properties': {
+                                 'parent_id': {'type': 'string', 'description': 'Parent page ID to create the new page under'},
+                                 'title': {'type': 'string', 'description': 'Page title'},
+                                 'content': {'type': 'string', 'description': 'Page body text (optional)'},
+                             }, 'required': ['parent_id', 'title']}),
+        'required_service': 'notion',
+        'execute': _exec_create_notion_page,
+    },
+
+    # -- GitHub writes --
+    'create_github_issue': {
+        'schema': _fn_schema('create_github_issue', 'Create a new issue on a GitHub repository.',
+                             {'type': 'object', 'properties': {
+                                 'owner': {'type': 'string', 'description': 'Repository owner (user or org)'},
+                                 'repo': {'type': 'string', 'description': 'Repository name'},
+                                 'title': {'type': 'string', 'description': 'Issue title'},
+                                 'body': {'type': 'string', 'description': 'Issue description (optional)'},
+                                 'labels': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Labels to apply (optional)'},
+                             }, 'required': ['owner', 'repo', 'title']}),
+        'required_service': 'github',
+        'execute': _exec_create_github_issue,
+    },
+    'create_github_comment': {
+        'schema': _fn_schema('create_github_comment', 'Add a comment to a GitHub issue or pull request.',
+                             {'type': 'object', 'properties': {
+                                 'owner': {'type': 'string', 'description': 'Repository owner (user or org)'},
+                                 'repo': {'type': 'string', 'description': 'Repository name'},
+                                 'issue_number': {'type': 'integer', 'description': 'Issue or PR number'},
+                                 'body': {'type': 'string', 'description': 'Comment text'},
+                             }, 'required': ['owner', 'repo', 'issue_number', 'body']}),
+        'required_service': 'github',
+        'execute': _exec_create_github_comment,
+    },
+
+    # -- Slack writes --
+    'send_slack_message': {
+        'schema': _fn_schema('send_slack_message', 'Send a message to a Slack channel.',
+                             {'type': 'object', 'properties': {
+                                 'channel_id': {'type': 'string', 'description': 'The Slack channel ID'},
+                                 'text': {'type': 'string', 'description': 'Message text to send'},
+                             }, 'required': ['channel_id', 'text']}),
+        'required_service': 'slack',
+        'execute': _exec_send_slack_message,
+    },
+
+    # -- Discord writes --
+    'send_discord_message': {
+        'schema': _fn_schema('send_discord_message', 'Send a message to a Discord channel.',
+                             {'type': 'object', 'properties': {
+                                 'channel_id': {'type': 'string', 'description': 'Discord channel ID'},
+                                 'content': {'type': 'string', 'description': 'Message content to send'},
+                             }, 'required': ['channel_id', 'content']}),
+        'required_service': 'discord',
+        'execute': _exec_send_discord_message,
+    },
+
+    # -- Telegram writes --
+    'send_telegram_message': {
+        'schema': _fn_schema('send_telegram_message', 'Send a message via the connected Telegram bot.',
+                             {'type': 'object', 'properties': {
+                                 'chat_id': {'type': 'string', 'description': 'Telegram chat ID to send the message to'},
+                                 'text': {'type': 'string', 'description': 'Message text to send'},
+                             }, 'required': ['chat_id', 'text']}),
+        'required_service': 'telegram',
+        'execute': _exec_send_telegram_message,
+    },
+
+    # -- Todoist writes --
+    'create_todoist_task': {
+        'schema': _fn_schema('create_todoist_task', 'Create a new task in Todoist.',
+                             {'type': 'object', 'properties': {
+                                 'content': {'type': 'string', 'description': 'Task title/content'},
+                                 'project_id': {'type': 'string', 'description': 'Project ID to add the task to (optional)'},
+                                 'due_string': {'type': 'string', 'description': 'Due date in natural language, e.g. "tomorrow", "next Monday" (optional)'},
+                                 'priority': {'type': 'integer', 'description': 'Priority 1 (normal) to 4 (urgent) (optional)'},
+                             }, 'required': ['content']}),
+        'required_service': 'todoist',
+        'execute': _exec_create_todoist_task,
+    },
+    'complete_todoist_task': {
+        'schema': _fn_schema('complete_todoist_task', 'Mark a Todoist task as completed.',
+                             {'type': 'object', 'properties': {
+                                 'task_id': {'type': 'string', 'description': 'Todoist task ID to complete'},
+                             }, 'required': ['task_id']}),
+        'required_service': 'todoist',
+        'execute': _exec_complete_todoist_task,
+    },
+
+    # -- Spotify writes --
+    'spotify_play': {
+        'schema': _fn_schema('spotify_play', 'Start or resume playback on the user\'s Spotify. Can play a specific track, album, or playlist by URI, or resume current playback.',
+                             {'type': 'object', 'properties': {
+                                 'uri': {'type': 'string', 'description': 'Spotify URI (e.g. spotify:track:xxx, spotify:album:xxx, spotify:playlist:xxx). Leave empty to resume current playback.'},
+                             }, 'required': []}),
+        'required_service': 'spotify',
+        'execute': _exec_spotify_play,
     },
 }
 
