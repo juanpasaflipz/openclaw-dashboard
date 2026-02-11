@@ -5613,7 +5613,16 @@ Examples:
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const text = (input.value || '').trim();
-            if (!text || !activeConversationId) return;
+            if (!text) return;
+
+            // Auto-create a conversation if none is active
+            if (!activeConversationId) {
+                await createNewConversation();
+                if (!activeConversationId) {
+                    appendChatBubble('system', 'Could not create a conversation. Please try again.');
+                    return;
+                }
+            }
             input.value = '';
 
             const mode = document.getElementById('chat-agent-mode').value;
