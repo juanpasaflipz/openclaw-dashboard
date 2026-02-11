@@ -5247,7 +5247,8 @@ Examples:
                 return;
             }
             container.innerHTML = messages.map(m => {
-                return `<div class="chat-bubble ${m.role}">${escapeHtml(m.content)}</div>`;
+                const rendered = m.role === 'user' ? escapeHtml(m.content) : formatMessage(m.content);
+                return `<div class="chat-bubble ${m.role}">${rendered}</div>`;
             }).join('');
             container.scrollTop = container.scrollHeight;
         }
@@ -5257,7 +5258,8 @@ Examples:
             if (!container) return;
             const empty = container.querySelector('.chat-empty-state');
             if (empty) empty.remove();
-            container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+            const _rendered = role === 'user' ? escapeHtml(content) : formatMessage(content);
+                container.innerHTML += `<div class="chat-bubble ${role}">${_rendered}</div>`;
             container.scrollTop = container.scrollHeight;
         }
 
@@ -5376,7 +5378,8 @@ Examples:
             if (metadata && metadata.tool_name) {
                 container.innerHTML += renderToolCard({ content, metadata });
             } else {
-                container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+                const _rendered = role === 'user' ? escapeHtml(content) : formatMessage(content);
+                container.innerHTML += `<div class="chat-bubble ${role}">${_rendered}</div>`;
             }
             container.scrollTop = container.scrollHeight;
         }
@@ -5549,7 +5552,8 @@ Examples:
                 if (m.metadata && m.metadata.tool_name) {
                     return renderToolCard(m);
                 }
-                return `<div class="chat-bubble ${m.role}">${escapeHtml(m.content)}</div>`;
+                const rendered = m.role === 'user' ? escapeHtml(m.content) : formatMessage(m.content);
+                return `<div class="chat-bubble ${m.role}">${rendered}</div>`;
             }).join('');
             container.scrollTop = container.scrollHeight;
         }
@@ -5574,6 +5578,31 @@ Examples:
             return div.innerHTML;
         }
 
+        function formatMessage(text) {
+            // Escape HTML first for safety
+            let html = escapeHtml(text);
+            // Code blocks: ```lang\n...\n```
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            // Inline code: `...`
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Bold: **...**
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Italic: *...*
+            html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+            // Markdown links: [text](url)
+            html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+            // Bare URLs (not already inside an href)
+            html = html.replace(/(?<!href="|">)(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+            // Line breaks (but not inside <pre>)
+            html = html.replace(/\n/g, '<br>');
+            // Clean up <br> inside <pre> blocks — restore newlines
+            html = html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (match, code) => {
+                return '<pre><code>' + code.replace(/<br>/g, '\n') + '</code></pre>';
+            });
+            return html;
+        }
+
         function appendChatBubble(role, content, metadata) {
             const container = document.getElementById('chat-messages');
             if (!container) return;
@@ -5584,7 +5613,8 @@ Examples:
             if (metadata && metadata.tool_name) {
                 container.innerHTML += renderToolCard({ content, metadata });
             } else {
-                container.innerHTML += `<div class="chat-bubble ${role}">${escapeHtml(content)}</div>`;
+                const _rendered = role === 'user' ? escapeHtml(content) : formatMessage(content);
+                container.innerHTML += `<div class="chat-bubble ${role}">${_rendered}</div>`;
             }
             container.scrollTop = container.scrollHeight;
         }
