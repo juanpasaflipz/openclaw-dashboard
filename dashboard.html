@@ -188,7 +188,7 @@
                 <h2>Welcome to Green Monkey</h2>
 
                 <div class="info-box">
-                    <p>Green Monkey is a framework for creating a personalized AI agent with persistent memory and customized behavior. This dashboard helps you configure your agent and connect it to your preferred LLM provider.</p>
+                    <p>Configure your AI agent below, then open the chat to start talking. Connect an LLM provider, set your agent's identity, and you're ready to go.</p>
                 </div>
 
                 <!-- Nautilus AI Hero Banner -->
@@ -199,87 +199,45 @@
                         <div class="nautilus-hero-text">
                             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                                 <h3 style="margin:0; font-size:20px; color:white;">Nautilus AI Agent</h3>
-                                <span class="nautilus-hero-badge">Featured</span>
                                 <span id="nautilus-overview-status" class="nautilus-hero-status">
                                     <span class="status-dot status-disconnected"></span>
                                     Disconnected
                                 </span>
                             </div>
                             <p style="margin:6px 0 0; color:rgba(255,255,255,0.85); font-size:14px; line-height:1.5;">
-                                Chat directly using your LLM API key, or connect to the Gateway for tool execution, web search, file operations, and 3-tier memory.
+                                Your AI agent. Chat directly using your LLM API key, or connect to the Gateway for tool execution, web search, and memory.
                             </p>
                         </div>
                         <div class="nautilus-hero-action">
                             <button class="btn nautilus-hero-btn" onclick="event.stopPropagation(); switchTab('ext-agents');">
-                                Open Nautilus →
+                                Open Chat →
                             </button>
                         </div>
                     </div>
-                    <div class="nautilus-hero-features">
-                        <div class="nautilus-hero-feature">
-                            <span>💬</span> Direct LLM Chat
-                        </div>
-                        <div class="nautilus-hero-feature">
-                            <span>🔌</span> Gateway Mode
-                        </div>
-                        <div class="nautilus-hero-feature">
-                            <span>🛠️</span> Tool Execution
-                        </div>
-                        <div class="nautilus-hero-feature">
-                            <span>🌐</span> Web Search
-                        </div>
-                        <div class="nautilus-hero-feature">
-                            <span>🧠</span> 3-Tier Memory
-                        </div>
-                    </div>
-                </div>
-
-                <!-- OpenClaw Setup CTA -->
-                <div class="setup-cta" id="openclawSetupCTA" style="display: none;">
-                    <div class="setup-cta-content">
-                        <div class="setup-cta-icon">🚀</div>
-                        <div class="setup-cta-text">
-                            <h3 style="margin: 0 0 8px 0; font-size: 18px;">Get Started with OpenClaw</h3>
-                            <p style="margin: 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">Install and configure OpenClaw in minutes with our guided setup wizard</p>
-                        </div>
-                        <a href="/setup" class="btn btn-primary" style="text-decoration: none; white-space: nowrap;">
-                            Start Setup →
-                        </a>
-                    </div>
-                </div>
-
-                <h3>Setup Progress</h3>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-llm"></span>
-                    <div style="flex: 1;">
-                        <strong>LLM Connection:</strong> <span id="progress-llm">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-identity"></span>
-                    <div style="flex: 1;">
-                        <strong>AI Identity:</strong> <span id="progress-identity">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-user"></span>
-                    <div style="flex: 1;">
-                        <strong>User Info:</strong> <span id="progress-user">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-soul"></span>
-                    <div style="flex: 1;">
-                        <strong>Soul & Behavior:</strong> <span id="progress-soul">Using defaults</span>
+                    <!-- Agent config status (inline) -->
+                    <div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                        <span style="color: rgba(255,255,255,0.5); font-size: 13px;">Agent config:</span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-llm" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-llm" style="color: rgba(255,255,255,0.7);">LLM not configured</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-identity" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-identity" style="color: rgba(255,255,255,0.7);">Identity not set</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-user" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-user" style="color: rgba(255,255,255,0.7);">User info not set</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-soul" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-soul" style="color: rgba(255,255,255,0.7);">Using defaults</span>
+                        </span>
                     </div>
                 </div>
 
                 <div class="button-group">
-                    <button class="btn btn-primary" onclick="switchTab('llm')">Start Configuration →</button>
+                    <button class="btn btn-primary" onclick="switchTab('llm')">Configure Agent →</button>
                 </div>
             </div>
 

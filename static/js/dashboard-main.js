@@ -2147,34 +2147,6 @@ Examples:
             }
         }
 
-        // Check if OpenClaw is installed and show setup CTA if needed
-        document.addEventListener('DOMContentLoaded', () => {
-            checkOpenClawInstallation();
-        });
-
-        async function checkOpenClawInstallation() {
-            try {
-                const response = await fetch('/api/setup/check-install');
-                const data = await response.json();
-
-                const setupCTA = document.getElementById('openclawSetupCTA');
-                if (setupCTA) {
-                    // Show CTA if OpenClaw is NOT installed
-                    if (!data.installed) {
-                        setupCTA.style.display = 'block';
-                    } else {
-                        setupCTA.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.log('Could not check OpenClaw installation status');
-                // Show CTA by default if check fails
-                const setupCTA = document.getElementById('openclawSetupCTA');
-                if (setupCTA) {
-                    setupCTA.style.display = 'block';
-                }
-            }
-        }
 
         // Auto-add loading states to all async button clicks
         document.addEventListener('DOMContentLoaded', () => {
