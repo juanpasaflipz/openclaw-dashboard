@@ -5,10 +5,13 @@ from flask import jsonify, request, session, redirect, url_for
 from models import db, User, Superpower
 import os
 import json
+import secrets
+import base64
 from datetime import datetime, timedelta
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+import requests as http_requests
 
 
 # Google OAuth Configuration
@@ -279,3 +282,313 @@ def register_oauth_routes(app):
             print(f"❌ Error disconnecting superpower: {e}")
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
+
+    # ========================================
+    # Generic OAuth for third-party services
+    # ========================================
+
+    OAUTH_PROVIDERS = {
+        'slack': {
+            'client_id_env': 'SLACK_CLIENT_ID',
+            'client_secret_env': 'SLACK_CLIENT_SECRET',
+            'authorize_url': 'https://slack.com/oauth/v2/authorize',
+            'token_url': 'https://slack.com/api/oauth.v2.access',
+            'scopes': ['channels:read', 'chat:read', 'users:read', 'team:read'],
+            'service_name': 'Slack',
+            'category': 'connect',
+            'token_response_key': 'authed_user.access_token',
+        },
+        'github': {
+            'client_id_env': 'GITHUB_CLIENT_ID',
+            'client_secret_env': 'GITHUB_CLIENT_SECRET',
+            'authorize_url': 'https://github.com/login/oauth/authorize',
+            'token_url': 'https://github.com/login/oauth/access_token',
+            'scopes': ['repo', 'read:user', 'read:org'],
+            'scope_separator': ',',
+            'service_name': 'GitHub',
+            'category': 'connect',
+            'token_request_headers': {'Accept': 'application/json'},
+        },
+        'discord': {
+            'client_id_env': 'DISCORD_CLIENT_ID',
+            'client_secret_env': 'DISCORD_CLIENT_SECRET',
+            'authorize_url': 'https://discord.com/api/oauth2/authorize',
+            'token_url': 'https://discord.com/api/oauth2/token',
+            'scopes': ['identify', 'guilds', 'guilds.members.read'],
+            'service_name': 'Discord',
+            'category': 'connect',
+        },
+        'spotify': {
+            'client_id_env': 'SPOTIFY_CLIENT_ID',
+            'client_secret_env': 'SPOTIFY_CLIENT_SECRET',
+            'authorize_url': 'https://accounts.spotify.com/authorize',
+            'token_url': 'https://accounts.spotify.com/api/token',
+            'scopes': ['user-read-private', 'user-read-email', 'user-read-playback-state',
+                       'user-read-currently-playing', 'playlist-read-private'],
+            'service_name': 'Spotify',
+            'category': 'connect',
+            'token_auth': 'basic',
+        },
+        'todoist': {
+            'client_id_env': 'TODOIST_CLIENT_ID',
+            'client_secret_env': 'TODOIST_CLIENT_SECRET',
+            'authorize_url': 'https://todoist.com/oauth/authorize',
+            'token_url': 'https://todoist.com/oauth/access_token',
+            'scopes': ['data:read'],
+            'service_name': 'Todoist',
+            'category': 'connect',
+        },
+        'dropbox': {
+            'client_id_env': 'DROPBOX_CLIENT_ID',
+            'client_secret_env': 'DROPBOX_CLIENT_SECRET',
+            'authorize_url': 'https://www.dropbox.com/oauth2/authorize',
+            'token_url': 'https://api.dropboxapi.com/oauth2/token',
+            'scopes': [],
+            'service_name': 'Dropbox',
+            'category': 'connect',
+            'extra_auth_params': {'token_access_type': 'offline'},
+        },
+    }
+
+    @app.route('/api/oauth/<provider>/start', methods=['GET'])
+    def start_oauth(provider):
+        """Initiate OAuth flow for a third-party provider"""
+        try:
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'Authentication required'}), 401
+
+            if provider not in OAUTH_PROVIDERS:
+                return jsonify({'error': 'Unknown provider'}), 400
+
+            config = OAUTH_PROVIDERS[provider]
+            client_id = os.environ.get(config['client_id_env'])
+            client_secret = os.environ.get(config['client_secret_env'])
+
+            if not client_id or not client_secret:
+                return jsonify({
+                    'error': f'{config["service_name"]} OAuth not configured',
+                    'message': f'Administrator needs to set {config["client_id_env"]} and {config["client_secret_env"]}'
+                }), 500
+
+            base_url = os.environ.get('BASE_URL', 'http://localhost:5000')
+            redirect_uri = f'{base_url}/api/oauth/{provider}/callback'
+
+            state = secrets.token_urlsafe(32)
+            session[f'oauth_state_{provider}'] = state
+
+            separator = config.get('scope_separator', ' ')
+            scope_str = separator.join(config['scopes'])
+
+            params = {
+                'client_id': client_id,
+                'redirect_uri': redirect_uri,
+                'response_type': 'code',
+                'state': state,
+            }
+            if scope_str:
+                params['scope'] = scope_str
+
+            # Add extra auth params (e.g. Dropbox token_access_type)
+            extra = config.get('extra_auth_params', {})
+            params.update(extra)
+
+            from urllib.parse import urlencode
+            authorization_url = f'{config["authorize_url"]}?{urlencode(params)}'
+
+            return jsonify({'authorization_url': authorization_url})
+
+        except Exception as e:
+            print(f"Error starting {provider} OAuth: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/oauth/<provider>/callback', methods=['GET'])
+    def oauth_callback(provider):
+        """Handle OAuth callback for a third-party provider"""
+        try:
+            user_id = session.get('user_id')
+            if not user_id:
+                return '<html><body style="font-family:system-ui;text-align:center;padding:50px;"><h1>Authentication Required</h1><p>Please log in first.</p><script>setTimeout(()=>window.location.href="/",3000)</script></body></html>'
+
+            if provider not in OAUTH_PROVIDERS:
+                return '<html><body style="font-family:system-ui;text-align:center;padding:50px;"><h1>Unknown Provider</h1></body></html>'
+
+            state = request.args.get('state')
+            if state != session.get(f'oauth_state_{provider}'):
+                return '<html><body style="font-family:system-ui;text-align:center;padding:50px;"><h1>Invalid State</h1><p>OAuth state mismatch. Please try again.</p></body></html>'
+
+            code = request.args.get('code')
+            if not code:
+                error = request.args.get('error', 'unknown')
+                return f'<html><body style="font-family:system-ui;text-align:center;padding:50px;"><h1>Authorization Failed</h1><p>{error}</p></body></html>'
+
+            config = OAUTH_PROVIDERS[provider]
+            client_id = os.environ.get(config['client_id_env'])
+            client_secret = os.environ.get(config['client_secret_env'])
+            base_url = os.environ.get('BASE_URL', 'http://localhost:5000')
+            redirect_uri = f'{base_url}/api/oauth/{provider}/callback'
+
+            # Exchange code for tokens
+            token_data = {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'code': code,
+                'redirect_uri': redirect_uri,
+                'grant_type': 'authorization_code',
+            }
+
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+            headers.update(config.get('token_request_headers', {}))
+
+            # Spotify requires Basic auth for token exchange
+            if config.get('token_auth') == 'basic':
+                creds = base64.b64encode(f'{client_id}:{client_secret}'.encode()).decode()
+                headers['Authorization'] = f'Basic {creds}'
+                del token_data['client_id']
+                del token_data['client_secret']
+
+            resp = http_requests.post(config['token_url'], data=token_data, headers=headers)
+            token_json = resp.json()
+
+            if resp.status_code != 200 and 'access_token' not in token_json:
+                error_msg = token_json.get('error_description', token_json.get('error', 'Token exchange failed'))
+                raise Exception(error_msg)
+
+            # Extract access token (handle non-standard responses like Slack)
+            token_key = config.get('token_response_key', 'access_token')
+            access_token = token_json
+            for key_part in token_key.split('.'):
+                access_token = access_token.get(key_part, {}) if isinstance(access_token, dict) else None
+            if not access_token or isinstance(access_token, dict):
+                access_token = token_json.get('access_token')
+
+            refresh_token = token_json.get('refresh_token')
+            expires_in = token_json.get('expires_in')
+            token_expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in)) if expires_in else None
+
+            # Store connection
+            superpower = Superpower.query.filter_by(
+                user_id=user_id,
+                service_type=provider
+            ).first()
+
+            if superpower:
+                superpower.access_token_encrypted = access_token
+                superpower.refresh_token_encrypted = refresh_token
+                superpower.token_expires_at = token_expires_at
+                superpower.scopes_granted = json.dumps(config['scopes'])
+                superpower.connected_at = datetime.utcnow()
+                superpower.is_enabled = True
+            else:
+                superpower = Superpower(
+                    user_id=user_id,
+                    service_type=provider,
+                    service_name=config['service_name'],
+                    category=config['category'],
+                    access_token_encrypted=access_token,
+                    refresh_token_encrypted=refresh_token,
+                    token_expires_at=token_expires_at,
+                    scopes_granted=json.dumps(config['scopes']),
+                )
+                db.session.add(superpower)
+
+            db.session.commit()
+
+            session.pop(f'oauth_state_{provider}', None)
+            print(f"{config['service_name']} connected for user {user_id}")
+
+            service_name = config['service_name']
+            return f'''
+            <html>
+                <head><title>Connection Successful</title></head>
+                <body style="font-family: system-ui; text-align: center; padding: 50px;">
+                    <h1>Connection Successful!</h1>
+                    <p>{service_name} is now connected.</p>
+                    <p>You can close this window and return to the dashboard.</p>
+                    <script>
+                        setTimeout(() => {{ window.location.href = '/?tab=connect'; }}, 2000);
+                    </script>
+                </body>
+            </html>
+            '''
+
+        except Exception as e:
+            print(f"Error in {provider} OAuth callback: {e}")
+            return f'''
+            <html>
+                <head><title>Connection Failed</title></head>
+                <body style="font-family: system-ui; text-align: center; padding: 50px;">
+                    <h1>Connection Failed</h1>
+                    <p>Error: {str(e)}</p>
+                    <button onclick="window.location.href='/'">Return to Dashboard</button>
+                </body>
+            </html>
+            '''
+
+
+def refresh_oauth_token(superpower, provider_key):
+    """Refresh an expired OAuth token for a third-party provider.
+    Returns True if refresh succeeded, False otherwise."""
+    from routes.oauth_routes import register_oauth_routes
+    # Access the OAUTH_PROVIDERS from the closure isn't possible, so we define it here too
+    providers = {
+        'spotify': {
+            'client_id_env': 'SPOTIFY_CLIENT_ID',
+            'client_secret_env': 'SPOTIFY_CLIENT_SECRET',
+            'token_url': 'https://accounts.spotify.com/api/token',
+            'token_auth': 'basic',
+        },
+        'discord': {
+            'client_id_env': 'DISCORD_CLIENT_ID',
+            'client_secret_env': 'DISCORD_CLIENT_SECRET',
+            'token_url': 'https://discord.com/api/oauth2/token',
+        },
+        'dropbox': {
+            'client_id_env': 'DROPBOX_CLIENT_ID',
+            'client_secret_env': 'DROPBOX_CLIENT_SECRET',
+            'token_url': 'https://api.dropboxapi.com/oauth2/token',
+        },
+    }
+
+    config = providers.get(provider_key)
+    if not config or not superpower.refresh_token_encrypted:
+        return False
+
+    client_id = os.environ.get(config['client_id_env'])
+    client_secret = os.environ.get(config['client_secret_env'])
+    if not client_id or not client_secret:
+        return False
+
+    token_data = {
+        'grant_type': 'refresh_token',
+        'refresh_token': superpower.refresh_token_encrypted,
+    }
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    if config.get('token_auth') == 'basic':
+        creds = base64.b64encode(f'{client_id}:{client_secret}'.encode()).decode()
+        headers['Authorization'] = f'Basic {creds}'
+    else:
+        token_data['client_id'] = client_id
+        token_data['client_secret'] = client_secret
+
+    try:
+        resp = http_requests.post(config['token_url'], data=token_data, headers=headers)
+        token_json = resp.json()
+
+        if resp.status_code != 200 or 'access_token' not in token_json:
+            print(f"Token refresh failed for {provider_key}: {token_json}")
+            return False
+
+        superpower.access_token_encrypted = token_json['access_token']
+        if token_json.get('refresh_token'):
+            superpower.refresh_token_encrypted = token_json['refresh_token']
+        expires_in = token_json.get('expires_in')
+        if expires_in:
+            superpower.token_expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in))
+        db.session.commit()
+        return True
+
+    except Exception as e:
+        print(f"Error refreshing {provider_key} token: {e}")
+        return False

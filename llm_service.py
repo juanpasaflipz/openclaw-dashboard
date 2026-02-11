@@ -63,18 +63,27 @@ DEFAULT_TIMEOUT = 30
 
 class LLMService:
 
+    # Providers that support function/tool calling
+    TOOL_CAPABLE_PROVIDERS = {'openai', 'anthropic', 'groq', 'mistral', 'together', 'xai', 'openrouter', 'azure'}
+
     @staticmethod
-    def call(provider, model, api_key, messages, endpoint_url=None, extra_config=None):
+    def call(provider, model, api_key, messages, endpoint_url=None, extra_config=None, tools=None):
         """
-        Unified LLM call. Returns dict with content, model, usage.
+        Unified LLM call. Returns dict with content, model, usage, tool_calls.
+        When tools is provided and the provider supports it, tool_calls may be
+        a list of {id, name, arguments} dicts instead of (or alongside) content.
         """
         extra_config = extra_config or {}
         temperature = extra_config.get('temperature', 0.7)
         max_tokens = extra_config.get('max_tokens', 1024)
         timeout = extra_config.get('timeout', DEFAULT_TIMEOUT)
 
+        # Only pass tools to capable providers
+        if tools and provider not in LLMService.TOOL_CAPABLE_PROVIDERS:
+            tools = None
+
         if provider == 'anthropic':
-            return LLMService._call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
+            return LLMService._call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
         elif provider == 'google':
             return LLMService._call_google(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
         elif provider == 'ollama':
@@ -83,10 +92,10 @@ class LLMService:
             return LLMService._call_cohere(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
         else:
             # OpenAI-compatible path: OpenAI, Groq, Mistral, Together, OpenRouter, Azure, Custom
-            return LLMService._call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
+            return LLMService._call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
 
     @staticmethod
-    def _call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout):
+    def _call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=None):
         url = endpoint_url or PROVIDER_DEFAULTS.get(provider, {}).get('endpoint', '')
         if not url:
             raise ValueError(f'No endpoint URL configured for provider: {provider}')
@@ -108,30 +117,57 @@ class LLMService:
             'max_tokens': max_tokens,
         }
 
+        if tools:
+            payload['tools'] = tools
+
         resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
         if not resp.ok:
             raise Exception(f'{provider} API error ({resp.status_code}): {resp.text[:500]}')
 
         data = resp.json()
         choice = data['choices'][0]
+        message = choice['message']
+
+        # Parse tool calls if present
+        tool_calls = None
+        if message.get('tool_calls'):
+            tool_calls = []
+            for tc in message['tool_calls']:
+                args = tc['function'].get('arguments', '{}')
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except (json.JSONDecodeError, TypeError):
+                        args = {}
+                tool_calls.append({
+                    'id': tc.get('id', ''),
+                    'name': tc['function']['name'],
+                    'arguments': args,
+                })
+
         return {
-            'content': choice['message']['content'],
+            'content': message.get('content') or '',
             'model': data.get('model', model),
             'usage': data.get('usage', {}),
+            'tool_calls': tool_calls,
         }
 
     @staticmethod
-    def _call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout):
+    def _call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=None):
         url = endpoint_url or PROVIDER_DEFAULTS['anthropic']['endpoint']
 
-        # Extract system prompt from messages
+        # Extract system prompt and build chat messages
         system_text = ''
         chat_messages = []
         for msg in messages:
             if msg['role'] == 'system':
                 system_text += msg['content'] + '\n'
             else:
-                chat_messages.append({'role': msg['role'], 'content': msg['content']})
+                # Pass through structured content (for tool_result blocks)
+                chat_messages.append({
+                    'role': msg['role'],
+                    'content': msg.get('content', ''),
+                })
 
         headers = {
             'Content-Type': 'application/json',
@@ -148,20 +184,43 @@ class LLMService:
         if system_text.strip():
             payload['system'] = system_text.strip()
 
+        # Convert OpenAI tool format → Anthropic tool format
+        if tools:
+            payload['tools'] = [
+                {
+                    'name': t['function']['name'],
+                    'description': t['function'].get('description', ''),
+                    'input_schema': t['function'].get('parameters', {'type': 'object', 'properties': {}}),
+                }
+                for t in tools
+            ]
+
         resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
         if not resp.ok:
             raise Exception(f'Anthropic API error ({resp.status_code}): {resp.text[:500]}')
 
         data = resp.json()
+
+        # Parse response content blocks — may contain text and/or tool_use
         content = ''
+        tool_calls = None
         for block in data.get('content', []):
             if block.get('type') == 'text':
                 content += block['text']
+            elif block.get('type') == 'tool_use':
+                if tool_calls is None:
+                    tool_calls = []
+                tool_calls.append({
+                    'id': block['id'],
+                    'name': block['name'],
+                    'arguments': block.get('input', {}),
+                })
 
         return {
             'content': content,
             'model': data.get('model', model),
             'usage': data.get('usage', {}),
+            'tool_calls': tool_calls,
         }
 
     @staticmethod
@@ -210,6 +269,7 @@ class LLMService:
                 'completion_tokens': usage.get('candidatesTokenCount', 0),
                 'total_tokens': usage.get('totalTokenCount', 0),
             },
+            'tool_calls': None,
         }
 
     @staticmethod
@@ -236,6 +296,7 @@ class LLMService:
                 'completion_tokens': data.get('eval_count', 0),
                 'total_tokens': (data.get('prompt_eval_count', 0) + data.get('eval_count', 0)),
             },
+            'tool_calls': None,
         }
 
     @staticmethod
@@ -280,6 +341,7 @@ class LLMService:
             'content': content,
             'model': model,
             'usage': data.get('usage', {}),
+            'tool_calls': None,
         }
 
     @staticmethod

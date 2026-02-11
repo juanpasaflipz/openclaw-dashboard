@@ -4108,6 +4108,37 @@ Examples:
                     if (binanceControls) binanceControls.style.display = 'none';
                 }
 
+                // Update status for OAuth services (Slack, GitHub, Discord, Spotify, Todoist, Dropbox)
+                const oauthServices = ['slack', 'github', 'discord', 'spotify', 'todoist', 'dropbox'];
+                for (const svc of oauthServices) {
+                    const svcData = services.find(s => s.service_type === svc);
+                    const statusEl = document.getElementById(`${svc}-status`);
+                    const btn = document.querySelector(`.service-card[data-service="${svc}"] .service-connect-btn`);
+
+                    if (svcData && svcData.is_enabled) {
+                        if (statusEl) { statusEl.textContent = '✅ Connected'; statusEl.classList.add('connected'); }
+                        if (btn) { btn.textContent = `⚙️ Manage ${svcData.service_name}`; btn.classList.add('connected'); }
+                    } else {
+                        if (statusEl) { statusEl.textContent = 'Not Connected'; statusEl.classList.remove('connected'); }
+                    }
+                }
+
+                // Update Telegram status (API-key service)
+                const telegramService = services.find(s => s.service_type === 'telegram');
+                const telegramStatus = document.getElementById('telegram-status');
+                const telegramConnectForm = document.getElementById('telegram-connect-form');
+                const telegramControls = document.getElementById('telegram-controls');
+
+                if (telegramService && telegramService.is_enabled) {
+                    if (telegramStatus) { telegramStatus.textContent = '✅ Connected'; telegramStatus.classList.add('connected'); }
+                    if (telegramConnectForm) telegramConnectForm.style.display = 'none';
+                    if (telegramControls) telegramControls.style.display = 'block';
+                } else {
+                    if (telegramStatus) { telegramStatus.textContent = 'Not Connected'; telegramStatus.classList.remove('connected'); }
+                    if (telegramConnectForm) telegramConnectForm.style.display = 'block';
+                    if (telegramControls) telegramControls.style.display = 'none';
+                }
+
             } catch (error) {
                 console.error('Error loading connected services:', error);
             }
@@ -4121,7 +4152,12 @@ Examples:
                 'notion': '📝',
                 'slack': '💬',
                 'github': '🐙',
-                'binance': '💰'
+                'binance': '💰',
+                'discord': '🎮',
+                'telegram': '✈️',
+                'spotify': '🎵',
+                'todoist': '✅',
+                'dropbox': '📦',
             };
             return icons[serviceType] || '🔌';
         }
@@ -4251,6 +4287,85 @@ Examples:
             } catch (error) {
                 console.error('Error disconnecting service:', error);
                 alert(`Failed to disconnect: ${error.message}`);
+            }
+        }
+
+        // ========================================
+        // GENERIC OAUTH + TELEGRAM FUNCTIONS
+        // ========================================
+
+        async function connectOAuthService(provider) {
+            try {
+                const response = await fetch(`/api/oauth/${provider}/start`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(`Error: ${data.error}\n${data.message || ''}`);
+                    return;
+                }
+
+                const width = 600;
+                const height = 700;
+                const left = (screen.width - width) / 2;
+                const top = (screen.height - height) / 2;
+
+                const authWindow = window.open(
+                    data.authorization_url,
+                    `OAuth - ${provider}`,
+                    `width=${width},height=${height},left=${left},top=${top}`
+                );
+
+                const checkWindow = setInterval(() => {
+                    try {
+                        if (authWindow.closed) {
+                            clearInterval(checkWindow);
+                            setTimeout(() => loadConnectedServices(), 1000);
+                        }
+                    } catch (e) {
+                        // Ignore COOP errors from cross-origin popup
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error(`Error connecting ${provider}:`, error);
+                alert(`Failed to connect ${provider}: ${error.message}`);
+            }
+        }
+
+        async function connectTelegram() {
+            const botToken = document.getElementById('telegram-bot-token').value.trim();
+            if (!botToken) {
+                alert('Please enter your bot token from @BotFather.');
+                return;
+            }
+
+            const btn = document.getElementById('telegram-connect-btn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Connecting...';
+
+            try {
+                const response = await fetch('/api/telegram/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bot_token: botToken })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    document.getElementById('telegram-bot-token').value = '';
+                    loadConnectedServices();
+                } else {
+                    alert(`Failed to connect: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error connecting Telegram:', error);
+                alert(`Failed to connect Telegram: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
 
@@ -5551,7 +5666,23 @@ Examples:
                     const data = await resp.json();
                     hideThinkingIndicator();
                     if (data.success) {
-                        appendChatBubble('assistant', data.message.content);
+                        // Handle multi-message responses (tool calls + final answer)
+                        if (data.messages && data.messages.length > 0) {
+                            for (const msg of data.messages) {
+                                appendChatBubble(msg.role || 'assistant', msg.content || '', msg.metadata);
+                                // Auto-open OAuth popup for connect_service tool
+                                if (msg.metadata && msg.metadata.tool_name === 'connect_service') {
+                                    try {
+                                        const result = JSON.parse(msg.content);
+                                        if (result.authorization_url) {
+                                            window.open(result.authorization_url, 'OAuthConnect', 'width=600,height=700');
+                                        }
+                                    } catch(e) {}
+                                }
+                            }
+                        } else if (data.message) {
+                            appendChatBubble('assistant', data.message.content);
+                        }
                     } else {
                         appendChatBubble('system', 'Error: ' + (data.error || 'Unknown error'));
                     }

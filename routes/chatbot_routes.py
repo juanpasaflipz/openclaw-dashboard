@@ -1,11 +1,111 @@
 """
-Chatbot Routes — conversation management and direct-LLM chat.
+Chatbot Routes — conversation management and direct-LLM chat with tool calling.
 """
 from flask import jsonify, request, session
 from datetime import datetime
 from models import db, ChatConversation, ChatMessage, UserModelConfig
 from llm_service import LLMService
 import secrets
+import json
+
+
+MAX_TOOL_ITERATIONS = 5
+
+
+def _build_history_messages(conversation_id, provider, system_prompt=None):
+    """
+    Load DB messages and reconstruct provider-specific format.
+    Tool messages and assistant tool_calls are converted back to the
+    format each provider expects.
+    """
+    history = ChatMessage.query.filter_by(conversation_id=conversation_id)\
+        .order_by(ChatMessage.created_at.asc()).all()
+
+    messages = []
+    if system_prompt:
+        messages.append({'role': 'system', 'content': system_prompt})
+
+    is_anthropic = (provider == 'anthropic')
+
+    i = 0
+    while i < len(history):
+        msg = history[i]
+        meta = msg.metadata_json or {}
+
+        if msg.role == 'assistant' and meta.get('tool_calls'):
+            # Assistant message that requested tool calls
+            tc_list = meta['tool_calls']
+
+            if is_anthropic:
+                # Anthropic: content blocks with text + tool_use
+                content_blocks = []
+                if msg.content:
+                    content_blocks.append({'type': 'text', 'text': msg.content})
+                for tc in tc_list:
+                    content_blocks.append({
+                        'type': 'tool_use',
+                        'id': tc.get('id', ''),
+                        'name': tc['name'],
+                        'input': tc.get('arguments', {}),
+                    })
+                messages.append({'role': 'assistant', 'content': content_blocks})
+
+                # Collect subsequent tool result messages into one user message
+                tool_results = []
+                j = i + 1
+                while j < len(history) and history[j].role == 'tool':
+                    t = history[j]
+                    t_meta = t.metadata_json or {}
+                    tool_results.append({
+                        'type': 'tool_result',
+                        'tool_use_id': t_meta.get('tool_call_id', ''),
+                        'content': t.content,
+                    })
+                    j += 1
+                if tool_results:
+                    messages.append({'role': 'user', 'content': tool_results})
+                i = j
+                continue
+            else:
+                # OpenAI-compatible: assistant with tool_calls + separate tool messages
+                openai_tool_calls = []
+                for tc in tc_list:
+                    openai_tool_calls.append({
+                        'id': tc.get('id', ''),
+                        'type': 'function',
+                        'function': {
+                            'name': tc['name'],
+                            'arguments': json.dumps(tc.get('arguments', {})),
+                        },
+                    })
+                assistant_msg = {'role': 'assistant', 'content': msg.content or ''}
+                assistant_msg['tool_calls'] = openai_tool_calls
+                messages.append(assistant_msg)
+
+                # Add subsequent tool result messages
+                j = i + 1
+                while j < len(history) and history[j].role == 'tool':
+                    t = history[j]
+                    t_meta = t.metadata_json or {}
+                    messages.append({
+                        'role': 'tool',
+                        'tool_call_id': t_meta.get('tool_call_id', ''),
+                        'content': t.content,
+                    })
+                    j += 1
+                i = j
+                continue
+
+        elif msg.role == 'tool':
+            # Orphan tool message (shouldn't happen normally) — skip
+            i += 1
+            continue
+        elif msg.role in ('user', 'assistant', 'system'):
+            messages.append({'role': msg.role, 'content': msg.content})
+
+        i += 1
+
+    return messages, history
 
 
 def register_chatbot_routes(app):
@@ -88,7 +188,7 @@ def register_chatbot_routes(app):
 
     @app.route('/api/chat/send', methods=['POST'])
     def send_message():
-        """Send a message in direct LLM mode — Flask calls LLMService and returns response."""
+        """Send a message in direct LLM mode — with tool-calling loop."""
         user_id = session.get('user_id')
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -119,41 +219,124 @@ def register_chatbot_routes(app):
         db.session.add(user_msg)
         db.session.flush()
 
-        # Build message history for LLM
-        history = ChatMessage.query.filter_by(conversation_id=conversation_id)\
-            .order_by(ChatMessage.created_at.asc()).all()
+        # Get tools for this user (lazy import to avoid circular deps)
+        from agent_tools import get_tools_for_user, execute_tool, get_tools_system_prompt
 
-        messages = []
-        system_prompt = data.get('system_prompt')
-        if system_prompt:
-            messages.append({'role': 'system', 'content': system_prompt})
+        tools = get_tools_for_user(user_id)
+        tools_system_prompt = get_tools_system_prompt(user_id)
 
-        for msg in history:
-            if msg.role in ('user', 'assistant', 'system'):
-                messages.append({'role': msg.role, 'content': msg.content})
+        # Build system prompt with tools context
+        base_system = data.get('system_prompt') or ''
+        full_system = (base_system + '\n\n' + tools_system_prompt).strip() if tools_system_prompt else base_system
+
+        # Build message history
+        messages, history = _build_history_messages(conversation_id, config.provider, system_prompt=full_system)
+
+        # Track new messages to return to frontend
+        new_messages = []
 
         try:
-            result = LLMService.call(
-                provider=config.provider,
-                model=config.model,
-                api_key=config.api_key,
-                messages=messages,
-                endpoint_url=config.endpoint_url,
-                extra_config=config.extra_config,
-            )
+            for iteration in range(MAX_TOOL_ITERATIONS):
+                result = LLMService.call(
+                    provider=config.provider,
+                    model=config.model,
+                    api_key=config.api_key,
+                    messages=messages,
+                    endpoint_url=config.endpoint_url,
+                    extra_config=config.extra_config,
+                    tools=tools if tools else None,
+                )
 
-            # Save assistant message
-            assistant_msg = ChatMessage(
-                conversation_id=conversation_id,
-                role='assistant',
-                content=result['content'],
-                metadata_json={
-                    'model': result.get('model'),
-                    'usage': result.get('usage'),
-                    'provider': config.provider,
-                },
-            )
-            db.session.add(assistant_msg)
+                tool_calls = result.get('tool_calls')
+
+                if not tool_calls:
+                    # Final text response — save and return
+                    assistant_msg = ChatMessage(
+                        conversation_id=conversation_id,
+                        role='assistant',
+                        content=result['content'],
+                        metadata_json={
+                            'model': result.get('model'),
+                            'usage': result.get('usage'),
+                            'provider': config.provider,
+                        },
+                    )
+                    db.session.add(assistant_msg)
+                    new_messages.append(assistant_msg.to_dict())
+                    break
+
+                # --- Tool calls: execute and loop ---
+
+                # Save assistant message with tool_calls metadata
+                tc_meta = [{'id': tc['id'], 'name': tc['name'], 'arguments': tc['arguments']}
+                           for tc in tool_calls]
+                assistant_msg = ChatMessage(
+                    conversation_id=conversation_id,
+                    role='assistant',
+                    content=result.get('content') or '',
+                    metadata_json={
+                        'tool_calls': tc_meta,
+                        'model': result.get('model'),
+                        'usage': result.get('usage'),
+                        'provider': config.provider,
+                    },
+                )
+                db.session.add(assistant_msg)
+                db.session.flush()
+
+                # Execute each tool and save results
+                for tc in tool_calls:
+                    tool_result = execute_tool(tc['name'], user_id, tc['arguments'])
+                    result_str = json.dumps(tool_result, default=str)
+
+                    tool_msg = ChatMessage(
+                        conversation_id=conversation_id,
+                        role='tool',
+                        content=result_str,
+                        metadata_json={
+                            'tool_name': tc['name'],
+                            'tool_input': tc['arguments'],
+                            'tool_call_id': tc['id'],
+                        },
+                    )
+                    db.session.add(tool_msg)
+                    new_messages.append(tool_msg.to_dict())
+
+                    # Append to messages for next LLM call
+                    if config.provider == 'anthropic':
+                        # Will be bundled in the history reconstruction on next iteration
+                        pass
+                    else:
+                        messages.append({
+                            'role': 'tool',
+                            'tool_call_id': tc['id'],
+                            'content': result_str,
+                        })
+
+                db.session.flush()
+
+                # For Anthropic, rebuild messages from DB to get proper format
+                if config.provider == 'anthropic':
+                    messages, _ = _build_history_messages(
+                        conversation_id, config.provider, system_prompt=full_system)
+                else:
+                    # Append assistant message with tool_calls for OpenAI-compat
+                    # Insert before the tool results we just added
+                    insert_idx = len(messages) - len(tool_calls)
+                    openai_tc = [{
+                        'id': tc['id'],
+                        'type': 'function',
+                        'function': {
+                            'name': tc['name'],
+                            'arguments': json.dumps(tc['arguments']),
+                        },
+                    } for tc in tool_calls]
+                    assistant_api_msg = {
+                        'role': 'assistant',
+                        'content': result.get('content') or '',
+                        'tool_calls': openai_tc,
+                    }
+                    messages.insert(insert_idx, assistant_api_msg)
 
             # Auto-title on first exchange
             if conv.title == 'New Chat' and len(history) <= 1:
@@ -162,9 +345,18 @@ def register_chatbot_routes(app):
             conv.updated_at = datetime.utcnow()
             db.session.commit()
 
+            # Return all new messages (tool cards + final response)
+            # Also include backward-compatible 'message' field (last assistant msg)
+            last_assistant = None
+            for m in reversed(new_messages):
+                if m.get('role') == 'assistant':
+                    last_assistant = m
+                    break
+
             return jsonify({
                 'success': True,
-                'message': assistant_msg.to_dict(),
+                'messages': new_messages,
+                'message': last_assistant or (new_messages[-1] if new_messages else {}),
                 'usage': result.get('usage', {}),
             })
 
@@ -184,7 +376,7 @@ def register_chatbot_routes(app):
 
         data = request.get_json() or {}
         conversation_id = data.get('conversation_id')
-        messages = data.get('messages', [])
+        msgs_data = data.get('messages', [])
 
         if not conversation_id:
             return jsonify({'error': 'conversation_id is required'}), 400
@@ -194,7 +386,7 @@ def register_chatbot_routes(app):
             return jsonify({'error': 'Conversation not found'}), 404
 
         saved = []
-        for msg_data in messages:
+        for msg_data in msgs_data:
             msg = ChatMessage(
                 conversation_id=conversation_id,
                 role=msg_data.get('role', 'assistant'),

@@ -19,3 +19,10 @@ from routes.external_agents_routes import register_external_agents_routes
 from routes.chatbot_routes import register_chatbot_routes
 from routes.web_browsing_routes import register_web_browsing_routes
 from routes.utility_routes import register_utility_routes
+from routes.slack_routes import register_slack_routes
+from routes.github_routes import register_github_routes
+from routes.discord_routes import register_discord_routes
+from routes.telegram_routes import register_telegram_routes
+from routes.spotify_routes import register_spotify_routes
+from routes.todoist_routes import register_todoist_routes
+from routes.dropbox_routes import register_dropbox_routes

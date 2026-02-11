@@ -1530,12 +1530,209 @@
                     </div>
                 </div>
 
-                <!-- More services placeholder -->
-                <div style="margin-top: 32px; padding: 24px; text-align: center; background: rgba(99, 91, 255, 0.1); border-radius: 12px; border: 2px dashed rgba(99, 91, 255, 0.3);">
-                    <h4 style="margin: 0 0 8px 0;">More Services Coming Soon</h4>
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
-                        Notion, Slack, GitHub, Shopify, and many more integrations are on the way!
+                <!-- Slack Card -->
+                <div class="service-card" data-service="slack">
+                    <div class="service-card-header">
+                        <div class="service-icon">💬</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Slack</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="slack-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Slack workspace. Your agent can read channels and view messages to stay in the loop.
                     </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Read channels</li>
+                            <li>View messages</li>
+                            <li>Team info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('slack')">
+                        🚀 Connect Slack
+                    </button>
+                </div>
+
+                <!-- GitHub Card -->
+                <div class="service-card" data-service="github">
+                    <div class="service-card-header">
+                        <div class="service-icon">🐙</div>
+                        <div class="service-info">
+                            <h4 class="service-name">GitHub</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="github-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your GitHub account. Your agent can view repositories and read issues to help with development workflows.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View repositories</li>
+                            <li>Read issues</li>
+                            <li>Org info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('github')">
+                        🚀 Connect GitHub
+                    </button>
+                </div>
+
+                <!-- Discord Card -->
+                <div class="service-card" data-service="discord">
+                    <div class="service-card-header">
+                        <div class="service-icon">🎮</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Discord</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="discord-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Discord account. Your agent can view your servers and channels.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View servers</li>
+                            <li>Read channels</li>
+                            <li>Member info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('discord')">
+                        🚀 Connect Discord
+                    </button>
+                </div>
+
+                <!-- Telegram Card -->
+                <div class="service-card" data-service="telegram">
+                    <div class="service-card-header">
+                        <div class="service-icon">✈️</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Telegram</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="telegram-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect a Telegram bot. Get a token from <a href="https://t.me/BotFather" target="_blank" style="color: var(--accent);">@BotFather</a> and your agent can read bot updates and info.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Bot info</li>
+                            <li>Read updates</li>
+                        </ul>
+                    </div>
+                    <div id="telegram-connect-form">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Bot Token</label>
+                            <input type="text" id="telegram-bot-token" placeholder="Token from @BotFather"
+                                   style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+                        </div>
+                        <button class="service-connect-btn" id="telegram-connect-btn" onclick="connectTelegram()">
+                            🚀 Connect Telegram
+                        </button>
+                    </div>
+                    <div id="telegram-controls" style="display: none;">
+                        <button class="service-connect-btn connected" onclick="alert('Telegram bot connected!')">
+                            ⚙️ Manage Telegram
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spotify Card -->
+                <div class="service-card" data-service="spotify">
+                    <div class="service-card-header">
+                        <div class="service-icon">🎵</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Spotify</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="spotify-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Spotify account. Your agent can see your profile, playlists, and what you're currently listening to.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Profile</li>
+                            <li>Playlists</li>
+                            <li>Now playing</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('spotify')">
+                        🚀 Connect Spotify
+                    </button>
+                </div>
+
+                <!-- Todoist Card -->
+                <div class="service-card" data-service="todoist">
+                    <div class="service-card-header">
+                        <div class="service-icon">✅</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Todoist</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="todoist-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Todoist account. Your agent can view your projects and tasks to help manage your to-dos.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View projects</li>
+                            <li>Read tasks</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('todoist')">
+                        🚀 Connect Todoist
+                    </button>
+                </div>
+
+                <!-- Dropbox Card -->
+                <div class="service-card" data-service="dropbox">
+                    <div class="service-card-header">
+                        <div class="service-icon">📦</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Dropbox</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="dropbox-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Dropbox account. Your agent can list files and view file metadata in your cloud storage.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>List files</li>
+                            <li>File metadata</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('dropbox')">
+                        🚀 Connect Dropbox
+                    </button>
                 </div>
             </div>
 

@@ -79,6 +79,10 @@ from routes import (
     register_model_config_routes, register_external_agents_routes,
     register_chatbot_routes, register_web_browsing_routes,
     register_utility_routes,
+    register_slack_routes, register_github_routes,
+    register_discord_routes, register_telegram_routes,
+    register_spotify_routes, register_todoist_routes,
+    register_dropbox_routes,
 )
 
 register_auth_routes(app)
@@ -102,6 +106,13 @@ register_external_agents_routes(app)
 register_chatbot_routes(app)
 register_web_browsing_routes(app)
 register_utility_routes(app)
+register_slack_routes(app)
+register_github_routes(app)
+register_discord_routes(app)
+register_telegram_routes(app)
+register_spotify_routes(app)
+register_todoist_routes(app)
+register_dropbox_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])
