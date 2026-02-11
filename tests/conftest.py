@@ -21,6 +21,7 @@ def app():
     """Create and configure a test Flask application instance"""
     from server import app as flask_app
     from models import db
+    from rate_limiter import limiter
 
     # Create a temporary database for testing
     db_fd, db_path = tempfile.mkstemp(suffix='.db')
@@ -31,13 +32,16 @@ def app():
         'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'SECRET_KEY': 'test-secret-key',
-        'WTF_CSRF_ENABLED': False,  # Disable CSRF for testing
+        'WTF_CSRF_ENABLED': False,
         'STRIPE_SECRET_KEY': 'sk_test_fake_key',
         'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake_secret',
         'SENDGRID_API_KEY': 'test_sendgrid_key',
     })
 
-    # Create tables
+    # Disable rate limiting for tests (must be done after init_limiter ran)
+    limiter.enabled = False
+
+    # Create tables inside a persistent app context
     with flask_app.app_context():
         db.create_all()
         yield flask_app
@@ -49,37 +53,27 @@ def app():
     os.unlink(db_path)
 
 
+@pytest.fixture(autouse=True)
+def _clean_db(app):
+    """Clean up data between tests to avoid UNIQUE constraint violations."""
+    from models import db
+    yield
+    db.session.rollback()
+    for table in reversed(db.metadata.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()
+
+
 @pytest.fixture(scope='function')
 def client(app):
     """Create a test client for the Flask application"""
     return app.test_client()
 
 
-@pytest.fixture(scope='function')
-def db_session(app):
-    """Create a new database session for each test"""
-    from models import db
-
-    with app.app_context():
-        # Begin a nested transaction
-        connection = db.engine.connect()
-        transaction = connection.begin()
-
-        # Bind the session to the connection
-        db.session.bind = connection
-
-        yield db.session
-
-        # Rollback the transaction after the test
-        transaction.rollback()
-        connection.close()
-        db.session.remove()
-
-
 @pytest.fixture
-def user(app, db_session):
+def user(app):
     """Create a test user"""
-    from models import User
+    from models import User, db
 
     user = User(
         email='test@example.com',
@@ -88,16 +82,15 @@ def user(app, db_session):
         subscription_tier='free',
         subscription_status='inactive'
     )
-    db_session.add(user)
-    db_session.commit()
-
+    db.session.add(user)
+    db.session.commit()
     return user
 
 
 @pytest.fixture
-def premium_user(app, db_session):
+def premium_user(app):
     """Create a premium test user"""
-    from models import User
+    from models import User, db
 
     user = User(
         email='premium@example.com',
@@ -110,16 +103,15 @@ def premium_user(app, db_session):
         subscription_expires_at=datetime.utcnow() + timedelta(days=30),
         subscription_started_at=datetime.utcnow()
     )
-    db_session.add(user)
-    db_session.commit()
-
+    db.session.add(user)
+    db.session.commit()
     return user
 
 
 @pytest.fixture
-def admin_user(app, db_session):
+def admin_user(app):
     """Create an admin test user"""
-    from models import User
+    from models import User, db
 
     user = User(
         email='admin@example.com',
@@ -129,50 +121,45 @@ def admin_user(app, db_session):
         subscription_status='active',
         is_admin=True
     )
-    db_session.add(user)
-    db_session.commit()
-
+    db.session.add(user)
+    db.session.commit()
     return user
 
 
 @pytest.fixture
-def magic_link(app, db_session, user):
+def magic_link(app, user):
     """Create a valid magic link for testing"""
-    from models import MagicLink
+    from models import MagicLink, db
     import secrets
 
     token = secrets.token_urlsafe(32)
-    magic_link = MagicLink(
+    ml = MagicLink(
         user_id=user.id,
         token=token,
         created_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + timedelta(hours=1),
-        used=False
     )
-    db_session.add(magic_link)
-    db_session.commit()
-
-    return magic_link
+    db.session.add(ml)
+    db.session.commit()
+    return ml
 
 
 @pytest.fixture
-def expired_magic_link(app, db_session, user):
+def expired_magic_link(app, user):
     """Create an expired magic link for testing"""
-    from models import MagicLink
+    from models import MagicLink, db
     import secrets
 
     token = secrets.token_urlsafe(32)
-    magic_link = MagicLink(
+    ml = MagicLink(
         user_id=user.id,
         token=token,
         created_at=datetime.utcnow() - timedelta(hours=2),
         expires_at=datetime.utcnow() - timedelta(hours=1),
-        used=False
     )
-    db_session.add(magic_link)
-    db_session.commit()
-
-    return magic_link
+    db.session.add(ml)
+    db.session.commit()
+    return ml
 
 
 @pytest.fixture
@@ -181,26 +168,24 @@ def authenticated_client(client, user, app):
     with client.session_transaction() as sess:
         sess['user_id'] = user.id
         sess['user_email'] = user.email
-
     return client
 
 
 @pytest.fixture
-def agent(app, db_session, user):
+def agent(app, user):
     """Create a test agent"""
-    from models import Agent
+    from models import Agent, db
 
     agent = Agent(
         user_id=user.id,
         name='TestAgent',
-        moltbook_username='testagent',
-        moltbook_api_key='test_api_key',
-        is_primary=True,
+        description='A test agent',
+        is_active=True,
+        is_default=True,
         created_at=datetime.utcnow()
     )
-    db_session.add(agent)
-    db_session.commit()
-
+    db.session.add(agent)
+    db.session.commit()
     return agent
 
 
@@ -217,7 +202,6 @@ def mock_stripe_event():
             },
             'created': int(datetime.utcnow().timestamp())
         }
-
     return _create_event
 
 
