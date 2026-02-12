@@ -201,6 +201,42 @@ PROVIDERS = {
         'models': [],
         'docs_url': 'https://docs.openclaw.ai/providers/custom',
         'benefits': ['Maximum flexibility', 'Any provider', 'Custom deployments']
+    },
+
+    # Speech-to-Text providers (for voice message transcription in channels)
+    'stt_openai': {
+        'name': 'OpenAI Whisper (STT)',
+        'icon': '🎙️',
+        'tier': 'free',
+        'difficulty': 'easy',
+        'description': 'Transcribe voice messages with OpenAI Whisper',
+        'setup_type': 'api_key',
+        'category': 'stt',
+        'fields': [
+            {'key': 'api_key', 'label': 'API Key', 'type': 'password', 'required': True, 'help': 'Same OpenAI API key from platform.openai.com'}
+        ],
+        'models': [
+            {'id': 'whisper-1', 'name': 'Whisper v1', 'recommended': True}
+        ],
+        'docs_url': 'https://platform.openai.com/docs/guides/speech-to-text',
+        'pricing_url': 'https://openai.com/api/pricing/'
+    },
+    'stt_groq': {
+        'name': 'Groq Whisper (STT)',
+        'icon': '⚡🎙️',
+        'tier': 'free',
+        'difficulty': 'easy',
+        'description': 'Ultra-fast voice transcription with Groq Whisper',
+        'setup_type': 'api_key',
+        'category': 'stt',
+        'fields': [
+            {'key': 'api_key', 'label': 'API Key', 'type': 'password', 'required': True, 'help': 'Get from console.groq.com'}
+        ],
+        'models': [
+            {'id': 'whisper-large-v3', 'name': 'Whisper Large v3', 'recommended': True}
+        ],
+        'docs_url': 'https://console.groq.com/docs/speech-text',
+        'benefits': ['Fastest transcription', 'Free tier available']
     }
 }
 
