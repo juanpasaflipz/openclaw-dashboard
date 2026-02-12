@@ -115,7 +115,10 @@ def run_llm_pipeline(user_id, conversation_id, message_text, feature_slot='chatb
     """
     config = UserModelConfig.query.filter_by(user_id=user_id, feature_slot=feature_slot).first()
     if not config:
-        return {'success': False, 'error': f'No model configured for {feature_slot}. Please configure a model first.'}
+        # Fall back to any available model config for this user
+        config = UserModelConfig.query.filter_by(user_id=user_id).first()
+    if not config:
+        return {'success': False, 'error': f'No model configured. Please configure a model in Model Config.'}
 
     # --- Observability: start run ---
     import time as _time
