@@ -346,7 +346,7 @@ def _get_or_create_channel_conversation(user_id, platform, chat_id, metadata=Non
             channel_metadata=metadata,
         )
         db.session.add(conv)
-        db.session.flush()
+        db.session.commit()
 
     return conv
 
