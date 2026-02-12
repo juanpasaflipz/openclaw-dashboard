@@ -3585,23 +3585,35 @@ Examples:
             const formData = new FormData(form);
             const config = Object.fromEntries(formData);
 
-            // Get current agent (use first agent for now)
-            // TODO: Let user select which agent
-            const agentId = 1;
-
             try {
-                const response = await fetch(`/api/channels/agent/${agentId}/connect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ channel_id: channelId, config })
-                });
+                let response;
+
+                // Telegram uses its own dedicated connect endpoint
+                if (channelId === 'telegram') {
+                    response = await fetch('/api/telegram/connect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bot_token: config.bot_token }),
+                        credentials: 'include'
+                    });
+                } else {
+                    // Generic channel connect via agent
+                    // TODO: Let user select which agent
+                    const agentId = 1;
+                    response = await fetch(`/api/channels/agent/${agentId}/connect`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ channel_id: channelId, config }),
+                        credentials: 'include'
+                    });
+                }
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
                     alert(`✅ ${data.message}`);
                     closeChannelModal();
-                    loadChannels(); // Reload to show updated status
+                    loadChannels();
                 } else {
                     alert(`❌ Failed to connect: ${data.error || 'Unknown error'}`);
                 }
@@ -4110,21 +4122,7 @@ Examples:
                     }
                 }
 
-                // Update Telegram status (API-key service)
-                const telegramService = services.find(s => s.service_type === 'telegram');
-                const telegramStatus = document.getElementById('telegram-status');
-                const telegramConnectForm = document.getElementById('telegram-connect-form');
-                const telegramControls = document.getElementById('telegram-controls');
-
-                if (telegramService && telegramService.is_enabled) {
-                    if (telegramStatus) { telegramStatus.textContent = '✅ Connected'; telegramStatus.classList.add('connected'); }
-                    if (telegramConnectForm) telegramConnectForm.style.display = 'none';
-                    if (telegramControls) telegramControls.style.display = 'block';
-                } else {
-                    if (telegramStatus) { telegramStatus.textContent = 'Not Connected'; telegramStatus.classList.remove('connected'); }
-                    if (telegramConnectForm) telegramConnectForm.style.display = 'block';
-                    if (telegramControls) telegramControls.style.display = 'none';
-                }
+                // Telegram status managed in Channels tab
 
             } catch (error) {
                 console.error('Error loading connected services:', error);
@@ -4319,42 +4317,7 @@ Examples:
             }
         }
 
-        async function connectTelegram() {
-            const botToken = document.getElementById('telegram-bot-token').value.trim();
-            if (!botToken) {
-                alert('Please enter your bot token from @BotFather.');
-                return;
-            }
-
-            const btn = document.getElementById('telegram-connect-btn');
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = '⏳ Connecting...';
-
-            try {
-                const response = await fetch('/api/telegram/connect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bot_token: botToken })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert(data.message);
-                    document.getElementById('telegram-bot-token').value = '';
-                    loadConnectedServices();
-                } else {
-                    alert(`Failed to connect: ${data.error}`);
-                }
-            } catch (error) {
-                console.error('Error connecting Telegram:', error);
-                alert(`Failed to connect Telegram: ${error.message}`);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
+        // Telegram connect moved to Channels tab via connectChannel('telegram')
 
         // ========================================
         // BINANCE FUNCTIONS
