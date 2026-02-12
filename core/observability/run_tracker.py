@@ -14,6 +14,7 @@ def start_run(user_id, agent_id=None, model=None, metadata=None):
 
     rid = str(uuid.uuid4())
     try:
+        nested = db.session.begin_nested()
         run = ObsRun(
             run_id=rid,
             user_id=user_id,
@@ -22,12 +23,15 @@ def start_run(user_id, agent_id=None, model=None, metadata=None):
             metadata_json=metadata or {},
         )
         db.session.add(run)
-        db.session.commit()
+        nested.commit()
 
         emit_event(user_id, 'run_started', status='info', agent_id=agent_id,
                    run_id=rid, model=model, payload={'metadata': metadata or {}})
     except Exception as e:
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         print(f"[obs] start_run failed: {e}")
     return rid
 
@@ -38,6 +42,7 @@ def finish_run(run_id, status='success', error_message=None,
     from models import db, ObsRun
 
     try:
+        nested = db.session.begin_nested()
         run = ObsRun.query.filter_by(run_id=run_id).first()
         if not run:
             return
@@ -51,7 +56,7 @@ def finish_run(run_id, status='success', error_message=None,
         run.total_latency_ms = (run.total_latency_ms or 0) + latency_ms
         run.tool_calls_count = (run.tool_calls_count or 0) + tool_calls
         run.finished_at = datetime.utcnow()
-        db.session.commit()
+        nested.commit()
 
         emit_event(run.user_id, 'run_finished', status=status,
                    agent_id=run.agent_id, run_id=run_id,
@@ -62,5 +67,8 @@ def finish_run(run_id, status='success', error_message=None,
                    latency_ms=run.total_latency_ms,
                    payload={'error': error_message} if error_message else {})
     except Exception as e:
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         print(f"[obs] finish_run failed: {e}")

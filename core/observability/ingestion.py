@@ -21,6 +21,7 @@ def emit_event(user_id, event_type, status='info', agent_id=None, run_id=None,
             provider = (payload or {}).get('provider', '')
             cost_usd = float(calculate_cost(provider, model, tokens_in, tokens_out))
 
+        nested = db.session.begin_nested()
         event = ObsEvent(
             uid=str(uuid.uuid4()),
             user_id=user_id,
@@ -37,10 +38,13 @@ def emit_event(user_id, event_type, status='info', agent_id=None, run_id=None,
             dedupe_key=dedupe_key,
         )
         db.session.add(event)
-        db.session.commit()
+        nested.commit()
         return event
     except Exception as e:
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         print(f"[obs] Failed to emit {event_type}: {e}")
         return None
 
