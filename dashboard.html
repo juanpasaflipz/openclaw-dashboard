@@ -69,36 +69,43 @@
                     </div>
                 </div>
 
-                <div class="topnav-dropdown" data-group="workbench">
-                    <button class="topnav-item topnav-dropdown-toggle">Workbench <span class="topnav-arrow">▾</span></button>
+                <div class="topnav-dropdown" data-group="tasks">
+                    <button class="topnav-item topnav-dropdown-toggle">Tasks <span class="topnav-arrow">▾</span></button>
                     <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="chatbot">
-                            <span class="topnav-dropdown-icon">💬</span> Chat Bot
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="web-browse">
-                            <span class="topnav-dropdown-icon">🌐</span> Web Browse
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="utility">
-                            <span class="topnav-dropdown-icon">🧰</span> Utility
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="model-config">
-                            <span class="topnav-dropdown-icon">⚙️</span> Model Config
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="llm">
-                            <span class="topnav-dropdown-icon">🔌</span> LLM Connection
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="observability">
-                            <span class="topnav-dropdown-icon">📡</span> Observability
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="governance">
-                            <span class="topnav-dropdown-icon">🛡️</span> Governance
-                            <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
-                        </button>
                         <button class="topnav-dropdown-item" data-tab="collab-tasks">
-                            <span class="topnav-dropdown-icon">📋</span> Tasks
+                            <span class="topnav-dropdown-icon">📋</span> Task Queue
                         </button>
                         <button class="topnav-dropdown-item" data-tab="collab-team">
-                            <span class="topnav-dropdown-icon">👥</span> Team
+                            <span class="topnav-dropdown-icon">👥</span> Team Hierarchy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="governance">
+                    <button class="topnav-item topnav-dropdown-toggle">Governance <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="governance">
+                            <span class="topnav-dropdown-icon">🛡️</span> Risk Policies
+                            <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="actions">
+                            <span class="topnav-dropdown-icon">✅</span> Approval Queue
+                            <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="chatbot">
+                            <span class="topnav-dropdown-icon">💬</span> Chatbot
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="observability">
+                    <button class="topnav-item topnav-dropdown-toggle">Observability <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="observability">
+                            <span class="topnav-dropdown-icon">📡</span> Live Activity
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="analytics">
+                            <span class="topnav-dropdown-icon">📊</span> Analytics
                         </button>
                     </div>
                 </div>
@@ -107,38 +114,25 @@
                     <button class="topnav-item topnav-dropdown-toggle">Integrations <span class="topnav-arrow">▾</span></button>
                     <div class="topnav-dropdown-menu">
                         <button class="topnav-dropdown-item" data-tab="connect">
-                            <span class="topnav-dropdown-icon">🔌</span> Connect
+                            <span class="topnav-dropdown-icon">🔌</span> Services
                         </button>
                         <button class="topnav-dropdown-item" data-tab="channels">
                             <span class="topnav-dropdown-icon">💬</span> Channels
                         </button>
-                        <button class="topnav-dropdown-item" data-tab="actions">
-                            <span class="topnav-dropdown-icon">✅</span> Actions
-                            <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
-                        </button>
                         <button class="topnav-dropdown-item" data-tab="providers">
                             <span class="topnav-dropdown-icon">🤖</span> Providers
                         </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="social">
-                    <button class="topnav-item topnav-dropdown-toggle">Social <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="moltbook">
-                            <span class="topnav-dropdown-icon">🦞</span> Moltbook
+                        <button class="topnav-dropdown-item" data-tab="model-config">
+                            <span class="topnav-dropdown-icon">⚙️</span> Model Config
                         </button>
-                        <button class="topnav-dropdown-item" data-tab="feed">
-                            <span class="topnav-dropdown-icon">📖</span> Feed
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="analytics">
-                            <span class="topnav-dropdown-icon">📊</span> Analytics
+                        <button class="topnav-dropdown-item" data-tab="llm">
+                            <span class="topnav-dropdown-icon">🔌</span> LLM Connection
                         </button>
                     </div>
                 </div>
 
-                <div class="topnav-dropdown" data-group="account">
-                    <button class="topnav-item topnav-dropdown-toggle">Account <span class="topnav-arrow">▾</span></button>
+                <div class="topnav-dropdown" data-group="workspace">
+                    <button class="topnav-item topnav-dropdown-toggle">Workspace <span class="topnav-arrow">▾</span></button>
                     <div class="topnav-dropdown-menu">
                         <button class="topnav-dropdown-item" data-tab="subscription">
                             <span class="topnav-dropdown-icon">💎</span> Subscription
@@ -148,6 +142,24 @@
                         </button>
                         <button class="topnav-dropdown-item" id="admin-tab-button" data-tab="admin" style="display: none;">
                             <span class="topnav-dropdown-icon">🔐</span> Admin
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="labs">
+                    <button class="topnav-item topnav-dropdown-toggle">Labs <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="moltbook">
+                            <span class="topnav-dropdown-icon">🦞</span> Moltbook
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="feed">
+                            <span class="topnav-dropdown-icon">📖</span> Feed
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="web-browse">
+                            <span class="topnav-dropdown-icon">🌐</span> Web Browse
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="utility">
+                            <span class="topnav-dropdown-icon">🧰</span> Utility
                         </button>
                     </div>
                 </div>

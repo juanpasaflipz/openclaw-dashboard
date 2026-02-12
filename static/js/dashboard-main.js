@@ -37,6 +37,7 @@
         // ===== Tab-to-group mapping =====
         const TAB_GROUP_MAP = {
             'overview': null,
+            // Agents
             'ext-agents': 'agents',
             'agents': 'agents',
             'identity': 'agents',
@@ -44,25 +45,31 @@
             'soul': 'agents',
             'tools': 'agents',
             'security': 'agents',
-            'chatbot': 'workbench',
-            'web-browse': 'workbench',
-            'utility': 'workbench',
-            'model-config': 'workbench',
-            'llm': 'workbench',
-            'observability': 'workbench',
-            'governance': 'workbench',
-            'collab-tasks': 'workbench',
-            'collab-team': 'workbench',
+            // Tasks
+            'collab-tasks': 'tasks',
+            'collab-team': 'tasks',
+            // Governance
+            'governance': 'governance',
+            'actions': 'governance',
+            'chatbot': 'governance',
+            // Observability
+            'observability': 'observability',
+            'analytics': 'observability',
+            // Integrations
             'connect': 'integrations',
             'channels': 'integrations',
-            'actions': 'integrations',
             'providers': 'integrations',
-            'moltbook': 'social',
-            'feed': 'social',
-            'analytics': 'social',
-            'subscription': 'account',
-            'export': 'account',
-            'admin': 'account'
+            'model-config': 'integrations',
+            'llm': 'integrations',
+            // Workspace
+            'subscription': 'workspace',
+            'export': 'workspace',
+            'admin': 'workspace',
+            // Labs
+            'moltbook': 'labs',
+            'feed': 'labs',
+            'web-browse': 'labs',
+            'utility': 'labs'
         };
 
         // Navigation click handlers (top-level + dropdown items)
