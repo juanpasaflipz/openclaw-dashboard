@@ -102,6 +102,8 @@ class User(db.Model):
 
     def get_max_agents(self):
         """Get max number of agents user can have"""
+        if self.is_admin:
+            return 999  # Unlimited
         if self.effective_tier == 'pro' and self.has_active_subscription():
             return 999  # Unlimited
         return 1  # Free tier
