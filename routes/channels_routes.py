@@ -617,6 +617,12 @@ def register_channels_routes(app):
         Always returns 200 to prevent Telegram retries.
         """
         try:
+            # Ensure clean DB session state (previous requests may have left aborted transactions)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
             update = request.get_json(silent=True) or {}
             parsed = _parse_telegram_message(update)
             if not parsed:

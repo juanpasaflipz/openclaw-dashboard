@@ -330,9 +330,16 @@ def run_llm_pipeline(user_id, conversation_id, message_text, feature_slot='chatb
             LLMService._obs_hook = None
         except Exception:
             pass
-        db.session.rollback()
-        db.session.add(user_msg)
-        db.session.commit()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Try to preserve the user message
+        try:
+            db.session.add(user_msg)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         return {'success': False, 'error': f'LLM error: {str(e)[:300]}'}
 
 
