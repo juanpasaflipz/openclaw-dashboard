@@ -3588,25 +3588,50 @@ Examples:
             try {
                 let response;
 
-                // Telegram uses its own dedicated connect endpoint
+                // Telegram: save token then activate webhook in one flow
                 if (channelId === 'telegram') {
+                    // Step 1: Save bot token
                     response = await fetch('/api/telegram/connect', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ bot_token: config.bot_token }),
                         credentials: 'include'
                     });
-                } else {
-                    // Generic channel connect via agent
-                    // TODO: Let user select which agent
-                    const agentId = 1;
-                    response = await fetch(`/api/channels/agent/${agentId}/connect`, {
+
+                    const connectData = await response.json();
+                    if (!response.ok || !connectData.success) {
+                        alert(`❌ Failed to connect: ${connectData.error || 'Unknown error'}`);
+                        return;
+                    }
+
+                    // Step 2: Activate webhook with owner_telegram_id
+                    const activateResponse = await fetch('/api/channels/telegram/activate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ channel_id: channelId, config }),
+                        body: JSON.stringify({ owner_telegram_id: config.owner_telegram_id }),
                         credentials: 'include'
                     });
+
+                    const activateData = await activateResponse.json();
+                    if (activateResponse.ok && activateData.success) {
+                        alert(`✅ ${connectData.message} Webhook activated.`);
+                        closeChannelModal();
+                        loadChannels();
+                    } else {
+                        alert(`⚠️ Bot connected but webhook failed: ${activateData.error || 'Unknown error'}`);
+                    }
+                    return;
                 }
+
+                // Generic channel connect via agent
+                // TODO: Let user select which agent
+                const agentId = 1;
+                response = await fetch(`/api/channels/agent/${agentId}/connect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel_id: channelId, config }),
+                    credentials: 'include'
+                });
 
                 const data = await response.json();
 

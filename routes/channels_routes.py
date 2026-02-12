@@ -23,7 +23,8 @@ CHANNELS = {
         'description': 'Bot API via grammY; supports groups',
         'setup_type': 'token',
         'fields': [
-            {'key': 'bot_token', 'label': 'Bot Token', 'type': 'password', 'required': True, 'help': 'Get from @BotFather on Telegram'}
+            {'key': 'bot_token', 'label': 'Bot Token', 'type': 'password', 'required': True, 'help': 'Get from @BotFather on Telegram'},
+            {'key': 'owner_telegram_id', 'label': 'Your Telegram User ID', 'type': 'text', 'required': True, 'help': 'Send /start to @userinfobot on Telegram to get your numeric ID'}
         ],
         'docs_url': 'https://core.telegram.org/bots#how-do-i-create-a-bot'
     },
