@@ -7,14 +7,32 @@ from decimal import Decimal
 
 from core.observability.ingestion import emit_event
 
+# Cache whether obs tables exist to avoid repeated failed queries
+_obs_available = None
+
+
+def _check_obs_tables():
+    global _obs_available
+    if _obs_available is not None:
+        return _obs_available
+    try:
+        from models import db
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        _obs_available = 'obs_runs' in inspector.get_table_names()
+    except Exception:
+        _obs_available = False
+    return _obs_available
+
 
 def start_run(user_id, agent_id=None, model=None, metadata=None):
     """Create a new run, emit run_started event. Returns run_id."""
-    from models import db, ObsRun
-
     rid = str(uuid.uuid4())
+    if not _check_obs_tables():
+        return rid
+
+    from models import db, ObsRun
     try:
-        nested = db.session.begin_nested()
         run = ObsRun(
             run_id=rid,
             user_id=user_id,
@@ -23,15 +41,12 @@ def start_run(user_id, agent_id=None, model=None, metadata=None):
             metadata_json=metadata or {},
         )
         db.session.add(run)
-        nested.commit()
+        db.session.commit()
 
         emit_event(user_id, 'run_started', status='info', agent_id=agent_id,
                    run_id=rid, model=model, payload={'metadata': metadata or {}})
     except Exception as e:
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
+        db.session.rollback()
         print(f"[obs] start_run failed: {e}")
     return rid
 
@@ -39,10 +54,11 @@ def start_run(user_id, agent_id=None, model=None, metadata=None):
 def finish_run(run_id, status='success', error_message=None,
                tokens_in=0, tokens_out=0, cost_usd=0, latency_ms=0, tool_calls=0):
     """Finalize a run, emit run_finished event."""
-    from models import db, ObsRun
+    if not _check_obs_tables():
+        return
 
+    from models import db, ObsRun
     try:
-        nested = db.session.begin_nested()
         run = ObsRun.query.filter_by(run_id=run_id).first()
         if not run:
             return
@@ -56,7 +72,7 @@ def finish_run(run_id, status='success', error_message=None,
         run.total_latency_ms = (run.total_latency_ms or 0) + latency_ms
         run.tool_calls_count = (run.tool_calls_count or 0) + tool_calls
         run.finished_at = datetime.utcnow()
-        nested.commit()
+        db.session.commit()
 
         emit_event(run.user_id, 'run_finished', status=status,
                    agent_id=run.agent_id, run_id=run_id,
@@ -67,8 +83,5 @@ def finish_run(run_id, status='success', error_message=None,
                    latency_ms=run.total_latency_ms,
                    payload={'error': error_message} if error_message else {})
     except Exception as e:
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
+        db.session.rollback()
         print(f"[obs] finish_run failed: {e}")

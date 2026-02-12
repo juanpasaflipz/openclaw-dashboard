@@ -9,11 +9,31 @@ from decimal import Decimal
 from core.observability.constants import VALID_EVENT_TYPES, EVENT_STATUS_VALUES
 from core.observability.cost_engine import calculate_cost
 
+# Cache whether obs tables exist
+_obs_available = None
+
+
+def _check_obs_tables():
+    global _obs_available
+    if _obs_available is not None:
+        return _obs_available
+    try:
+        from models import db
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        _obs_available = 'obs_events' in inspector.get_table_names()
+    except Exception:
+        _obs_available = False
+    return _obs_available
+
 
 def emit_event(user_id, event_type, status='info', agent_id=None, run_id=None,
                model=None, tokens_in=None, tokens_out=None, cost_usd=None,
                latency_ms=None, payload=None, dedupe_key=None):
     """Write a single event. Never raises — swallows errors to avoid blocking callers."""
+    if not _check_obs_tables():
+        return None
+
     from models import db, ObsEvent
 
     try:
@@ -21,7 +41,6 @@ def emit_event(user_id, event_type, status='info', agent_id=None, run_id=None,
             provider = (payload or {}).get('provider', '')
             cost_usd = float(calculate_cost(provider, model, tokens_in, tokens_out))
 
-        nested = db.session.begin_nested()
         event = ObsEvent(
             uid=str(uuid.uuid4()),
             user_id=user_id,
@@ -38,19 +57,19 @@ def emit_event(user_id, event_type, status='info', agent_id=None, run_id=None,
             dedupe_key=dedupe_key,
         )
         db.session.add(event)
-        nested.commit()
+        db.session.commit()
         return event
     except Exception as e:
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
+        db.session.rollback()
         print(f"[obs] Failed to emit {event_type}: {e}")
         return None
 
 
 def emit_event_batch(events_data, user_id):
     """Write a batch of events. Returns (accepted_count, rejected list)."""
+    if not _check_obs_tables():
+        return 0, [{'index': i, 'reason': 'obs tables not available'} for i in range(len(events_data))]
+
     from models import db, ObsEvent
 
     accepted = 0
