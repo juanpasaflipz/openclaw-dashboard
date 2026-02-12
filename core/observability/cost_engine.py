@@ -16,32 +16,53 @@ _pricing_cache: dict[tuple[str, str], tuple[Decimal, Decimal]] = {}
 _pricing_cache_ts: float = 0
 
 
+_pricing_table_exists = None
+
+
 def _load_pricing():
     """Load pricing from DB into module cache. Returns the cache dict."""
-    global _pricing_cache, _pricing_cache_ts
+    global _pricing_cache, _pricing_cache_ts, _pricing_table_exists
 
     now = time.time()
     if _pricing_cache and (now - _pricing_cache_ts) < PRICING_CACHE_TTL:
         return _pricing_cache
 
+    # Check if obs_llm_pricing table exists (cached after first check)
+    if _pricing_table_exists is False:
+        return _pricing_cache
+
     from models import db, ObsLlmPricing
 
-    today = date.today()
-    rows = ObsLlmPricing.query.filter(
-        ObsLlmPricing.effective_from <= today,
-        db.or_(ObsLlmPricing.effective_to.is_(None), ObsLlmPricing.effective_to >= today),
-    ).all()
+    if _pricing_table_exists is None:
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            _pricing_table_exists = 'obs_llm_pricing' in inspector.get_table_names()
+        except Exception:
+            _pricing_table_exists = False
+        if not _pricing_table_exists:
+            return _pricing_cache
 
-    cache: dict[tuple[str, str], tuple[Decimal, Decimal]] = {}
-    for r in rows:
-        cache[(r.provider, r.model)] = (
-            Decimal(str(r.input_cost_per_mtok)),
-            Decimal(str(r.output_cost_per_mtok)),
-        )
+    try:
+        today = date.today()
+        rows = ObsLlmPricing.query.filter(
+            ObsLlmPricing.effective_from <= today,
+            db.or_(ObsLlmPricing.effective_to.is_(None), ObsLlmPricing.effective_to >= today),
+        ).all()
 
-    _pricing_cache = cache
-    _pricing_cache_ts = now
-    return cache
+        cache: dict[tuple[str, str], tuple[Decimal, Decimal]] = {}
+        for r in rows:
+            cache[(r.provider, r.model)] = (
+                Decimal(str(r.input_cost_per_mtok)),
+                Decimal(str(r.output_cost_per_mtok)),
+            )
+
+        _pricing_cache = cache
+        _pricing_cache_ts = now
+    except Exception:
+        _pricing_table_exists = False
+
+    return _pricing_cache
 
 
 def invalidate_pricing_cache():
