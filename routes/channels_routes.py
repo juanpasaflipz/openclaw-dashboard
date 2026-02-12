@@ -369,6 +369,12 @@ def register_channels_routes(app):
             tier_hierarchy = {'free': 0, 'pro': 1}
             user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
 
+            # Check which channels are already connected via Superpower table
+            connected_services = {
+                sp.service_type: sp.is_enabled
+                for sp in Superpower.query.filter_by(user_id=user_id).all()
+            }
+
             available_channels = {}
             locked_channels = {}
 
@@ -378,7 +384,8 @@ def register_channels_routes(app):
                 channel_data = {
                     **channel_info,
                     'id': channel_id,
-                    'locked': channel_tier_level > user_tier_level
+                    'locked': channel_tier_level > user_tier_level,
+                    'connected': connected_services.get(channel_id, False)
                 }
 
                 if channel_tier_level <= user_tier_level:

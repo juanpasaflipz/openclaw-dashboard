@@ -3444,7 +3444,7 @@ Examples:
         }
 
         function createChannelCard(channel, userTier) {
-            const isConnected = false; // TODO: Check if actually connected
+            const isConnected = !!channel.connected;
             const statusClass = channel.isLocked ? 'locked' : (isConnected ? 'connected' : '');
             const difficultyClass = channel.difficulty || 'easy';
 
