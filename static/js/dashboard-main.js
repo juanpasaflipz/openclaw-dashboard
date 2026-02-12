@@ -49,6 +49,7 @@
             'utility': 'workbench',
             'model-config': 'workbench',
             'llm': 'workbench',
+            'observability': 'workbench',
             'connect': 'integrations',
             'channels': 'integrations',
             'actions': 'integrations',
@@ -115,6 +116,7 @@
             if (tabName === 'utility') initUtilityTab();
             if (tabName === 'model-config') initModelConfigTab();
             if (tabName === 'ext-agents') initExtAgentsTab();
+            if (tabName === 'observability') initObservabilityTab();
         }
 
         // ===== Dropdown hover behavior (desktop) =====
@@ -6050,4 +6052,331 @@ Examples:
             }).catch(() => {
                 showAlert('utility', 'error', 'Failed to copy');
             });
+        }
+
+
+        // =====================================================
+        // OBSERVABILITY TAB
+        // =====================================================
+
+        let _obsInitialized = false;
+
+        function initObservabilityTab() {
+            if (!_obsInitialized) _obsInitialized = true;
+            obsLoadOverview();
+            obsLoadAgentsMetrics();
+        }
+
+        function obsShowView(viewName) {
+            document.querySelectorAll('.obs-view').forEach(v => v.style.display = 'none');
+            document.querySelectorAll('.obs-subtab').forEach(b => b.classList.remove('active'));
+            const view = document.getElementById('obs-view-' + viewName);
+            if (view) view.style.display = 'block';
+            const btn = document.querySelector(`.obs-subtab[data-obs-view="${viewName}"]`);
+            if (btn) btn.classList.add('active');
+            if (viewName === 'events-log') obsLoadEvents();
+            if (viewName === 'alerts-view') { obsLoadAlertRules(); obsLoadAlertEvents(); }
+            if (viewName === 'api-keys-view') obsLoadApiKeys();
+        }
+
+        async function obsLoadOverview() {
+            try {
+                const resp = await fetch(API_BASE + '/obs/metrics/overview', {credentials:'include'});
+                if (!resp.ok) return;
+                const data = await resp.json();
+                document.getElementById('obs-kpi-cost').textContent = '$' + (data.today.cost_usd || 0).toFixed(4);
+                document.getElementById('obs-kpi-calls').textContent = data.today.llm_calls || 0;
+                document.getElementById('obs-kpi-errors').textContent = data.today.errors || 0;
+                document.getElementById('obs-kpi-agents').textContent = data.active_agents_24h || 0;
+                document.getElementById('obs-kpi-alerts').textContent = data.unacknowledged_alerts || 0;
+            } catch(e) { console.error('obs overview:', e); }
+        }
+
+        async function obsLoadAgentsMetrics() {
+            const container = document.getElementById('obs-agents-table-container');
+            try {
+                const resp = await fetch(API_BASE + '/obs/metrics/agents?from=' + _daysAgo(7), {credentials:'include'});
+                if (!resp.ok) { container.innerHTML = '<p style="color:var(--text-secondary)">No metrics yet. Events will appear after agents send data.</p>'; return; }
+                const data = await resp.json();
+                const metrics = data.metrics || [];
+                if (!metrics.length) { container.innerHTML = '<p style="color:var(--text-secondary)">No metrics yet. Use the API Keys tab to get an ingestion key, or chat with an LLM to generate events.</p>'; return; }
+
+                // Aggregate by agent_id
+                const byAgent = {};
+                metrics.forEach(m => {
+                    const aid = m.agent_id || 'workspace';
+                    if (!byAgent[aid]) byAgent[aid] = {agent_id:aid, runs:0, cost:0, errors:0, tokens:0, latency_values:[]};
+                    byAgent[aid].runs += m.total_runs;
+                    byAgent[aid].cost += m.total_cost_usd;
+                    byAgent[aid].errors += m.failed_runs;
+                    byAgent[aid].tokens += m.total_tokens_in + m.total_tokens_out;
+                    if (m.latency_avg_ms) byAgent[aid].latency_values.push(m.latency_avg_ms);
+                });
+
+                let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;"><thead><tr style="text-align:left; border-bottom:1px solid var(--border);">';
+                html += '<th style="padding:8px;">Agent</th><th style="padding:8px;">Runs</th><th style="padding:8px;">Cost</th><th style="padding:8px;">Errors</th><th style="padding:8px;">Tokens</th><th style="padding:8px;">Avg Latency</th><th style="padding:8px;"></th>';
+                html += '</tr></thead><tbody>';
+                Object.values(byAgent).forEach(a => {
+                    const avgLat = a.latency_values.length ? Math.round(a.latency_values.reduce((s,v)=>s+v,0) / a.latency_values.length) : '-';
+                    const errRate = a.runs ? ((a.errors / a.runs) * 100).toFixed(1) + '%' : '-';
+                    html += `<tr style="border-bottom:1px solid var(--border);">`;
+                    html += `<td style="padding:8px;">${a.agent_id === 'workspace' ? 'No Agent' : 'Agent #'+a.agent_id}</td>`;
+                    html += `<td style="padding:8px;">${a.runs}</td>`;
+                    html += `<td style="padding:8px;">$${a.cost.toFixed(4)}</td>`;
+                    html += `<td style="padding:8px; ${a.errors > 0 ? 'color:#ef4444;' : ''}">${a.errors} (${errRate})</td>`;
+                    html += `<td style="padding:8px;">${a.tokens.toLocaleString()}</td>`;
+                    html += `<td style="padding:8px;">${avgLat === '-' ? '-' : avgLat + 'ms'}</td>`;
+                    html += `<td style="padding:8px;"><button class="btn btn-secondary" style="font-size:11px; padding:4px 8px;" onclick="obsShowAgentDetail(${a.agent_id === 'workspace' ? 'null' : a.agent_id})">Detail</button></td>`;
+                    html += `</tr>`;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<p style="color:#ef4444;">Error loading metrics</p>'; console.error(e); }
+        }
+
+        async function obsShowAgentDetail(agentId) {
+            if (!agentId) return;
+            const panel = document.getElementById('obs-agent-detail');
+            panel.style.display = 'block';
+            document.getElementById('obs-detail-agent-name').textContent = 'Agent #' + agentId;
+
+            try {
+                const resp = await fetch(API_BASE + '/obs/metrics/agent/' + agentId + '?from=' + _daysAgo(30), {credentials:'include'});
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                // Render cost chart
+                _obsRenderLineChart('obs-cost-chart', data.metrics, 'total_cost_usd', 'Daily Cost ($)', '#06b6d4');
+                // Render latency chart
+                _obsRenderLineChart('obs-latency-chart', data.metrics, 'latency_avg_ms', 'Avg Latency (ms)', '#f59e0b');
+
+                // Render recent events table
+                const evContainer = document.getElementById('obs-detail-events');
+                if (data.recent_events && data.recent_events.length) {
+                    let html = '<table style="width:100%; border-collapse:collapse; font-size:12px;"><thead><tr style="border-bottom:1px solid var(--border);">';
+                    html += '<th style="padding:6px;">Time</th><th style="padding:6px;">Type</th><th style="padding:6px;">Status</th><th style="padding:6px;">Model</th><th style="padding:6px;">Tokens</th><th style="padding:6px;">Cost</th><th style="padding:6px;">Latency</th>';
+                    html += '</tr></thead><tbody>';
+                    data.recent_events.slice(0, 20).forEach(e => {
+                        const statusColor = e.status === 'error' ? '#ef4444' : e.status === 'success' ? '#22c55e' : 'var(--text-secondary)';
+                        html += `<tr style="border-bottom:1px solid var(--border);">`;
+                        html += `<td style="padding:6px;">${e.created_at ? new Date(e.created_at).toLocaleTimeString() : '-'}</td>`;
+                        html += `<td style="padding:6px;">${e.event_type}</td>`;
+                        html += `<td style="padding:6px; color:${statusColor};">${e.status}</td>`;
+                        html += `<td style="padding:6px;">${e.model || '-'}</td>`;
+                        html += `<td style="padding:6px;">${(e.tokens_in||0)+(e.tokens_out||0) || '-'}</td>`;
+                        html += `<td style="padding:6px;">${e.cost_usd ? '$'+e.cost_usd.toFixed(6) : '-'}</td>`;
+                        html += `<td style="padding:6px;">${e.latency_ms ? e.latency_ms+'ms' : '-'}</td>`;
+                        html += `</tr>`;
+                    });
+                    html += '</tbody></table>';
+                    evContainer.innerHTML = html;
+                } else {
+                    evContainer.innerHTML = '<p style="color:var(--text-secondary);">No recent events.</p>';
+                }
+            } catch(e) { console.error('agent detail:', e); }
+        }
+
+        function _obsRenderLineChart(canvasId, metrics, field, label, color) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            const pad = 50;
+            ctx.clearRect(0, 0, W, H);
+
+            if (!metrics || !metrics.length) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
+                ctx.fillText('No data', W/2, H/2);
+                return;
+            }
+
+            const values = metrics.map(m => m[field] || 0);
+            const labels = metrics.map(m => m.date);
+            const maxVal = Math.max(...values, 0.001);
+
+            // Axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(pad, 10); ctx.lineTo(pad, H-pad); ctx.lineTo(W-10, H-pad); ctx.stroke();
+
+            // Title
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+            ctx.fillText(label, pad, 22);
+
+            // Y-axis label
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'right'; ctx.font = '10px sans-serif';
+            ctx.fillText(field.includes('cost') ? '$'+maxVal.toFixed(4) : Math.round(maxVal), pad-4, 22);
+            ctx.fillText('0', pad-4, H-pad+4);
+
+            // Line
+            ctx.strokeStyle = color; ctx.lineWidth = 2;
+            ctx.beginPath();
+            values.forEach((v, i) => {
+                const x = pad + (i / Math.max(values.length-1, 1)) * (W - pad - 10);
+                const y = (H - pad) - (v / maxVal) * (H - pad - 20);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Points
+            ctx.fillStyle = color;
+            values.forEach((v, i) => {
+                const x = pad + (i / Math.max(values.length-1, 1)) * (W - pad - 10);
+                const y = (H - pad) - (v / maxVal) * (H - pad - 20);
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, 2*Math.PI); ctx.fill();
+            });
+
+            // X labels (first and last)
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'center'; ctx.font = '10px sans-serif';
+            if (labels[0]) ctx.fillText(labels[0], pad, H-pad+14);
+            if (labels.length > 1) ctx.fillText(labels[labels.length-1], W-10, H-pad+14);
+        }
+
+        async function obsLoadEvents() {
+            const container = document.getElementById('obs-events-table');
+            const typeFilter = document.getElementById('obs-event-type-filter').value;
+            const statusFilter = document.getElementById('obs-status-filter').value;
+            let url = API_BASE + '/obs/events?limit=100';
+            if (typeFilter) url += '&event_type=' + typeFilter;
+            if (statusFilter) url += '&status=' + statusFilter;
+
+            try {
+                const resp = await fetch(url, {credentials:'include'});
+                if (!resp.ok) { container.innerHTML = '<p style="color:var(--text-secondary)">No events yet.</p>'; return; }
+                const data = await resp.json();
+                const events = data.events || [];
+                if (!events.length) { container.innerHTML = '<p style="color:var(--text-secondary)">No events match filters.</p>'; return; }
+
+                let html = '<table style="width:100%; border-collapse:collapse; font-size:12px;"><thead><tr style="border-bottom:1px solid var(--border);">';
+                html += '<th style="padding:6px;">Time</th><th style="padding:6px;">Type</th><th style="padding:6px;">Status</th><th style="padding:6px;">Agent</th><th style="padding:6px;">Model</th><th style="padding:6px;">Tokens</th><th style="padding:6px;">Cost</th><th style="padding:6px;">Latency</th>';
+                html += '</tr></thead><tbody>';
+                events.forEach(e => {
+                    const statusColor = e.status === 'error' ? '#ef4444' : e.status === 'success' ? '#22c55e' : 'var(--text-secondary)';
+                    html += '<tr style="border-bottom:1px solid var(--border);">';
+                    html += `<td style="padding:6px;">${e.created_at ? new Date(e.created_at).toLocaleString() : '-'}</td>`;
+                    html += `<td style="padding:6px;">${e.event_type}</td>`;
+                    html += `<td style="padding:6px; color:${statusColor}">${e.status}</td>`;
+                    html += `<td style="padding:6px;">${e.agent_id || '-'}</td>`;
+                    html += `<td style="padding:6px;">${e.model || '-'}</td>`;
+                    html += `<td style="padding:6px;">${(e.tokens_in||0)+(e.tokens_out||0) || '-'}</td>`;
+                    html += `<td style="padding:6px;">${e.cost_usd ? '$'+e.cost_usd.toFixed(6) : '-'}</td>`;
+                    html += `<td style="padding:6px;">${e.latency_ms ? e.latency_ms+'ms' : '-'}</td>`;
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+                html += `<p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Showing ${events.length} of ${data.total} events</p>`;
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<p style="color:#ef4444">Error loading events</p>'; }
+        }
+
+        async function obsLoadAlertRules() {
+            const container = document.getElementById('obs-alert-rules-list');
+            try {
+                const resp = await fetch(API_BASE + '/obs/alerts/rules', {credentials:'include'});
+                const data = await resp.json();
+                const rules = data.rules || [];
+                if (!rules.length) { container.innerHTML = '<p style="color:var(--text-secondary);">No alert rules. Click "+ New Rule" to create one.</p>'; return; }
+                let html = '';
+                rules.forEach(r => {
+                    const typeLabel = r.rule_type === 'cost_per_day' ? 'Cost/day > $'+r.threshold : r.rule_type === 'error_rate' ? 'Error rate > '+r.threshold+'%' : 'No heartbeat > '+r.threshold+'m';
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">`;
+                    html += `<div><strong>${r.name}</strong><br><span style="font-size:12px; color:var(--text-secondary);">${typeLabel} | ${r.is_enabled ? 'Enabled' : 'Disabled'}${r.last_triggered_at ? ' | Last fired: '+new Date(r.last_triggered_at).toLocaleString() : ''}</span></div>`;
+                    html += `<div style="display:flex; gap:6px;">`;
+                    html += `<button class="btn btn-secondary" style="font-size:11px; padding:4px 8px;" onclick="obsToggleRule(${r.id}, ${!r.is_enabled})">${r.is_enabled ? 'Disable' : 'Enable'}</button>`;
+                    html += `<button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; color:#ef4444;" onclick="obsDeleteRule(${r.id})">Delete</button>`;
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<p style="color:#ef4444">Error loading rules</p>'; }
+        }
+
+        async function obsLoadAlertEvents() {
+            const container = document.getElementById('obs-alert-events-list');
+            try {
+                const resp = await fetch(API_BASE + '/obs/alerts/events?limit=20', {credentials:'include'});
+                const data = await resp.json();
+                const events = data.events || [];
+                if (!events.length) { container.innerHTML = '<p style="color:var(--text-secondary);">No alerts fired yet.</p>'; return; }
+                let html = '';
+                events.forEach(e => {
+                    const acked = e.acknowledged_at ? 'color:var(--text-secondary);' : 'color:#f59e0b;';
+                    html += `<div style="padding:10px 0; border-bottom:1px solid var(--border); ${acked}">`;
+                    html += `<div style="font-size:13px;">${e.message}</div>`;
+                    html += `<div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${new Date(e.triggered_at).toLocaleString()}`;
+                    if (!e.acknowledged_at) html += ` | <a href="#" onclick="event.preventDefault(); obsAckAlert(${e.id})" style="color:var(--primary);">Acknowledge</a>`;
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<p style="color:#ef4444">Error loading alert events</p>'; }
+        }
+
+        function obsShowCreateAlert() { document.getElementById('obs-create-alert-form').style.display = 'block'; }
+
+        async function obsCreateAlert() {
+            const body = {
+                name: document.getElementById('obs-alert-name').value,
+                rule_type: document.getElementById('obs-alert-type').value,
+                threshold: parseFloat(document.getElementById('obs-alert-threshold').value),
+                cooldown_minutes: parseInt(document.getElementById('obs-alert-cooldown').value) || 360,
+            };
+            try {
+                const resp = await fetch(API_BASE + '/obs/alerts/rules', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(body)});
+                if (resp.ok) { document.getElementById('obs-create-alert-form').style.display='none'; obsLoadAlertRules(); }
+            } catch(e) { console.error(e); }
+        }
+
+        async function obsToggleRule(ruleId, enabled) {
+            await fetch(API_BASE + '/obs/alerts/rules/' + ruleId, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({is_enabled: enabled})});
+            obsLoadAlertRules();
+        }
+
+        async function obsDeleteRule(ruleId) {
+            if (!confirm('Delete this alert rule?')) return;
+            await fetch(API_BASE + '/obs/alerts/rules/' + ruleId, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({delete: true})});
+            obsLoadAlertRules();
+        }
+
+        async function obsAckAlert(eventId) {
+            await fetch(API_BASE + '/obs/alerts/events/' + eventId + '/acknowledge', {method:'POST', credentials:'include'});
+            obsLoadAlertEvents();
+        }
+
+        async function obsLoadApiKeys() {
+            const container = document.getElementById('obs-api-keys-list');
+            try {
+                const resp = await fetch(API_BASE + '/obs/api-keys', {credentials:'include'});
+                const data = await resp.json();
+                const keys = data.keys || [];
+                if (!keys.length) { container.innerHTML = '<p style="color:var(--text-secondary);">No API keys yet. Create one to start ingesting events.</p>'; return; }
+                let html = '';
+                keys.forEach(k => {
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">`;
+                    html += `<div><code>${k.key_prefix}...</code> <span style="font-size:12px; color:var(--text-secondary);">${k.name} | ${k.is_active ? 'Active' : 'Revoked'}${k.last_used_at ? ' | Last used: '+new Date(k.last_used_at).toLocaleString() : ''}</span></div>`;
+                    if (k.is_active) html += `<button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; color:#ef4444;" onclick="obsRevokeKey(${k.id})">Revoke</button>`;
+                    html += `</div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = '<p style="color:#ef4444">Error loading keys</p>'; }
+        }
+
+        async function obsCreateApiKey() {
+            try {
+                const resp = await fetch(API_BASE + '/obs/api-keys', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({name:'default'})});
+                const data = await resp.json();
+                if (data.key) {
+                    document.getElementById('obs-new-key-value').textContent = data.key;
+                    document.getElementById('obs-new-key-display').style.display = 'block';
+                    obsLoadApiKeys();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function obsRevokeKey(keyId) {
+            if (!confirm('Revoke this API key? External agents using it will stop working.')) return;
+            await fetch(API_BASE + '/obs/api-keys/' + keyId + '/revoke', {method:'POST', credentials:'include'});
+            obsLoadApiKeys();
+        }
+
+        function _daysAgo(n) {
+            const d = new Date(); d.setDate(d.getDate() - n);
+            return d.toISOString().split('T')[0];
         }

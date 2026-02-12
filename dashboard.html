@@ -87,6 +87,9 @@
                         <button class="topnav-dropdown-item" data-tab="llm">
                             <span class="topnav-dropdown-icon">🔌</span> LLM Connection
                         </button>
+                        <button class="topnav-dropdown-item" data-tab="observability">
+                            <span class="topnav-dropdown-icon">📡</span> Observability
+                        </button>
                     </div>
                 </div>
 
@@ -2163,6 +2166,162 @@
                     </div>
                 </div>
                 <div id="ext-agents-alert" class="alert"></div>
+            </div>
+
+            <!-- Observability Tab -->
+            <div class="tab-content" id="observability">
+                <h2>Agent Observability</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Track LLM costs, errors, latency, and agent health in real-time.</p>
+
+                <!-- KPI Cards -->
+                <div id="obs-kpi-cards" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:24px;">
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--primary);" id="obs-kpi-cost">$0.00</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Today's Cost</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--accent);" id="obs-kpi-calls">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">LLM Calls Today</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#ef4444;" id="obs-kpi-errors">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Errors Today</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#22c55e;" id="obs-kpi-agents">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Active Agents (24h)</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#f59e0b;" id="obs-kpi-alerts">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Open Alerts</div>
+                    </div>
+                </div>
+
+                <!-- Sub-navigation -->
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary obs-subtab active" data-obs-view="agents-overview" onclick="obsShowView('agents-overview')">Agents Overview</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="events-log" onclick="obsShowView('events-log')">Events Log</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="alerts-view" onclick="obsShowView('alerts-view')">Alerts</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="api-keys-view" onclick="obsShowView('api-keys-view')">API Keys</button>
+                </div>
+
+                <!-- Agents Overview Sub-view -->
+                <div id="obs-view-agents-overview" class="obs-view active">
+                    <div class="card">
+                        <h3>Agent Metrics (last 7 days)</h3>
+                        <div id="obs-agents-table-container" style="overflow-x:auto; margin-top:12px;">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Agent Detail Panel (hidden by default) -->
+                    <div id="obs-agent-detail" class="card" style="display:none; margin-top:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 id="obs-detail-agent-name">Agent Detail</h3>
+                            <button class="btn btn-secondary" onclick="document.getElementById('obs-agent-detail').style.display='none'" style="font-size:12px;">Close</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
+                            <div>
+                                <canvas id="obs-cost-chart" width="400" height="200"></canvas>
+                            </div>
+                            <div>
+                                <canvas id="obs-latency-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                        <h4 style="margin-top:16px;">Recent Events</h4>
+                        <div id="obs-detail-events" style="overflow-x:auto; margin-top:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- Events Log Sub-view -->
+                <div id="obs-view-events-log" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                            <select id="obs-event-type-filter" onchange="obsLoadEvents()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Types</option>
+                                <option value="llm_call">LLM Call</option>
+                                <option value="tool_call">Tool Call</option>
+                                <option value="run_started">Run Started</option>
+                                <option value="run_finished">Run Finished</option>
+                                <option value="heartbeat">Heartbeat</option>
+                                <option value="error">Error</option>
+                            </select>
+                            <select id="obs-status-filter" onchange="obsLoadEvents()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Status</option>
+                                <option value="success">Success</option>
+                                <option value="error">Error</option>
+                                <option value="info">Info</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="obsLoadEvents()" style="font-size:12px;">Refresh</button>
+                        </div>
+                        <div id="obs-events-table" style="overflow-x:auto;">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts Sub-view -->
+                <div id="obs-view-alerts-view" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>Alert Rules</h3>
+                            <button class="btn btn-primary" onclick="obsShowCreateAlert()" style="font-size:12px;">+ New Rule</button>
+                        </div>
+                        <div id="obs-alert-rules-list"></div>
+
+                        <!-- Create alert form (hidden) -->
+                        <div id="obs-create-alert-form" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+                            <h4>New Alert Rule</h4>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Name</label>
+                                    <input type="text" id="obs-alert-name" placeholder="e.g. Daily cost limit" style="width:100%; margin-top:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Rule Type</label>
+                                    <select id="obs-alert-type" style="width:100%; margin-top:4px; background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:8px; border-radius:6px;">
+                                        <option value="cost_per_day">Cost per day > $X</option>
+                                        <option value="error_rate">Error rate > X%</option>
+                                        <option value="no_heartbeat">No heartbeat for X minutes</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Threshold</label>
+                                    <input type="number" id="obs-alert-threshold" placeholder="e.g. 5.00" step="0.01" style="width:100%; margin-top:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Cooldown (minutes)</label>
+                                    <input type="number" id="obs-alert-cooldown" value="360" style="width:100%; margin-top:4px;">
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn btn-primary" onclick="obsCreateAlert()">Create</button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('obs-create-alert-form').style.display='none'">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:16px;">
+                        <h3>Alert History</h3>
+                        <div id="obs-alert-events-list" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- API Keys Sub-view -->
+                <div id="obs-view-api-keys-view" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>Ingestion API Keys</h3>
+                            <button class="btn btn-primary" onclick="obsCreateApiKey()" style="font-size:12px;">+ New Key</button>
+                        </div>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Use these keys to send events from external agents via <code>POST /api/obs/ingest/events</code>.</p>
+                        <div id="obs-api-keys-list"></div>
+                        <div id="obs-new-key-display" style="display:none; margin-top:12px; padding:12px; background:var(--success-bg, #064e3b); border-radius:8px;">
+                            <strong>New key created! Copy it now — it won't be shown again:</strong>
+                            <code id="obs-new-key-value" style="display:block; margin-top:8px; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; word-break:break-all;"></code>
+                        </div>
+                    </div>
+                </div>
             </div>
 
                 </div> <!-- end content-wrapper -->

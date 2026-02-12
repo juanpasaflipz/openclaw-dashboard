@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing
 db.init_app(app)
 
 # Initialize rate limiter
@@ -69,7 +69,7 @@ limiter = init_limiter(app)
 # Register all route modules
 from routes import (
     register_auth_routes, register_stripe_routes,
-    moltbook_bp, analytics_bp,
+    moltbook_bp, analytics_bp, obs_bp,
     register_agent_routes, register_setup_routes,
     register_channels_routes, register_llm_providers_routes,
     register_oauth_routes, register_gmail_routes,
@@ -89,6 +89,7 @@ register_auth_routes(app)
 register_stripe_routes(app)
 app.register_blueprint(moltbook_bp)
 app.register_blueprint(analytics_bp)
+app.register_blueprint(obs_bp)
 register_agent_routes(app)
 register_setup_routes(app)
 register_channels_routes(app)

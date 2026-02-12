@@ -574,6 +574,11 @@ class ChatConversation(db.Model):
     agent_type = db.Column(db.String(50), default='direct_llm')  # direct_llm, nautilus, external
     agent_id = db.Column(db.Integer, db.ForeignKey('external_agents.id'), nullable=True)
 
+    # Channel linking (Telegram, Discord, etc.)
+    channel_platform = db.Column(db.String(50), index=True)  # 'telegram', 'discord', etc.
+    channel_chat_id = db.Column(db.String(255), index=True)  # External chat ID
+    channel_metadata = db.Column(db.JSON)  # Platform-specific data (username, etc.)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -588,6 +593,9 @@ class ChatConversation(db.Model):
             'feature': self.feature,
             'agent_type': self.agent_type,
             'agent_id': self.agent_id,
+            'channel_platform': self.channel_platform,
+            'channel_chat_id': self.channel_chat_id,
+            'channel_metadata': self.channel_metadata,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'message_count': self.messages.count(),
@@ -686,4 +694,280 @@ class WebBrowsingResult(db.Model):
             'urls_fetched': self.urls_fetched or [],
             'ai_summary': self.ai_summary,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ============================================
+# Observability Layer Models
+# ============================================
+
+class ObsApiKey(db.Model):
+    """API keys for external event ingestion, scoped to a user (workspace)."""
+    __tablename__ = 'obs_api_keys'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    key_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    key_prefix = db.Column(db.String(12), nullable=False)  # e.g. "obsk_a3f1..."
+    name = db.Column(db.String(100), nullable=False, default='default')
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    last_used_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_api_keys')
+
+    @staticmethod
+    def hash_key(raw_key):
+        return hashlib.sha256(raw_key.encode()).hexdigest()
+
+    @classmethod
+    def create_for_user(cls, user_id, name='default'):
+        raw_key = f"obsk_{secrets.token_hex(24)}"
+        api_key = cls(
+            user_id=user_id,
+            key_hash=cls.hash_key(raw_key),
+            key_prefix=raw_key[:12],
+            name=name,
+        )
+        db.session.add(api_key)
+        return api_key, raw_key
+
+    @classmethod
+    def lookup(cls, raw_key):
+        h = cls.hash_key(raw_key)
+        return cls.query.filter_by(key_hash=h, is_active=True).first()
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key_prefix': self.key_prefix,
+            'name': self.name,
+            'is_active': self.is_active,
+            'last_used_at': self.last_used_at.isoformat() if self.last_used_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsEvent(db.Model):
+    """Append-only event log for all agent observability data."""
+    __tablename__ = 'obs_events'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uid = db.Column(db.String(36), unique=True, nullable=False, index=True)  # UUID
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    run_id = db.Column(db.String(36), nullable=True, index=True)
+    event_type = db.Column(db.String(50), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default='info')  # success, error, info
+    model = db.Column(db.String(200), nullable=True)
+    tokens_in = db.Column(db.Integer, nullable=True)
+    tokens_out = db.Column(db.Integer, nullable=True)
+    cost_usd = db.Column(db.Numeric(12, 8), nullable=True)
+    latency_ms = db.Column(db.Integer, nullable=True)
+    payload = db.Column(db.JSON, nullable=False, default=dict)
+    dedupe_key = db.Column(db.String(255), nullable=True, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = db.relationship('User', backref='obs_events')
+    agent = db.relationship('Agent', backref='obs_events')
+
+    def to_dict(self):
+        return {
+            'id': self.uid,
+            'agent_id': self.agent_id,
+            'run_id': self.run_id,
+            'event_type': self.event_type,
+            'status': self.status,
+            'model': self.model,
+            'tokens_in': self.tokens_in,
+            'tokens_out': self.tokens_out,
+            'cost_usd': float(self.cost_usd) if self.cost_usd else None,
+            'latency_ms': self.latency_ms,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsRun(db.Model):
+    """Tracks a single agent run (e.g. one LLM pipeline execution)."""
+    __tablename__ = 'obs_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    status = db.Column(db.String(20), default='running')  # running, success, error
+    model = db.Column(db.String(200), nullable=True)
+    total_tokens_in = db.Column(db.Integer, default=0)
+    total_tokens_out = db.Column(db.Integer, default=0)
+    total_cost_usd = db.Column(db.Numeric(12, 8), default=0)
+    total_latency_ms = db.Column(db.Integer, default=0)
+    tool_calls_count = db.Column(db.Integer, default=0)
+    error_message = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.JSON, default=dict)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='obs_runs')
+    agent = db.relationship('Agent', backref='obs_runs')
+
+    def to_dict(self):
+        return {
+            'run_id': self.run_id,
+            'agent_id': self.agent_id,
+            'status': self.status,
+            'model': self.model,
+            'total_tokens_in': self.total_tokens_in,
+            'total_tokens_out': self.total_tokens_out,
+            'total_cost_usd': float(self.total_cost_usd) if self.total_cost_usd else 0,
+            'total_latency_ms': self.total_latency_ms,
+            'tool_calls_count': self.tool_calls_count,
+            'error_message': self.error_message,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'finished_at': self.finished_at.isoformat() if self.finished_at else None,
+        }
+
+
+class ObsAgentDailyMetrics(db.Model):
+    """Pre-aggregated daily metrics per agent."""
+    __tablename__ = 'obs_agent_daily_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    date = db.Column(db.Date, nullable=False)
+    total_runs = db.Column(db.Integer, default=0)
+    successful_runs = db.Column(db.Integer, default=0)
+    failed_runs = db.Column(db.Integer, default=0)
+    total_events = db.Column(db.Integer, default=0)
+    total_tokens_in = db.Column(db.Integer, default=0)
+    total_tokens_out = db.Column(db.Integer, default=0)
+    total_cost_usd = db.Column(db.Numeric(12, 8), default=0)
+    total_tool_calls = db.Column(db.Integer, default=0)
+    tool_errors = db.Column(db.Integer, default=0)
+    latency_p50_ms = db.Column(db.Integer, nullable=True)
+    latency_p95_ms = db.Column(db.Integer, nullable=True)
+    latency_avg_ms = db.Column(db.Integer, nullable=True)
+    models_used = db.Column(db.JSON, default=dict)  # {"gpt-4o": 5, "claude-3": 3}
+    last_heartbeat_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='obs_daily_metrics')
+    agent = db.relationship('Agent', backref='obs_daily_metrics')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'agent_id', 'date', name='_obs_daily_uc'),)
+
+    def to_dict(self):
+        total = self.total_runs or 0
+        return {
+            'date': self.date.isoformat() if self.date else None,
+            'agent_id': self.agent_id,
+            'total_runs': total,
+            'successful_runs': self.successful_runs or 0,
+            'failed_runs': self.failed_runs or 0,
+            'success_rate': round((self.successful_runs or 0) / total, 4) if total else 0,
+            'error_rate': round((self.failed_runs or 0) / total, 4) if total else 0,
+            'total_tokens_in': self.total_tokens_in or 0,
+            'total_tokens_out': self.total_tokens_out or 0,
+            'total_cost_usd': float(self.total_cost_usd) if self.total_cost_usd else 0,
+            'total_tool_calls': self.total_tool_calls or 0,
+            'tool_errors': self.tool_errors or 0,
+            'latency_p50_ms': self.latency_p50_ms,
+            'latency_p95_ms': self.latency_p95_ms,
+            'latency_avg_ms': self.latency_avg_ms,
+            'models_used': self.models_used or {},
+            'last_heartbeat_at': self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
+        }
+
+
+class ObsAlertRule(db.Model):
+    """User-defined alert rules evaluated by cron."""
+    __tablename__ = 'obs_alert_rules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)  # NULL = workspace-wide
+    name = db.Column(db.String(100), nullable=False)
+    rule_type = db.Column(db.String(50), nullable=False)  # cost_per_day, error_rate, no_heartbeat
+    threshold = db.Column(db.Numeric(12, 4), nullable=False)
+    window_minutes = db.Column(db.Integer, default=60)
+    cooldown_minutes = db.Column(db.Integer, default=360)
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    last_triggered_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_alert_rules')
+    agent = db.relationship('Agent', backref='obs_alert_rules')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'name': self.name,
+            'rule_type': self.rule_type,
+            'threshold': float(self.threshold),
+            'window_minutes': self.window_minutes,
+            'cooldown_minutes': self.cooldown_minutes,
+            'is_enabled': self.is_enabled,
+            'last_triggered_at': self.last_triggered_at.isoformat() if self.last_triggered_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsAlertEvent(db.Model):
+    """Fired alerts history."""
+    __tablename__ = 'obs_alert_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('obs_alert_rules.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    metric_value = db.Column(db.Numeric(12, 4), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    rule_type = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    notified_slack = db.Column(db.Boolean, default=False)
+    acknowledged_at = db.Column(db.DateTime, nullable=True)
+    triggered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    rule = db.relationship('ObsAlertRule', backref='alert_events')
+    user = db.relationship('User', backref='obs_alert_events')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'agent_id': self.agent_id,
+            'rule_type': self.rule_type,
+            'metric_value': float(self.metric_value),
+            'threshold_value': float(self.threshold_value),
+            'message': self.message,
+            'notified_slack': self.notified_slack,
+            'acknowledged_at': self.acknowledged_at.isoformat() if self.acknowledged_at else None,
+            'triggered_at': self.triggered_at.isoformat() if self.triggered_at else None,
+        }
+
+
+class ObsLlmPricing(db.Model):
+    """Reference table for LLM token costs per provider/model."""
+    __tablename__ = 'obs_llm_pricing'
+
+    id = db.Column(db.Integer, primary_key=True)
+    provider = db.Column(db.String(50), nullable=False)
+    model = db.Column(db.String(200), nullable=False)
+    input_cost_per_mtok = db.Column(db.Numeric(10, 4), nullable=False)   # USD per 1M input tokens
+    output_cost_per_mtok = db.Column(db.Numeric(10, 4), nullable=False)  # USD per 1M output tokens
+    effective_from = db.Column(db.Date, nullable=False)
+    effective_to = db.Column(db.Date, nullable=True)  # NULL = current
+
+    __table_args__ = (db.UniqueConstraint('provider', 'model', 'effective_from', name='_obs_pricing_uc'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'provider': self.provider,
+            'model': self.model,
+            'input_cost_per_mtok': float(self.input_cost_per_mtok),
+            'output_cost_per_mtok': float(self.output_cost_per_mtok),
+            'effective_from': self.effective_from.isoformat(),
+            'effective_to': self.effective_to.isoformat() if self.effective_to else None,
         }

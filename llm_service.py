@@ -4,6 +4,7 @@ Supports multiple providers via raw HTTP requests.
 """
 import requests
 import json
+import time
 
 
 # Provider endpoint defaults
@@ -66,6 +67,10 @@ class LLMService:
     # Providers that support function/tool calling
     TOOL_CAPABLE_PROVIDERS = {'openai', 'anthropic', 'groq', 'mistral', 'together', 'xai', 'openrouter', 'azure'}
 
+    # Observability hook — set by caller to capture LLM metrics.
+    # Signature: (provider, model, usage_dict, latency_ms, success, error_msg)
+    _obs_hook = None
+
     @staticmethod
     def call(provider, model, api_key, messages, endpoint_url=None, extra_config=None, tools=None):
         """
@@ -82,17 +87,32 @@ class LLMService:
         if tools and provider not in LLMService.TOOL_CAPABLE_PROVIDERS:
             tools = None
 
-        if provider == 'anthropic':
-            return LLMService._call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
-        elif provider == 'google':
-            return LLMService._call_google(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
-        elif provider == 'ollama':
-            return LLMService._call_ollama(model, messages, endpoint_url, temperature, timeout)
-        elif provider == 'cohere':
-            return LLMService._call_cohere(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
-        else:
-            # OpenAI-compatible path: OpenAI, Groq, Mistral, Together, OpenRouter, Azure, Custom
-            return LLMService._call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
+        t0 = time.time()
+        error_msg = None
+        result = None
+        try:
+            if provider == 'anthropic':
+                result = LLMService._call_anthropic(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
+            elif provider == 'google':
+                result = LLMService._call_google(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
+            elif provider == 'ollama':
+                result = LLMService._call_ollama(model, messages, endpoint_url, temperature, timeout)
+            elif provider == 'cohere':
+                result = LLMService._call_cohere(model, api_key, messages, endpoint_url, temperature, max_tokens, timeout)
+            else:
+                result = LLMService._call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=tools)
+            return result
+        except Exception as exc:
+            error_msg = str(exc)[:300]
+            raise
+        finally:
+            latency_ms = int((time.time() - t0) * 1000)
+            if LLMService._obs_hook:
+                try:
+                    usage = (result or {}).get('usage', {})
+                    LLMService._obs_hook(provider, model, usage, latency_ms, error_msg is None, error_msg)
+                except Exception:
+                    pass  # Never let observability break the response
 
     @staticmethod
     def _call_openai_compatible(provider, model, api_key, messages, endpoint_url, temperature, max_tokens, timeout, tools=None):
