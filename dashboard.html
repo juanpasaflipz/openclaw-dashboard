@@ -1109,6 +1109,41 @@
                         Loading agents...
                     </p>
                 </div>
+
+                <!-- Agent Create/Edit Modal -->
+                <div id="agent-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h3 id="agent-modal-title" style="margin: 0;">🤖 Create New Agent</h3>
+                            <button onclick="document.getElementById('agent-modal').style.display='none'" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <form id="agent-form" onsubmit="saveAgent(event)">
+                            <input type="hidden" id="agent-id" value="">
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Agent Name</label>
+                                <input type="text" id="agent-name" placeholder="My Agent" required style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px;">
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Avatar Emoji</label>
+                                <input type="text" id="agent-emoji" value="🤖" maxlength="4" style="width: 80px; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 20px; text-align: center;">
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Description</label>
+                                <textarea id="agent-description" placeholder="What does this agent do?" rows="3" style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px; resize: vertical;"></textarea>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="agent-is-default">
+                                    <span style="font-size: 14px; color: var(--text-secondary);">Set as default agent</span>
+                                </label>
+                            </div>
+                            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                                <button type="button" onclick="document.getElementById('agent-modal').style.display='none'" class="btn btn-secondary" style="padding: 10px 20px;">Cancel</button>
+                                <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Save Agent</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Admin Tab -->

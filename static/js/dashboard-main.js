@@ -1908,19 +1908,19 @@ Examples:
                             </div>
 
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button onclick="selectAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-cyan);">
+                                <button onclick="selectAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-cyan); color: #0f172a; font-weight: 600;">
                                     ✅ Select
                                 </button>
-                                <button onclick="editAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-purple);">
+                                <button onclick="editAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-purple); color: #fff; font-weight: 600;">
                                     ✏️ Edit
                                 </button>
-                                <button onclick="cloneAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280;">
+                                <button onclick="cloneAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">
                                     📋 Clone
                                 </button>
-                                <button onclick="exportAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280;">
+                                <button onclick="exportAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">
                                     📥 Export
                                 </button>
-                                ${!agent.is_default ? `<button onclick="deleteAgent(${agent.id}, '${agent.name}')" style="padding: 8px 16px; font-size: 14px; background: #ef4444;">🗑️ Delete</button>` : ''}
+                                ${!agent.is_default ? `<button onclick="deleteAgent(${agent.id}, '${agent.name}')" style="padding: 8px 16px; font-size: 14px; background: #ef4444; color: #fff; font-weight: 600;">🗑️ Delete</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1950,7 +1950,7 @@ Examples:
             document.getElementById('agent-form').reset();
             document.getElementById('agent-id').value = '';
             document.getElementById('agent-emoji').value = '🤖';
-            document.getElementById('agent-modal').style.display = 'block';
+            document.getElementById('agent-modal').style.display = 'flex';
         }
 
         async function editAgent(agentId) {
@@ -1974,7 +1974,7 @@ Examples:
                 document.getElementById('agent-description').value = agent.description || '';
                 document.getElementById('agent-is-default').checked = agent.is_default;
 
-                document.getElementById('agent-modal').style.display = 'block';
+                document.getElementById('agent-modal').style.display = 'flex';
             } catch (error) {
                 console.error('Error loading agent:', error);
                 alert('❌ Failed to load agent details');
