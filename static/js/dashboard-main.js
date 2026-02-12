@@ -3462,7 +3462,9 @@ Examples:
                     <div class="channel-status">
                         <div class="channel-status-dot ${isConnected ? 'connected' : ''}"></div>
                         <span class="channel-status-text">
-                            ${isConnected ? 'Connected' : (channel.isLocked ? 'Requires Pro' : 'Not connected')}
+                            ${isConnected
+                                ? (channel.connected_agent_name ? `Connected - ${channel.connected_agent_name}` : 'Connected')
+                                : (channel.isLocked ? 'Requires Pro' : 'Not connected')}
                         </span>
                     </div>
                     <button class="channel-connect-btn ${isConnected ? 'connected' : ''} ${channel.isLocked ? 'locked' : ''}" ${channel.isLocked ? 'disabled' : ''}>
@@ -3514,6 +3516,30 @@ Examples:
             // Add modal to page
             document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+            // Populate agent dropdown
+            (async () => {
+                try {
+                    const resp = await fetch('/api/agents', { credentials: 'include' });
+                    if (resp.ok) {
+                        const agents = await resp.json();
+                        const select = document.getElementById('field_agent_id');
+                        if (select && Array.isArray(agents)) {
+                            agents.forEach(a => {
+                                const opt = document.createElement('option');
+                                opt.value = a.id;
+                                opt.textContent = `${a.avatar_emoji || ''} ${a.name}`.trim();
+                                if (channel.connected_agent_id && a.id === channel.connected_agent_id) {
+                                    opt.selected = true;
+                                }
+                                select.appendChild(opt);
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load agents for channel modal:', e);
+                }
+            })();
+
             // Add form submit handler
             document.getElementById('channelConfigForm').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -3529,11 +3555,22 @@ Examples:
         }
 
         function renderChannelFields(channel) {
+            // Agent picker (universal for all channels)
+            let html = `
+                <div class="form-field">
+                    <label for="field_agent_id">Agent</label>
+                    <select id="field_agent_id" name="agent_id">
+                        <option value="">No agent (raw LLM)</option>
+                    </select>
+                    <div class="form-field-help">Select an agent to power this channel with a personality</div>
+                </div>
+            `;
+
             if (!channel.fields || channel.fields.length === 0) {
-                return '<p style="color: var(--text-secondary);">No additional configuration required. Click Connect to get started!</p>';
+                return html;
             }
 
-            return channel.fields.map(field => `
+            html += channel.fields.map(field => `
                 <div class="form-field">
                     <label for="field_${field.key}">
                         ${field.label}
@@ -3546,6 +3583,8 @@ Examples:
                     ${field.help ? `<div class="form-field-help">${field.help}</div>` : ''}
                 </div>
             `).join('');
+
+            return html;
         }
 
         function closeChannelModal() {
@@ -3604,11 +3643,15 @@ Examples:
                         return;
                     }
 
-                    // Step 2: Activate webhook with owner_telegram_id
+                    // Step 2: Activate webhook with owner_telegram_id and agent
+                    const activateBody = { owner_telegram_id: config.owner_telegram_id };
+                    if (config.agent_id) {
+                        activateBody.agent_id = parseInt(config.agent_id);
+                    }
                     const activateResponse = await fetch('/api/channels/telegram/activate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ owner_telegram_id: config.owner_telegram_id }),
+                        body: JSON.stringify(activateBody),
                         credentials: 'include'
                     });
 
@@ -3624,8 +3667,7 @@ Examples:
                 }
 
                 // Generic channel connect via agent
-                // TODO: Let user select which agent
-                const agentId = 1;
+                const agentId = config.agent_id ? parseInt(config.agent_id) : 1;
                 response = await fetch(`/api/channels/agent/${agentId}/connect`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

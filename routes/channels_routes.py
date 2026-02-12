@@ -351,6 +351,37 @@ def _get_or_create_channel_conversation(user_id, platform, chat_id, metadata=Non
     return conv
 
 
+def _build_agent_system_prompt(agent):
+    """Construct a system prompt from an Agent's personality and identity_config."""
+    if not agent:
+        return None
+
+    parts = []
+
+    # Core personality text
+    if agent.personality:
+        parts.append(agent.personality)
+
+    # Structured identity config (role, behavior, etc.)
+    identity = agent.identity_config or {}
+    if isinstance(identity, str):
+        try:
+            identity = json.loads(identity)
+        except (json.JSONDecodeError, TypeError):
+            identity = {}
+
+    if identity.get('role'):
+        parts.append(f"Your role: {identity['role']}")
+    if identity.get('behavior'):
+        parts.append(f"Behavior guidelines: {identity['behavior']}")
+    if identity.get('tone'):
+        parts.append(f"Tone: {identity['tone']}")
+    if identity.get('instructions'):
+        parts.append(identity['instructions'])
+
+    return '\n\n'.join(parts) if parts else None
+
+
 def register_channels_routes(app):
     """Register chat channels management routes"""
 
@@ -371,10 +402,18 @@ def register_channels_routes(app):
             user_tier_level = tier_hierarchy.get(user.effective_tier, 0)
 
             # Check which channels are already connected via Superpower table
-            connected_services = {
-                sp.service_type: sp.is_enabled
-                for sp in Superpower.query.filter_by(user_id=user_id).all()
-            }
+            connected_services = {}
+            for sp in Superpower.query.filter_by(user_id=user_id).all():
+                agent_name = None
+                if sp.agent_id:
+                    agent = Agent.query.get(sp.agent_id)
+                    if agent:
+                        agent_name = agent.name
+                connected_services[sp.service_type] = {
+                    'is_enabled': sp.is_enabled,
+                    'agent_id': sp.agent_id,
+                    'agent_name': agent_name,
+                }
 
             available_channels = {}
             locked_channels = {}
@@ -382,11 +421,14 @@ def register_channels_routes(app):
             for channel_id, channel_info in CHANNELS.items():
                 channel_tier_level = tier_hierarchy.get(channel_info['tier'], 0)
 
+                svc = connected_services.get(channel_id)
                 channel_data = {
                     **channel_info,
                     'id': channel_id,
                     'locked': channel_tier_level > user_tier_level,
-                    'connected': connected_services.get(channel_id, False)
+                    'connected': svc['is_enabled'] if svc else False,
+                    'connected_agent_id': svc['agent_id'] if svc else None,
+                    'connected_agent_name': svc['agent_name'] if svc else None,
                 }
 
                 if channel_tier_level <= user_tier_level:
@@ -562,6 +604,16 @@ def register_channels_routes(app):
         except requests.RequestException as e:
             return jsonify({'error': f'Failed to reach Telegram API: {str(e)[:200]}'}), 502
 
+        # Optionally assign an agent to this channel
+        agent_id = data.get('agent_id')
+        if agent_id:
+            agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
+            if not agent:
+                return jsonify({'error': 'Agent not found or does not belong to you'}), 400
+            sp.agent_id = agent.id
+        else:
+            sp.agent_id = None
+
         # Store owner_telegram_id in superpower config
         config = json.loads(sp.config) if sp.config else {}
         config['owner_telegram_id'] = owner_telegram_id
@@ -681,9 +733,16 @@ def register_channels_routes(app):
             }
             conv = _get_or_create_channel_conversation(owner_user_id, 'telegram', chat_id, metadata)
 
+            # Build agent system prompt if an agent is assigned
+            system_prompt = None
+            if sp.agent_id:
+                agent = Agent.query.get(sp.agent_id)
+                if agent and agent.is_active:
+                    system_prompt = _build_agent_system_prompt(agent)
+
             # Run the shared LLM pipeline (with tool-calling loop)
             from routes.chatbot_routes import run_llm_pipeline
-            result = run_llm_pipeline(owner_user_id, conv.conversation_id, message_text)
+            result = run_llm_pipeline(owner_user_id, conv.conversation_id, message_text, system_prompt=system_prompt)
 
             if result['success']:
                 response_text = result.get('last_assistant_content', '')
