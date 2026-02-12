@@ -1,6 +1,9 @@
 """
-Observability API Routes — ingestion, metrics, alerts, API key management.
+Observability API Routes — ingestion, metrics, alerts, API key management, health scores.
 Blueprint mounted at /api/obs
+
+All business logic is delegated to core.observability package.
+Routes are thin HTTP handlers only.
 """
 import os
 from flask import Blueprint, jsonify, request, session
@@ -59,6 +62,7 @@ def ingest_events():
     Auth: Bearer API key
     Body: single event object OR {"events": [...]}
     Returns: {"accepted": N, "rejected": [...]}
+    Tier-enforced: batch size limit, agent monitoring limit.
     """
     user_id, api_key = _get_api_key_user()
     if not user_id:
@@ -79,10 +83,16 @@ def ingest_events():
     if not isinstance(events_list, list):
         return jsonify({'error': 'events must be an array'}), 400
 
-    if len(events_list) > 1000:
-        return jsonify({'error': 'Max 1000 events per request'}), 400
+    # Tier-enforced batch size
+    from core.observability.tier_enforcement import get_max_batch_size, check_agent_allowed
+    max_batch = get_max_batch_size(user_id)
+    if len(events_list) > max_batch:
+        return jsonify({
+            'error': f'Batch size {len(events_list)} exceeds tier limit ({max_batch}). Upgrade for larger batches.',
+            'upgrade_required': True,
+        }), 403
 
-    from observability_service import emit_event_batch, VALID_EVENT_TYPES
+    from core.observability import emit_event_batch, VALID_EVENT_TYPES
 
     # Validate before writing
     validated = []
@@ -95,12 +105,18 @@ def ingest_events():
         if etype not in VALID_EVENT_TYPES:
             rejected.append({'index': i, 'reason': f"invalid event_type '{etype}'. Valid: {sorted(VALID_EVENT_TYPES)}"})
             continue
+        # Tier-enforced agent limit
+        agent_id = ev.get('agent_id')
+        if agent_id is not None:
+            ok, msg = check_agent_allowed(user_id, agent_id)
+            if not ok:
+                rejected.append({'index': i, 'reason': msg})
+                continue
         validated.append(ev)
 
     accepted = 0
     if validated:
         accepted, batch_rejected = emit_event_batch(validated, user_id)
-        # Re-index batch_rejected to match original positions
         for r in batch_rejected:
             rejected.append(r)
 
@@ -117,6 +133,7 @@ def ingest_heartbeat():
     POST /api/obs/ingest/heartbeat
     Auth: Bearer API key
     Body: {"agent_id": int, "status": str, "metadata": {...}}
+    Tier-enforced: agent monitoring limit.
     """
     user_id, api_key = _get_api_key_user()
     if not user_id:
@@ -130,12 +147,18 @@ def ingest_heartbeat():
     if not agent_id:
         return jsonify({'error': 'agent_id required'}), 400
 
-    # Verify agent belongs to user
-    agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
+    from core.observability import verify_agent_ownership
+    agent = verify_agent_ownership(agent_id, user_id)
     if not agent:
         return jsonify({'error': 'Agent not found'}), 404
 
-    from observability_service import emit_event
+    # Tier-enforced agent limit
+    from core.observability.tier_enforcement import check_agent_allowed
+    ok, msg = check_agent_allowed(user_id, agent_id)
+    if not ok:
+        return jsonify({'error': msg, 'upgrade_required': True}), 403
+
+    from core.observability import emit_event
 
     emit_event(
         user_id=user_id,
@@ -157,6 +180,7 @@ def metrics_agents():
     """
     GET /api/obs/metrics/agents?from=YYYY-MM-DD&to=YYYY-MM-DD
     Returns aggregated daily metrics for all agents of the current user.
+    Date range is clamped to the workspace's retention window.
     """
     user_id = _require_session_auth()
     if not user_id:
@@ -170,6 +194,9 @@ def metrics_agents():
         d_to = date.fromisoformat(date_to) if date_to else date.today()
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+    from core.observability.tier_enforcement import clamp_date_range
+    d_from, d_to = clamp_date_range(user_id, d_from, d_to)
 
     metrics = ObsAgentDailyMetrics.query.filter(
         ObsAgentDailyMetrics.user_id == user_id,
@@ -185,6 +212,7 @@ def metrics_agent_detail(agent_id):
     """
     GET /api/obs/metrics/agent/<id>?from=...&to=...
     Returns daily metrics for a specific agent.
+    Date range and recent events are clamped to the workspace's retention window.
     """
     user_id = _require_session_auth()
     if not user_id:
@@ -203,6 +231,9 @@ def metrics_agent_detail(agent_id):
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
 
+    from core.observability.tier_enforcement import clamp_date_range, get_retention_cutoff
+    d_from, d_to = clamp_date_range(user_id, d_from, d_to)
+
     metrics = ObsAgentDailyMetrics.query.filter(
         ObsAgentDailyMetrics.user_id == user_id,
         ObsAgentDailyMetrics.agent_id == agent_id,
@@ -210,10 +241,11 @@ def metrics_agent_detail(agent_id):
         ObsAgentDailyMetrics.date <= d_to,
     ).order_by(ObsAgentDailyMetrics.date.asc()).all()
 
-    # Also get recent events for the detail view
+    retention_cutoff = get_retention_cutoff(user_id)
     recent_events = ObsEvent.query.filter(
         ObsEvent.user_id == user_id,
         ObsEvent.agent_id == agent_id,
+        ObsEvent.created_at >= retention_cutoff,
     ).order_by(ObsEvent.created_at.desc()).limit(50).all()
 
     return jsonify({
@@ -236,7 +268,6 @@ def metrics_overview():
     today = date.today()
     today_start = datetime.combine(today, datetime.min.time())
 
-    # Today's totals from raw events (real-time)
     today_q = ObsEvent.query.filter(
         ObsEvent.user_id == user_id,
         ObsEvent.created_at >= today_start,
@@ -251,7 +282,6 @@ def metrics_overview():
     today_errors = today_q.filter(ObsEvent.status == 'error').count()
     today_total = today_q.count()
 
-    # 7-day totals from aggregated metrics
     week_ago = today - timedelta(days=7)
     week_metrics = ObsAgentDailyMetrics.query.filter(
         ObsAgentDailyMetrics.user_id == user_id,
@@ -262,7 +292,6 @@ def metrics_overview():
     week_runs = sum(m.total_runs or 0 for m in week_metrics)
     week_errors = sum(m.failed_runs or 0 for m in week_metrics)
 
-    # Active agents (have events in last 24h)
     day_ago = datetime.utcnow() - timedelta(days=1)
     active_agents = db.session.query(ObsEvent.agent_id).filter(
         ObsEvent.user_id == user_id,
@@ -270,11 +299,13 @@ def metrics_overview():
         ObsEvent.agent_id.isnot(None),
     ).distinct().count()
 
-    # Unacknowledged alerts
     unack_alerts = ObsAlertEvent.query.filter(
         ObsAlertEvent.user_id == user_id,
         ObsAlertEvent.acknowledged_at.is_(None),
     ).count()
+
+    from core.observability.tier_enforcement import get_workspace_tier
+    tier = get_workspace_tier(user_id)
 
     return jsonify({
         'today': {
@@ -290,6 +321,10 @@ def metrics_overview():
         },
         'active_agents_24h': active_agents,
         'unacknowledged_alerts': unack_alerts,
+        'tier': {
+            'name': tier['tier_name'],
+            'retention_days': tier['retention_days'],
+        },
     })
 
 
@@ -301,12 +336,19 @@ def metrics_overview():
 def list_events():
     """
     GET /api/obs/events?agent_id=&event_type=&status=&limit=50&offset=0
+    Events are filtered to the workspace's retention window.
     """
     user_id = _require_session_auth()
     if not user_id:
         return jsonify({'error': 'Authentication required'}), 401
 
-    q = ObsEvent.query.filter(ObsEvent.user_id == user_id)
+    from core.observability.tier_enforcement import get_retention_cutoff
+    retention_cutoff = get_retention_cutoff(user_id)
+
+    q = ObsEvent.query.filter(
+        ObsEvent.user_id == user_id,
+        ObsEvent.created_at >= retention_cutoff,
+    )
 
     agent_id = request.args.get('agent_id', type=int)
     event_type = request.args.get('event_type')
@@ -357,10 +399,17 @@ def create_alert_rule():
     POST /api/obs/alerts/rules
     Body: {"name", "rule_type", "threshold", "agent_id"?, "window_minutes"?, "cooldown_minutes"?}
     rule_type: cost_per_day | error_rate | no_heartbeat
+    Tier-enforced: alert rule count limit.
     """
     user_id = _require_session_auth()
     if not user_id:
         return jsonify({'error': 'Authentication required'}), 401
+
+    # Tier-enforced alert rule limit
+    from core.observability.tier_enforcement import check_alert_rule_limit
+    ok, msg = check_alert_rule_limit(user_id)
+    if not ok:
+        return jsonify({'error': msg, 'upgrade_required': True}), 403
 
     data = request.get_json(silent=True) or {}
 
@@ -480,10 +529,18 @@ def list_api_keys():
 
 @obs_bp.route('/api-keys', methods=['POST'])
 def create_api_key():
-    """POST /api/obs/api-keys — create a new ingestion API key."""
+    """POST /api/obs/api-keys — create a new ingestion API key.
+    Tier-enforced: API key count limit.
+    """
     user_id = _require_session_auth()
     if not user_id:
         return jsonify({'error': 'Authentication required'}), 401
+
+    # Tier-enforced API key limit
+    from core.observability.tier_enforcement import check_api_key_limit
+    ok, msg = check_api_key_limit(user_id)
+    if not ok:
+        return jsonify({'error': msg, 'upgrade_required': True}), 403
 
     data = request.get_json(silent=True) or {}
     name = data.get('name', 'default')
@@ -493,7 +550,7 @@ def create_api_key():
 
     return jsonify({
         'success': True,
-        'key': raw_key,  # Only shown once
+        'key': raw_key,
         'key_info': api_key.to_dict(),
     }), 201
 
@@ -520,20 +577,56 @@ def revoke_api_key(key_id):
 
 @obs_bp.route('/internal/aggregate', methods=['POST'])
 def cron_aggregate():
-    """Cron: aggregate daily metrics. Protected by CRON_SECRET."""
+    """Cron: aggregate daily metrics + health scores. Protected by CRON_SECRET."""
     if not _require_cron_auth():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    from observability_service import aggregate_daily
-    from datetime import date
+    from core.observability import aggregate_daily
 
-    # Aggregate today and yesterday (in case yesterday was missed)
-    today_count = aggregate_daily(date.today())
-    yesterday_count = aggregate_daily(date.today() - timedelta(days=1))
+    utc_today = datetime.utcnow().date()
+    today_count = aggregate_daily(utc_today)
+    yesterday_count = aggregate_daily(utc_today - timedelta(days=1))
+
+    # Also compute health scores after aggregation
+    health_count = 0
+    try:
+        from core.observability import compute_all_health_scores
+        from models import User
+        # Process all users with recent events
+        user_ids = db.session.query(ObsEvent.user_id).filter(
+            ObsEvent.created_at >= datetime.utcnow() - timedelta(days=1),
+        ).distinct().all()
+        for (uid,) in user_ids:
+            results = compute_all_health_scores(uid, utc_today)
+            health_count += len(results)
+    except Exception as e:
+        print(f"[obs] Health score computation failed: {e}")
 
     return jsonify({
         'success': True,
         'aggregated': {'today': today_count, 'yesterday': yesterday_count},
+        'health_scores_computed': health_count,
+    })
+
+
+@obs_bp.route('/internal/retention-cleanup', methods=['POST'])
+def cron_retention_cleanup():
+    """Cron: delete events past each workspace's retention window. Protected by CRON_SECRET."""
+    if not _require_cron_auth():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    from core.observability.retention import cleanup_expired_events
+    results = cleanup_expired_events()
+
+    total_events = sum(r['events_deleted'] for r in results.values())
+    total_runs = sum(r['runs_deleted'] for r in results.values())
+
+    return jsonify({
+        'success': True,
+        'workspaces_processed': len(results),
+        'total_events_deleted': total_events,
+        'total_runs_deleted': total_runs,
+        'details': {str(k): v for k, v in results.items()},
     })
 
 
@@ -543,14 +636,14 @@ def cron_evaluate_alerts():
     if not _require_cron_auth():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    from observability_service import evaluate_alerts
+    from core.observability import evaluate_alerts
     fired = evaluate_alerts()
 
     return jsonify({'success': True, 'alerts_fired': fired})
 
 
 # ===================================================================
-# G) LLM PRICING (session auth, admin-only for writes)
+# G) LLM PRICING (session auth)
 # ===================================================================
 
 @obs_bp.route('/pricing', methods=['GET'])
@@ -563,3 +656,334 @@ def list_pricing():
         db.or_(ObsLlmPricing.effective_to.is_(None), ObsLlmPricing.effective_to >= today),
     ).order_by(ObsLlmPricing.provider, ObsLlmPricing.model).all()
     return jsonify({'pricing': [r.to_dict() for r in rows]})
+
+
+# ===================================================================
+# H) HEALTH SCORE ENDPOINTS (session auth)
+# ===================================================================
+
+@obs_bp.route('/health/agent/<int:agent_id>', methods=['GET'])
+def agent_health(agent_id):
+    """
+    GET /api/obs/health/agent/<id>?from=YYYY-MM-DD&to=YYYY-MM-DD
+    Returns health score history for a specific agent.
+    History depth is limited by the workspace's tier.
+    Anomaly detection breakdown is hidden for non-Pro tiers.
+    """
+    user_id = _require_session_auth()
+    if not user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
+    if not agent:
+        return jsonify({'error': 'Agent not found'}), 404
+
+    from models import ObsAgentHealthDaily
+    from core.observability.tier_enforcement import get_health_history_cutoff, check_anomaly_detection
+
+    date_from = request.args.get('from')
+    date_to = request.args.get('to')
+
+    try:
+        d_from = date.fromisoformat(date_from) if date_from else datetime.utcnow().date() - timedelta(days=30)
+        d_to = date.fromisoformat(date_to) if date_to else datetime.utcnow().date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    # Clamp from-date to tier's health history limit
+    history_cutoff = get_health_history_cutoff(user_id)
+    if d_from < history_cutoff:
+        d_from = history_cutoff
+
+    scores = ObsAgentHealthDaily.query.filter(
+        ObsAgentHealthDaily.user_id == user_id,
+        ObsAgentHealthDaily.agent_id == agent_id,
+        ObsAgentHealthDaily.date >= d_from,
+        ObsAgentHealthDaily.date <= d_to,
+    ).order_by(ObsAgentHealthDaily.date.asc()).all()
+
+    anomaly_enabled = check_anomaly_detection(user_id)
+    result = []
+    for s in scores:
+        entry = s.to_dict()
+        if not anomaly_enabled:
+            entry['breakdown'].pop('cost_anomaly', None)
+            entry.get('details', {}).pop('cost_anomaly', None)
+        result.append(entry)
+
+    return jsonify({
+        'agent_id': agent_id,
+        'scores': result,
+        'anomaly_detection_enabled': anomaly_enabled,
+    })
+
+
+@obs_bp.route('/health/overview', methods=['GET'])
+def health_overview():
+    """
+    GET /api/obs/health/overview
+    Returns latest health score for all agents.
+    Anomaly detection breakdown is hidden for non-Pro tiers.
+    """
+    user_id = _require_session_auth()
+    if not user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    from models import ObsAgentHealthDaily
+    from core.observability.tier_enforcement import check_anomaly_detection
+
+    today = datetime.utcnow().date()
+    scores = ObsAgentHealthDaily.query.filter(
+        ObsAgentHealthDaily.user_id == user_id,
+        ObsAgentHealthDaily.date == today,
+    ).all()
+
+    agents = Agent.query.filter_by(user_id=user_id, is_active=True).all()
+    agent_map = {a.id: a.to_dict() for a in agents}
+
+    anomaly_enabled = check_anomaly_detection(user_id)
+    result = []
+    for s in scores:
+        entry = s.to_dict()
+        entry['agent'] = agent_map.get(s.agent_id)
+        if not anomaly_enabled:
+            entry['breakdown'].pop('cost_anomaly', None)
+            entry.get('details', {}).pop('cost_anomaly', None)
+        result.append(entry)
+
+    return jsonify({'health': result, 'anomaly_detection_enabled': anomaly_enabled})
+
+
+# ===================================================================
+# I) TIER MANAGEMENT (admin + session auth)
+# ===================================================================
+
+@obs_bp.route('/tier', methods=['GET'])
+def get_tier():
+    """
+    GET /api/obs/tier
+    Returns the current workspace tier configuration for the authenticated user.
+    """
+    user_id = _require_session_auth()
+    if not user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    from core.observability.tier_enforcement import get_workspace_tier
+    tier = get_workspace_tier(user_id)
+    return jsonify({'tier': tier})
+
+
+@obs_bp.route('/admin/tier', methods=['POST'])
+def admin_update_tier():
+    """
+    POST /api/obs/admin/tier
+    Admin-only endpoint to update a workspace's observability tier.
+
+    Body: {
+        "workspace_id": int (required),
+        "tier_name": str (required — free|production|pro|agency),
+        "overrides": {...} (optional — custom limit overrides)
+    }
+
+    If tier_name is valid, all limits are set from WorkspaceTier.TIER_DEFAULTS.
+    If overrides are provided, they are applied on top of the defaults.
+    """
+    user_id = _require_session_auth()
+    if not user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    from models import User, WorkspaceTier
+    from core.observability.tier_enforcement import invalidate_tier_cache
+
+    # Admin check
+    admin = User.query.get(user_id)
+    if not admin or not admin.is_admin:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.get_json(silent=True) or {}
+    workspace_id = data.get('workspace_id')
+    tier_name = data.get('tier_name', '').strip()
+    overrides = data.get('overrides', {})
+
+    if not workspace_id:
+        return jsonify({'error': 'workspace_id is required'}), 400
+
+    valid_tiers = set(WorkspaceTier.TIER_DEFAULTS.keys())
+    if tier_name not in valid_tiers:
+        return jsonify({'error': f'tier_name must be one of: {sorted(valid_tiers)}'}), 400
+
+    # Verify target workspace exists
+    target_user = User.query.get(workspace_id)
+    if not target_user:
+        return jsonify({'error': 'Workspace (user) not found'}), 404
+
+    # Build tier config from defaults + overrides
+    defaults = WorkspaceTier.TIER_DEFAULTS[tier_name].copy()
+
+    # Apply allowed overrides
+    allowed_override_keys = {
+        'agent_limit', 'retention_days', 'alert_rule_limit',
+        'health_history_days', 'anomaly_detection_enabled',
+        'slack_notifications_enabled', 'multi_workspace_enabled',
+        'priority_processing', 'max_api_keys', 'max_batch_size',
+    }
+    for key, value in overrides.items():
+        if key in allowed_override_keys:
+            defaults[key] = value
+
+    # Upsert
+    existing = WorkspaceTier.query.filter_by(workspace_id=workspace_id).first()
+    if existing:
+        existing.tier_name = tier_name
+        for key, value in defaults.items():
+            setattr(existing, key, value)
+    else:
+        tier = WorkspaceTier(workspace_id=workspace_id, tier_name=tier_name, **defaults)
+        db.session.add(tier)
+
+    db.session.commit()
+    invalidate_tier_cache(workspace_id)
+
+    from core.observability.tier_enforcement import get_workspace_tier
+    updated = get_workspace_tier(workspace_id)
+
+    return jsonify({'success': True, 'tier': updated})
+
+
+@obs_bp.route('/admin/tier/<int:workspace_id>', methods=['GET'])
+def admin_get_tier(workspace_id):
+    """
+    GET /api/obs/admin/tier/<workspace_id>
+    Admin-only: view any workspace's tier configuration.
+    """
+    user_id = _require_session_auth()
+    if not user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    from models import User
+    admin = User.query.get(user_id)
+    if not admin or not admin.is_admin:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    from core.observability.tier_enforcement import get_workspace_tier
+    tier = get_workspace_tier(workspace_id)
+    return jsonify({'tier': tier})
+
+
+# ===================================================================
+# J) BILLING WEBHOOK STUB (future Stripe integration)
+# ===================================================================
+
+@obs_bp.route('/webhooks/billing', methods=['POST'])
+def billing_webhook():
+    """
+    POST /api/obs/webhooks/billing
+    Webhook-ready structure for future billing integration (e.g., Stripe).
+
+    Expected event types:
+    - obs_subscription.created  → assign tier
+    - obs_subscription.updated  → update tier
+    - obs_subscription.deleted  → downgrade to free
+
+    Body: {
+        "event_type": str,
+        "workspace_id": int,
+        "tier_name": str (for created/updated),
+        "subscription_id": str (optional, for tracking),
+    }
+
+    NOTE: This is a STUB. In production, this endpoint should:
+    1. Verify Stripe webhook signature
+    2. Parse the Stripe event object
+    3. Map Stripe price IDs to tier names
+    For now, it accepts direct JSON for testing and manual tier management.
+    """
+    # In production: verify Stripe signature here
+    # stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+
+    # For now: accept cron auth or a shared secret
+    auth = request.headers.get('Authorization', '')
+    webhook_secret = os.environ.get('OBS_BILLING_WEBHOOK_SECRET', '')
+    admin_pw = os.environ.get('ADMIN_PASSWORD', '')
+
+    authorized = False
+    if webhook_secret and auth == f'Bearer {webhook_secret}':
+        authorized = True
+    elif admin_pw:
+        data_check = request.get_json(silent=True) or {}
+        if data_check.get('password') == admin_pw:
+            authorized = True
+
+    if not authorized:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json(silent=True) or {}
+    event_type = data.get('event_type', '')
+    workspace_id = data.get('workspace_id')
+
+    if not workspace_id:
+        return jsonify({'error': 'workspace_id is required'}), 400
+
+    from models import User, WorkspaceTier
+    from core.observability.tier_enforcement import invalidate_tier_cache
+
+    target_user = User.query.get(workspace_id)
+    if not target_user:
+        return jsonify({'error': 'Workspace not found'}), 404
+
+    # --- Event handlers ---
+
+    if event_type in ('obs_subscription.created', 'obs_subscription.updated'):
+        tier_name = data.get('tier_name', '').strip()
+        valid_tiers = set(WorkspaceTier.TIER_DEFAULTS.keys())
+        if tier_name not in valid_tiers:
+            return jsonify({'error': f'tier_name must be one of: {sorted(valid_tiers)}'}), 400
+
+        defaults = WorkspaceTier.TIER_DEFAULTS[tier_name]
+        existing = WorkspaceTier.query.filter_by(workspace_id=workspace_id).first()
+        if existing:
+            existing.tier_name = tier_name
+            for key, value in defaults.items():
+                setattr(existing, key, value)
+        else:
+            tier = WorkspaceTier(workspace_id=workspace_id, tier_name=tier_name, **defaults)
+            db.session.add(tier)
+
+        db.session.commit()
+        invalidate_tier_cache(workspace_id)
+
+        return jsonify({
+            'success': True,
+            'event_type': event_type,
+            'workspace_id': workspace_id,
+            'tier_name': tier_name,
+        })
+
+    elif event_type == 'obs_subscription.deleted':
+        # Downgrade to free
+        free_defaults = WorkspaceTier.TIER_DEFAULTS['free']
+        existing = WorkspaceTier.query.filter_by(workspace_id=workspace_id).first()
+        if existing:
+            existing.tier_name = 'free'
+            for key, value in free_defaults.items():
+                setattr(existing, key, value)
+        else:
+            tier = WorkspaceTier(workspace_id=workspace_id, tier_name='free', **free_defaults)
+            db.session.add(tier)
+
+        db.session.commit()
+        invalidate_tier_cache(workspace_id)
+
+        return jsonify({
+            'success': True,
+            'event_type': event_type,
+            'workspace_id': workspace_id,
+            'tier_name': 'free',
+        })
+
+    else:
+        return jsonify({
+            'ignored': True,
+            'event_type': event_type,
+            'message': f"Unhandled event type: '{event_type}'",
+        })

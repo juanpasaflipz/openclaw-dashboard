@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily
 db.init_app(app)
 
 # Initialize rate limiter

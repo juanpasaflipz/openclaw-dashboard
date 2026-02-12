@@ -971,3 +971,111 @@ class ObsLlmPricing(db.Model):
             'effective_from': self.effective_from.isoformat(),
             'effective_to': self.effective_to.isoformat() if self.effective_to else None,
         }
+
+
+class WorkspaceTier(db.Model):
+    """Observability tier configuration per workspace.
+
+    Each workspace (currently == user) gets a row that controls feature limits.
+    All enforcement reads from this table — no hard-coded limits elsewhere.
+    Missing row → treated as 'free' tier via get_workspace_tier().
+    """
+    __tablename__ = 'workspace_tiers'
+
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    tier_name = db.Column(db.String(50), nullable=False, default='free')  # free | production | pro | agency
+    agent_limit = db.Column(db.Integer, nullable=False, default=2)
+    retention_days = db.Column(db.Integer, nullable=False, default=7)
+    alert_rule_limit = db.Column(db.Integer, nullable=False, default=0)
+    health_history_days = db.Column(db.Integer, nullable=False, default=0)
+    anomaly_detection_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    slack_notifications_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    multi_workspace_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    priority_processing = db.Column(db.Boolean, nullable=False, default=False)
+    max_api_keys = db.Column(db.Integer, nullable=False, default=1)
+    max_batch_size = db.Column(db.Integer, nullable=False, default=100)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('workspace_tier', uselist=False))
+
+    # Canonical tier defaults — used by seed migration and get_workspace_tier() fallback.
+    TIER_DEFAULTS = {
+        'free': dict(
+            agent_limit=2, retention_days=7, alert_rule_limit=0,
+            health_history_days=0, anomaly_detection_enabled=False,
+            slack_notifications_enabled=False, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=1, max_batch_size=100,
+        ),
+        'production': dict(
+            agent_limit=10, retention_days=30, alert_rule_limit=3,
+            health_history_days=7, anomaly_detection_enabled=False,
+            slack_notifications_enabled=True, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=3, max_batch_size=500,
+        ),
+        'pro': dict(
+            agent_limit=50, retention_days=90, alert_rule_limit=9999,
+            health_history_days=30, anomaly_detection_enabled=True,
+            slack_notifications_enabled=True, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=10, max_batch_size=1000,
+        ),
+        'agency': dict(
+            agent_limit=9999, retention_days=180, alert_rule_limit=9999,
+            health_history_days=90, anomaly_detection_enabled=True,
+            slack_notifications_enabled=True, multi_workspace_enabled=True,
+            priority_processing=True, max_api_keys=9999, max_batch_size=1000,
+        ),
+    }
+
+    def to_dict(self):
+        return {
+            'workspace_id': self.workspace_id,
+            'tier_name': self.tier_name,
+            'agent_limit': self.agent_limit,
+            'retention_days': self.retention_days,
+            'alert_rule_limit': self.alert_rule_limit,
+            'health_history_days': self.health_history_days,
+            'anomaly_detection_enabled': self.anomaly_detection_enabled,
+            'slack_notifications_enabled': self.slack_notifications_enabled,
+            'multi_workspace_enabled': self.multi_workspace_enabled,
+            'priority_processing': self.priority_processing,
+            'max_api_keys': self.max_api_keys,
+            'max_batch_size': self.max_batch_size,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ObsAgentHealthDaily(db.Model):
+    """Daily composite health score per agent (premium feature)."""
+    __tablename__ = 'obs_agent_health_daily'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    score = db.Column(db.Numeric(5, 2), nullable=False)  # 0.00 - 100.00
+    success_rate_score = db.Column(db.Numeric(5, 2), nullable=False)
+    latency_score = db.Column(db.Numeric(5, 2), nullable=False)
+    error_burst_score = db.Column(db.Numeric(5, 2), nullable=False)
+    cost_anomaly_score = db.Column(db.Numeric(5, 2), nullable=False)
+    details = db.Column(db.JSON, default=dict)  # Full breakdown
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_health_scores')
+    agent = db.relationship('Agent', backref='obs_health_scores')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'agent_id', 'date', name='_obs_health_daily_uc'),)
+
+    def to_dict(self):
+        return {
+            'date': self.date.isoformat() if self.date else None,
+            'agent_id': self.agent_id,
+            'score': float(self.score),
+            'breakdown': {
+                'success_rate': float(self.success_rate_score),
+                'latency': float(self.latency_score),
+                'error_burst': float(self.error_burst_score),
+                'cost_anomaly': float(self.cost_anomaly_score),
+            },
+            'details': self.details or {},
+            'computed_at': self.computed_at.isoformat() if self.computed_at else None,
+        }
