@@ -51,6 +51,8 @@
             'llm': 'workbench',
             'observability': 'workbench',
             'governance': 'workbench',
+            'collab-tasks': 'workbench',
+            'collab-team': 'workbench',
             'connect': 'integrations',
             'channels': 'integrations',
             'actions': 'integrations',
@@ -119,6 +121,8 @@
             if (tabName === 'ext-agents') initExtAgentsTab();
             if (tabName === 'observability') initObservabilityTab();
             if (tabName === 'governance') initGovernanceTab();
+            if (tabName === 'collab-tasks') initCollabTasksTab();
+            if (tabName === 'collab-team') initCollabTeamTab();
         }
 
         // ===== Dropdown hover behavior (desktop) =====
@@ -6672,3 +6676,461 @@ Examples:
                 })
                 .catch(() => {});
         });
+
+        // =================================================================
+        // COLLABORATION: TASKS TAB
+        // =================================================================
+
+        let collabTasksData = [];
+
+        async function initCollabTasksTab() {
+            await populateAgentFilters();
+            await loadCollabTasks();
+        }
+
+        async function populateAgentFilters() {
+            try {
+                const resp = await fetch(`${API_BASE}/agents`, { credentials: 'include' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const agents = data.agents || [];
+
+                // Task tab agent filter
+                const taskFilter = document.getElementById('collab-task-agent-filter');
+                if (taskFilter) {
+                    const val = taskFilter.value;
+                    taskFilter.innerHTML = '<option value="">All Agents</option>' +
+                        agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+                    taskFilter.value = val;
+                }
+            } catch (e) {
+                console.error('Failed to populate agent filters:', e);
+            }
+        }
+
+        async function loadCollabTasks() {
+            try {
+                const status = document.getElementById('collab-task-status-filter')?.value || '';
+                const agentId = document.getElementById('collab-task-agent-filter')?.value || '';
+
+                let url = `${API_BASE}/tasks?`;
+                if (status) url += `status=${status}&`;
+                if (agentId) url += `assigned_to=${agentId}&`;
+
+                const resp = await fetch(url, { credentials: 'include' });
+                if (!resp.ok) throw new Error('Failed to load tasks');
+                const data = await resp.json();
+                collabTasksData = data.tasks || [];
+
+                renderCollabTaskStats(collabTasksData);
+                renderCollabTasksList(collabTasksData);
+            } catch (e) {
+                console.error('Error loading tasks:', e);
+                document.getElementById('collab-tasks-list').innerHTML =
+                    '<p style="text-align:center;color:#ef4444;padding:40px;">Failed to load tasks.</p>';
+            }
+        }
+
+        function renderCollabTaskStats(tasks) {
+            const container = document.getElementById('collab-task-stats');
+            if (!container) return;
+
+            const counts = { queued: 0, running: 0, blocked: 0, completed: 0, failed: 0, canceled: 0 };
+            tasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+
+            const colors = {
+                queued: '#3b82f6', running: '#f59e0b', blocked: '#ef4444',
+                completed: '#22c55e', failed: '#ef4444', canceled: '#6b7280',
+            };
+
+            container.innerHTML = Object.entries(counts).map(([s, c]) => `
+                <div style="background:${colors[s]}22; border:1px solid ${colors[s]}55; border-radius:8px; padding:12px; text-align:center;">
+                    <div style="font-size:22px; font-weight:700; color:${colors[s]};">${c}</div>
+                    <div style="font-size:12px; color:var(--text-secondary); text-transform:capitalize;">${s}</div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                queued: '#3b82f6', running: '#f59e0b', blocked: '#ef4444',
+                completed: '#22c55e', failed: '#ef4444', canceled: '#6b7280',
+            };
+            const c = colors[status] || '#6b7280';
+            return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${c}22;color:${c};border:1px solid ${c}55;">${status}</span>`;
+        }
+
+        function renderCollabTasksList(tasks) {
+            const container = document.getElementById('collab-tasks-list');
+            if (!container) return;
+
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:60px 20px;">
+                        <p style="font-size:48px; margin-bottom:16px;">📋</p>
+                        <h3 style="color:var(--text-primary); margin-bottom:12px;">No tasks yet</h3>
+                        <p style="color:var(--text-secondary); margin-bottom:24px;">Create your first collaboration task to get agents working together.</p>
+                        <button class="btn btn-primary" onclick="showCreateTaskModal()">+ Create Task</button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = tasks.map(t => `
+                <div class="card" style="margin-bottom:12px; padding:16px; cursor:pointer;" onclick="showTaskDetail('${t.id}')">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; color:var(--text-primary); margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.title)}</div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:13px; color:var(--text-secondary);">
+                                ${getStatusBadge(t.status)}
+                                <span>Agent #${t.assigned_to_agent_id}</span>
+                                ${t.priority > 0 ? `<span style="color:#f59e0b;">P${t.priority}</span>` : ''}
+                                ${t.parent_task_id ? '<span style="color:var(--text-secondary);">subtask</span>' : ''}
+                            </div>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">
+                            ${formatTimeAgo(t.created_at)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        async function showTaskDetail(taskId) {
+            try {
+                const resp = await fetch(`${API_BASE}/tasks/${taskId}`, { credentials: 'include' });
+                if (!resp.ok) throw new Error('Failed to load task');
+                const data = await resp.json();
+                const t = data.task;
+
+                const titleEl = document.getElementById('collab-task-detail-title');
+                const contentEl = document.getElementById('collab-task-detail-content');
+                titleEl.textContent = t.title;
+
+                const events = (t.events || []).map(e => `
+                    <div style="display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);">
+                        <span style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">${new Date(e.created_at).toLocaleString()}</span>
+                        <span style="font-size:13px; color:var(--text-primary);">${e.event_type}</span>
+                    </div>
+                `).join('');
+
+                // Action buttons based on status
+                let actions = '';
+                if (t.status === 'queued' || t.status === 'blocked') {
+                    actions += `<button class="btn btn-primary" onclick="collabTaskAction('${t.id}','start')" style="padding:8px 16px;">Start</button> `;
+                    actions += `<button class="btn btn-secondary" onclick="collabTaskAction('${t.id}','cancel')" style="padding:8px 16px;">Cancel</button> `;
+                }
+                if (t.status === 'running') {
+                    actions += `<button class="btn btn-primary" onclick="collabTaskAction('${t.id}','complete')" style="padding:8px 16px;">Complete</button> `;
+                    actions += `<button class="btn btn-secondary" onclick="collabTaskAction('${t.id}','fail')" style="padding:8px 16px;">Fail</button> `;
+                }
+
+                contentEl.innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                        <div><span style="color:var(--text-secondary);font-size:13px;">Status</span><br>${getStatusBadge(t.status)}</div>
+                        <div><span style="color:var(--text-secondary);font-size:13px;">Priority</span><br><span style="color:var(--text-primary);">${t.priority}</span></div>
+                        <div><span style="color:var(--text-secondary);font-size:13px;">Assigned To</span><br><span style="color:var(--text-primary);">Agent #${t.assigned_to_agent_id}</span></div>
+                        <div><span style="color:var(--text-secondary);font-size:13px;">Created</span><br><span style="color:var(--text-primary);">${new Date(t.created_at).toLocaleString()}</span></div>
+                    </div>
+                    ${t.input ? `<div style="margin-bottom:16px;"><span style="color:var(--text-secondary);font-size:13px;">Input</span><pre style="background:var(--bg-primary);padding:12px;border-radius:8px;overflow-x:auto;font-size:12px;margin-top:4px;">${escapeHtml(JSON.stringify(t.input, null, 2))}</pre></div>` : ''}
+                    ${t.output ? `<div style="margin-bottom:16px;"><span style="color:var(--text-secondary);font-size:13px;">Output</span><pre style="background:var(--bg-primary);padding:12px;border-radius:8px;overflow-x:auto;font-size:12px;margin-top:4px;">${escapeHtml(JSON.stringify(t.output, null, 2))}</pre></div>` : ''}
+                    ${actions ? `<div style="margin-bottom:20px;">${actions}</div>` : ''}
+                    <h4 style="margin:20px 0 10px;">Event Trail</h4>
+                    <div style="max-height:300px;overflow-y:auto;">${events || '<p style="color:var(--text-secondary);">No events</p>'}</div>
+                `;
+
+                document.getElementById('collab-task-detail-modal').style.display = 'block';
+            } catch (e) {
+                console.error('Error loading task detail:', e);
+            }
+        }
+
+        function closeTaskDetailModal() {
+            document.getElementById('collab-task-detail-modal').style.display = 'none';
+        }
+
+        async function collabTaskAction(taskId, action) {
+            try {
+                const resp = await fetch(`${API_BASE}/tasks/${taskId}/${action}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert(err.error || err.reason || 'Action failed');
+                    return;
+                }
+                closeTaskDetailModal();
+                await loadCollabTasks();
+            } catch (e) {
+                console.error('Task action failed:', e);
+            }
+        }
+
+        function showCreateTaskModal() {
+            // Build agent options from cached data or fetch
+            const agentSelect = document.getElementById('collab-task-agent-filter');
+            const options = agentSelect ? agentSelect.innerHTML : '<option value="">No agents</option>';
+
+            const modal = document.createElement('div');
+            modal.id = 'collab-create-task-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;overflow-y:auto;';
+            modal.innerHTML = `
+                <div style="max-width:500px;margin:80px auto;background:var(--bg-secondary);border-radius:12px;padding:32px;border:1px solid var(--border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h3 style="margin:0;">New Task</h3>
+                        <button onclick="document.getElementById('collab-create-task-modal').remove()" style="background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <div>
+                            <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-secondary);">Title *</label>
+                            <input type="text" id="new-task-title" style="width:100%;padding:10px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;" placeholder="Task title">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-secondary);">Assign To *</label>
+                            <select id="new-task-agent" style="width:100%;padding:10px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;">
+                                ${options.replace('All Agents', 'Select agent')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-secondary);">Priority</label>
+                            <input type="number" id="new-task-priority" value="0" min="0" max="10" style="width:100%;padding:10px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;">
+                        </div>
+                        <button class="btn btn-primary" onclick="submitCreateTask()" style="margin-top:8px;padding:12px;font-weight:600;">Create Task</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function submitCreateTask() {
+            const title = document.getElementById('new-task-title')?.value?.trim();
+            const agentId = document.getElementById('new-task-agent')?.value;
+            const priority = parseInt(document.getElementById('new-task-priority')?.value || '0');
+
+            if (!title) return alert('Title is required');
+            if (!agentId) return alert('Please select an agent');
+
+            try {
+                const resp = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        assigned_to_agent_id: parseInt(agentId),
+                        priority,
+                    }),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert(err.error || 'Failed to create task');
+                    return;
+                }
+                document.getElementById('collab-create-task-modal')?.remove();
+                await loadCollabTasks();
+            } catch (e) {
+                console.error('Create task failed:', e);
+            }
+        }
+
+        // =================================================================
+        // COLLABORATION: TEAM TAB
+        // =================================================================
+
+        async function initCollabTeamTab() {
+            await loadTeamRules();
+            await loadTeamSummary();
+            await populateTeamAgentSelects();
+        }
+
+        async function loadTeamRules() {
+            try {
+                const resp = await fetch(`${API_BASE}/team/rules`, { credentials: 'include' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const rules = data.rules || {};
+
+                document.getElementById('collab-rule-enforce').checked = !!rules.require_supervisor_for_tasks;
+                document.getElementById('collab-rule-peer').checked = !!rules.allow_peer_assignment;
+
+                // Supervisor select will be populated by populateTeamAgentSelects
+                const supSelect = document.getElementById('collab-rule-supervisor');
+                if (supSelect) supSelect.dataset.pendingValue = rules.default_supervisor_agent_id || '';
+            } catch (e) {
+                console.error('Failed to load team rules:', e);
+            }
+        }
+
+        async function saveTeamRules() {
+            try {
+                const enforce = document.getElementById('collab-rule-enforce').checked;
+                const peer = document.getElementById('collab-rule-peer').checked;
+                const supId = document.getElementById('collab-rule-supervisor').value;
+
+                await fetch(`${API_BASE}/team/rules`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        require_supervisor_for_tasks: enforce,
+                        allow_peer_assignment: peer,
+                        default_supervisor_agent_id: supId ? parseInt(supId) : null,
+                    }),
+                });
+            } catch (e) {
+                console.error('Failed to save team rules:', e);
+            }
+        }
+
+        async function populateTeamAgentSelects() {
+            try {
+                const resp = await fetch(`${API_BASE}/agents`, { credentials: 'include' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const agents = data.agents || [];
+
+                // Role assignment agent select
+                const roleSelect = document.getElementById('collab-role-agent');
+                if (roleSelect) {
+                    roleSelect.innerHTML = '<option value="">Select agent</option>' +
+                        agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+                }
+
+                // Supervisor select (only show agents with supervisor role)
+                const supResp = await fetch(`${API_BASE}/team/roles`, { credentials: 'include' });
+                const supData = supResp.ok ? await supResp.json() : { roles: [] };
+                const supervisors = (supData.roles || []).filter(r => r.role === 'supervisor');
+
+                const supSelect = document.getElementById('collab-rule-supervisor');
+                if (supSelect) {
+                    const pending = supSelect.dataset.pendingValue;
+                    supSelect.innerHTML = '<option value="">None</option>' +
+                        supervisors.map(s => {
+                            const agent = agents.find(a => a.id === s.agent_id);
+                            const name = agent ? agent.name : `Agent #${s.agent_id}`;
+                            return `<option value="${s.agent_id}">${name}</option>`;
+                        }).join('');
+                    if (pending) supSelect.value = pending;
+                }
+            } catch (e) {
+                console.error('Failed to populate team agent selects:', e);
+            }
+        }
+
+        async function assignAgentRole() {
+            const agentId = document.getElementById('collab-role-agent')?.value;
+            const role = document.getElementById('collab-role-type')?.value;
+
+            if (!agentId) return alert('Please select an agent');
+
+            try {
+                const resp = await fetch(`${API_BASE}/team/roles`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: parseInt(agentId), role }),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert(err.error || 'Failed to assign role');
+                    return;
+                }
+                await loadTeamSummary();
+                await populateTeamAgentSelects();
+            } catch (e) {
+                console.error('Assign role failed:', e);
+            }
+        }
+
+        async function removeAgentRole(agentId) {
+            try {
+                await fetch(`${API_BASE}/team/roles/${agentId}/delete`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                await loadTeamSummary();
+                await populateTeamAgentSelects();
+            } catch (e) {
+                console.error('Remove role failed:', e);
+            }
+        }
+
+        async function loadTeamSummary() {
+            try {
+                const resp = await fetch(`${API_BASE}/team/summary`, { credentials: 'include' });
+                if (!resp.ok) throw new Error('Failed');
+                const data = await resp.json();
+
+                const container = document.getElementById('collab-team-summary');
+                if (!container) return;
+
+                // Fetch agent names for display
+                const agentResp = await fetch(`${API_BASE}/agents`, { credentials: 'include' });
+                const agentData = agentResp.ok ? await agentResp.json() : { agents: [] };
+                const agentMap = {};
+                (agentData.agents || []).forEach(a => { agentMap[a.id] = a.name; });
+
+                function renderRoleGroup(title, emoji, roles) {
+                    if (roles.length === 0) return '';
+                    return `
+                        <div class="card" style="margin-bottom:12px; padding:16px;">
+                            <h4 style="margin:0 0 10px;">${emoji} ${title} (${roles.length})</h4>
+                            ${roles.map(r => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+                                    <div>
+                                        <span style="font-weight:600; color:var(--text-primary);">${agentMap[r.agent_id] || 'Agent #' + r.agent_id}</span>
+                                        <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">
+                                            ${r.can_assign_to_peers ? 'peers' : ''}
+                                            ${r.can_escalate_to_supervisor ? 'escalate' : ''}
+                                        </span>
+                                    </div>
+                                    <button onclick="removeAgentRole(${r.agent_id})" style="background:none; border:1px solid var(--border); color:var(--text-secondary); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px;">Remove</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                const unassigned = data.unassigned_agents || [];
+                let html = '';
+                html += renderRoleGroup('Supervisors', '👑', data.supervisors || []);
+                html += renderRoleGroup('Workers', '⚙️', data.workers || []);
+                html += renderRoleGroup('Specialists', '🔬', data.specialists || []);
+
+                if (unassigned.length > 0) {
+                    html += `
+                        <div class="card" style="padding:16px;">
+                            <h4 style="margin:0 0 10px;">Unassigned (${unassigned.length})</h4>
+                            ${unassigned.map(a => `
+                                <div style="padding:6px 0; color:var(--text-secondary); font-size:14px;">
+                                    ${a.name}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                if (!html) {
+                    html = `
+                        <div style="text-align:center; padding:40px;">
+                            <p style="font-size:48px; margin-bottom:16px;">👥</p>
+                            <h3 style="color:var(--text-primary); margin-bottom:12px;">No team roles defined</h3>
+                            <p style="color:var(--text-secondary);">Assign roles above to define your agent hierarchy.</p>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Failed to load team summary:', e);
+                document.getElementById('collab-team-summary').innerHTML =
+                    '<p style="text-align:center;color:#ef4444;padding:40px;">Failed to load team.</p>';
+            }
+        }

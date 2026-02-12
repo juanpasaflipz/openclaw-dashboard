@@ -28,3 +28,6 @@ from routes.todoist_routes import register_todoist_routes
 from routes.dropbox_routes import register_dropbox_routes
 from routes.observability_routes import obs_bp
 from routes.governance_routes import register_governance_routes
+from routes.collaboration_tasks_routes import register_collaboration_tasks_routes
+from routes.collaboration_messages_routes import register_collaboration_messages_routes
+from routes.collaboration_team_routes import register_collaboration_team_routes

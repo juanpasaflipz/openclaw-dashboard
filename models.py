@@ -1341,3 +1341,233 @@ class GovernanceAuditLog(db.Model):
             'details': self.details,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Tasks
+# ---------------------------------------------------------------------------
+
+class CollaborationTask(db.Model):
+    """Inter-agent work items for the collaboration framework."""
+    __tablename__ = 'collaboration_tasks'
+
+    id = db.Column(db.String(36), primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    # Creator (exactly one should be set)
+    created_by_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Assignment
+    assigned_to_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+
+    # Delegation chain
+    parent_task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=True)
+
+    title = db.Column(db.String(500), nullable=False)
+    input = db.Column(db.JSON)
+    output = db.Column(db.JSON, nullable=True)
+
+    VALID_STATUSES = frozenset({
+        'queued', 'running', 'blocked', 'completed', 'failed', 'canceled',
+    })
+    status = db.Column(db.String(20), nullable=False, default='queued')
+    priority = db.Column(db.Integer, nullable=False, default=0)
+    due_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='collaboration_tasks')
+    creator_agent = db.relationship('Agent', foreign_keys=[created_by_agent_id])
+    creator_user = db.relationship('User', foreign_keys=[created_by_user_id])
+    assigned_agent = db.relationship('Agent', foreign_keys=[assigned_to_agent_id])
+    parent_task = db.relationship('CollaborationTask', remote_side=[id], backref='subtasks')
+
+    __table_args__ = (
+        db.Index('ix_collab_task_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_collab_task_assigned', 'assigned_to_agent_id', 'status'),
+        db.Index('ix_collab_task_parent', 'parent_task_id'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'created_by_agent_id': self.created_by_agent_id,
+            'created_by_user_id': self.created_by_user_id,
+            'assigned_to_agent_id': self.assigned_to_agent_id,
+            'parent_task_id': self.parent_task_id,
+            'title': self.title,
+            'input': self.input,
+            'output': self.output,
+            'status': self.status,
+            'priority': self.priority,
+            'due_at': self.due_at.isoformat() if self.due_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TaskEvent(db.Model):
+    """Append-only lifecycle log for collaboration tasks."""
+    __tablename__ = 'task_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    VALID_EVENT_TYPES = frozenset({
+        'created', 'assigned', 'started', 'progress',
+        'tool_call', 'tool_result', 'completed', 'failed', 'escalated',
+        'blocked', 'canceled',
+    })
+    event_type = db.Column(db.String(30), nullable=False)
+    payload = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    task = db.relationship('CollaborationTask', backref='events')
+    agent = db.relationship('Agent', backref='task_events')
+
+    __table_args__ = (
+        db.Index('ix_task_event_task_created', 'task_id', 'created_at'),
+        db.Index('ix_task_event_ws', 'workspace_id', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'event_type': self.event_type,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Messages
+# ---------------------------------------------------------------------------
+
+class AgentMessage(db.Model):
+    """Inter-agent and user-agent messages for collaboration."""
+    __tablename__ = 'agent_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Optional link to a collaboration task
+    task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=True)
+    # Free-form thread grouping (UUID string)
+    thread_id = db.Column(db.String(36), nullable=True)
+
+    from_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    to_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    VALID_ROLES = frozenset({'system', 'agent', 'user'})
+    role = db.Column(db.String(10), nullable=False, default='agent')
+
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='agent_messages')
+    from_agent = db.relationship('Agent', foreign_keys=[from_agent_id])
+    to_agent = db.relationship('Agent', foreign_keys=[to_agent_id])
+    from_user = db.relationship('User', foreign_keys=[from_user_id])
+    task = db.relationship('CollaborationTask', backref='messages')
+
+    __table_args__ = (
+        db.Index('ix_agent_msg_task', 'task_id', 'created_at'),
+        db.Index('ix_agent_msg_thread', 'thread_id', 'created_at'),
+        db.Index('ix_agent_msg_ws', 'workspace_id', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'task_id': self.task_id,
+            'thread_id': self.thread_id,
+            'from_agent_id': self.from_agent_id,
+            'to_agent_id': self.to_agent_id,
+            'from_user_id': self.from_user_id,
+            'role': self.role,
+            'content': self.content,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Team Hierarchy
+# ---------------------------------------------------------------------------
+
+class AgentRole(db.Model):
+    """Optional per-agent role within a workspace's collaboration hierarchy."""
+    __tablename__ = 'agent_roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+
+    VALID_ROLES = frozenset({'supervisor', 'worker', 'specialist'})
+    role = db.Column(db.String(20), nullable=False, default='worker')
+
+    can_assign_to_peers = db.Column(db.Boolean, nullable=False, default=False)
+    can_escalate_to_supervisor = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='agent_roles')
+    agent = db.relationship('Agent', backref='agent_role')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'agent_id', name='uq_agent_role_ws_agent'),
+        db.Index('ix_agent_role_ws', 'workspace_id'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'role': self.role,
+            'can_assign_to_peers': self.can_assign_to_peers,
+            'can_escalate_to_supervisor': self.can_escalate_to_supervisor,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TeamRule(db.Model):
+    """Workspace-level team hierarchy settings."""
+    __tablename__ = 'team_rules'
+
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    allow_peer_assignment = db.Column(db.Boolean, nullable=False, default=False)
+    require_supervisor_for_tasks = db.Column(db.Boolean, nullable=False, default=False)
+    default_supervisor_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', backref=db.backref('team_rules', uselist=False))
+    default_supervisor = db.relationship('Agent')
+
+    def to_dict(self):
+        return {
+            'workspace_id': self.workspace_id,
+            'allow_peer_assignment': self.allow_peer_assignment,
+            'require_supervisor_for_tasks': self.require_supervisor_for_tasks,
+            'default_supervisor_agent_id': self.default_supervisor_agent_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

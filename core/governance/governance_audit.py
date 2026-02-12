@@ -16,7 +16,8 @@ def log_governance_event(workspace_id, event_type, details,
         event_type: One of: request_submitted, request_expired,
                     request_approved, request_denied, change_applied,
                     change_rolled_back, grant_created, grant_expired,
-                    grant_revoked, grant_used, boundary_violation.
+                    grant_revoked, grant_used, boundary_violation,
+                    task_blocked, task_escalated, task_reassigned.
         details: dict with event-specific data. Should include
                  policy_before/policy_after for mutation events.
         agent_id: The agent involved (may be None for system events).

@@ -94,6 +94,12 @@
                             <span class="topnav-dropdown-icon">🛡️</span> Governance
                             <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
                         </button>
+                        <button class="topnav-dropdown-item" data-tab="collab-tasks">
+                            <span class="topnav-dropdown-icon">📋</span> Tasks
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="collab-team">
+                            <span class="topnav-dropdown-icon">👥</span> Team
+                        </button>
                     </div>
                 </div>
 
@@ -2386,6 +2392,103 @@
                             <p style="color:var(--text-secondary);">Loading...</p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ========== COLLABORATION: TASKS TAB ========== -->
+            <div class="tab-content" id="collab-tasks">
+                <h2>Collaboration Tasks</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Manage inter-agent tasks — assign work, track status, and review the full event trail.</p>
+
+                <!-- Controls -->
+                <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;">
+                    <button class="btn btn-primary" onclick="showCreateTaskModal()" style="padding: 10px 20px; font-weight: 600;">+ New Task</button>
+                    <select id="collab-task-status-filter" onchange="loadCollabTasks()" style="padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                        <option value="">All Statuses</option>
+                        <option value="queued">Queued</option>
+                        <option value="running">Running</option>
+                        <option value="blocked">Blocked</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="canceled">Canceled</option>
+                    </select>
+                    <select id="collab-task-agent-filter" onchange="loadCollabTasks()" style="padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                        <option value="">All Agents</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadCollabTasks()" style="padding: 8px 16px;">Refresh</button>
+                </div>
+
+                <!-- Task Stats -->
+                <div id="collab-task-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
+
+                <!-- Task List -->
+                <div id="collab-tasks-list">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading tasks...</p>
+                </div>
+
+                <!-- Task Detail Modal (hidden) -->
+                <div id="collab-task-detail-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto;">
+                    <div style="max-width:640px; margin:60px auto; background:var(--bg-secondary); border-radius:12px; padding:32px; border:1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <h3 id="collab-task-detail-title" style="margin:0;"></h3>
+                            <button onclick="closeTaskDetailModal()" style="background:none; border:none; color:var(--text-secondary); font-size:20px; cursor:pointer;">✕</button>
+                        </div>
+                        <div id="collab-task-detail-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== COLLABORATION: TEAM TAB ========== -->
+            <div class="tab-content" id="collab-team">
+                <h2>Team Hierarchy</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Define optional roles for your agents and configure team assignment rules.</p>
+
+                <!-- Team Rules Card -->
+                <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                    <h3 style="margin: 0 0 16px 0;">Team Rules</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="collab-rule-enforce" onchange="saveTeamRules()" style="width: 18px; height: 18px;">
+                            <span>Require supervisor for agent-created tasks</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="collab-rule-peer" onchange="saveTeamRules()" style="width: 18px; height: 18px;">
+                            <span>Allow peer-to-peer assignment</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span>Default supervisor:</span>
+                            <select id="collab-rule-supervisor" onchange="saveTeamRules()" style="padding: 6px 10px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; min-width: 180px;">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assign Role Controls -->
+                <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                    <h3 style="margin: 0 0 16px 0;">Assign Role</h3>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 180px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">Agent</label>
+                            <select id="collab-role-agent" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                                <option value="">Select agent</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 140px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">Role</label>
+                            <select id="collab-role-type" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                                <option value="supervisor">Supervisor</option>
+                                <option value="worker">Worker</option>
+                                <option value="specialist">Specialist</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="assignAgentRole()" style="padding: 8px 20px;">Assign</button>
+                    </div>
+                </div>
+
+                <!-- Team Summary -->
+                <div id="collab-team-summary">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading team...</p>
                 </div>
             </div>
 

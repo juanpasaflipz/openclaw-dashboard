@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily, CollaborationTask, TaskEvent, AgentMessage, AgentRole, TeamRule
 db.init_app(app)
 
 # Initialize rate limiter
@@ -84,6 +84,9 @@ from routes import (
     register_spotify_routes, register_todoist_routes,
     register_dropbox_routes,
     register_governance_routes,
+    register_collaboration_tasks_routes,
+    register_collaboration_messages_routes,
+    register_collaboration_team_routes,
 )
 
 register_auth_routes(app)
@@ -116,6 +119,9 @@ register_spotify_routes(app)
 register_todoist_routes(app)
 register_dropbox_routes(app)
 register_governance_routes(app)
+register_collaboration_tasks_routes(app)
+register_collaboration_messages_routes(app)
+register_collaboration_team_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])
