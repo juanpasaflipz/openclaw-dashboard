@@ -50,6 +50,7 @@
             'model-config': 'workbench',
             'llm': 'workbench',
             'observability': 'workbench',
+            'governance': 'workbench',
             'connect': 'integrations',
             'channels': 'integrations',
             'actions': 'integrations',
@@ -117,6 +118,7 @@
             if (tabName === 'model-config') initModelConfigTab();
             if (tabName === 'ext-agents') initExtAgentsTab();
             if (tabName === 'observability') initObservabilityTab();
+            if (tabName === 'governance') initGovernanceTab();
         }
 
         // ===== Dropdown hover behavior (desktop) =====
@@ -6380,3 +6382,293 @@ Examples:
             const d = new Date(); d.setDate(d.getDate() - n);
             return d.toISOString().split('T')[0];
         }
+
+        // ==================================================================
+        // Governance Tab
+        // ==================================================================
+
+        let govInitialized = false;
+
+        function initGovernanceTab() {
+            if (!govInitialized) {
+                govInitialized = true;
+            }
+            govLoadPending();
+        }
+
+        function govShowView(viewName) {
+            document.querySelectorAll('.gov-view').forEach(v => v.style.display = 'none');
+            document.querySelectorAll('.gov-subtab').forEach(b => b.classList.remove('active'));
+            const target = document.getElementById('gov-view-' + viewName);
+            if (target) target.style.display = '';
+            const btn = document.querySelector(`.gov-subtab[data-gov-view="${viewName}"]`);
+            if (btn) btn.classList.add('active');
+            if (viewName === 'pending') govLoadPending();
+            if (viewName === 'delegations') govLoadDelegations();
+            if (viewName === 'audit') govLoadAudit();
+        }
+
+        async function govLoadPending() {
+            try {
+                const resp = await fetch(API_BASE + '/governance/pending', {credentials: 'include'});
+                if (resp.status === 401) return;
+                const data = await resp.json();
+                const container = document.getElementById('gov-pending-container');
+                const badge = document.getElementById('governance-pending-badge');
+                const requests = data.requests || [];
+
+                if (badge) {
+                    badge.textContent = data.count || 0;
+                    badge.style.display = (data.count > 0) ? 'inline-block' : 'none';
+                }
+
+                if (requests.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-secondary);">No pending requests.</p>';
+                    return;
+                }
+
+                container.innerHTML = requests.map(r => {
+                    const changes = r.requested_changes || {};
+                    return `<div style="border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-weight:600; margin-bottom:4px;">Policy #${changes.policy_id || '?'} &mdash; ${changes.field || '?'}</div>
+                                <div style="font-size:13px; color:var(--text-secondary);">
+                                    ${changes.current_value || '?'} &rarr; ${changes.requested_value || '?'}
+                                </div>
+                                <div style="font-size:13px; color:var(--text-secondary); margin-top:4px;">
+                                    Agent #${r.agent_id} &bull; ${_govTimeAgo(r.requested_at)}
+                                </div>
+                                <div style="font-size:13px; margin-top:4px; font-style:italic; color:var(--text-secondary);">
+                                    "${r.reason || ''}"
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button class="btn btn-primary" onclick="govApproveRequest(${r.id})" style="font-size:12px; padding:6px 12px;">Approve</button>
+                                <button class="btn btn-secondary" onclick="govDenyRequest(${r.id})" style="font-size:12px; padding:6px 12px;">Deny</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error('Error loading governance pending:', e); }
+        }
+
+        async function govApproveRequest(requestId) {
+            const mode = prompt('Approval mode: type "one_time" for immediate apply or "delegate" for time-bound delegation:', 'one_time');
+            if (!mode) return;
+
+            let body = { mode };
+            if (mode === 'delegate') {
+                const mins = prompt('Delegation duration in minutes (max 1440):', '60');
+                if (!mins) return;
+                body.delegation_params = { duration_minutes: parseInt(mins, 10) };
+            }
+
+            try {
+                const resp = await fetch(API_BASE + '/governance/approve/' + requestId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Request approved (' + (data.mode || mode) + ').');
+                    govLoadPending();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function govDenyRequest(requestId) {
+            const reason = prompt('Denial reason (optional):');
+            try {
+                const resp = await fetch(API_BASE + '/governance/deny/' + requestId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({ reason: reason || '' })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Request denied.');
+                    govLoadPending();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function govLoadDelegations() {
+            try {
+                const resp = await fetch(API_BASE + '/governance/delegations', {credentials: 'include'});
+                if (resp.status === 401) return;
+                const data = await resp.json();
+                const container = document.getElementById('gov-delegations-container');
+                const grants = data.delegations || [];
+
+                if (grants.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-secondary);">No active delegations.</p>';
+                    return;
+                }
+
+                container.innerHTML = grants.map(g => {
+                    const ac = g.allowed_changes || {};
+                    const fields = ac.fields ? Object.keys(ac.fields).join(', ') : 'N/A';
+                    return `<div style="border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-weight:600; margin-bottom:4px;">Grant #${g.id} &mdash; Policy #${ac.policy_id || '?'}</div>
+                                <div style="font-size:13px; color:var(--text-secondary);">
+                                    Fields: ${fields}
+                                </div>
+                                <div style="font-size:13px; color:var(--text-secondary); margin-top:4px;">
+                                    Agent #${g.agent_id} &bull; Expires: ${new Date(g.valid_to).toLocaleString()}
+                                </div>
+                                <div style="font-size:13px; color:var(--text-secondary); margin-top:2px;">
+                                    Duration: ${g.duration_minutes} min
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary" onclick="govRevokeDelegation(${g.id})" style="font-size:12px; padding:6px 12px;">Revoke</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error('Error loading delegations:', e); }
+        }
+
+        async function govRevokeDelegation(grantId) {
+            if (!confirm('Revoke this delegation grant? The agent will no longer be able to apply changes.')) return;
+            try {
+                const resp = await fetch(API_BASE + '/governance/delegations/' + grantId + '/revoke', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Delegation revoked.');
+                    govLoadDelegations();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function govLoadAudit() {
+            try {
+                const typeFilter = document.getElementById('gov-audit-type-filter');
+                const eventType = typeFilter ? typeFilter.value : '';
+                let url = API_BASE + '/governance/audit?limit=50';
+                if (eventType) url += '&event_type=' + encodeURIComponent(eventType);
+
+                const resp = await fetch(url, {credentials: 'include'});
+                if (resp.status === 401) return;
+                const data = await resp.json();
+                const container = document.getElementById('gov-audit-container');
+                const entries = data.audit_trail || [];
+
+                if (entries.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-secondary);">No audit entries found.</p>';
+                    return;
+                }
+
+                const eventColors = {
+                    'request_submitted': '#3b82f6',
+                    'request_approved': '#22c55e',
+                    'request_denied': '#ef4444',
+                    'request_expired': '#6b7280',
+                    'change_applied': '#22c55e',
+                    'change_rolled_back': '#f59e0b',
+                    'grant_created': '#8b5cf6',
+                    'grant_expired': '#6b7280',
+                    'grant_revoked': '#ef4444',
+                    'grant_used': '#3b82f6',
+                    'boundary_violation': '#ef4444'
+                };
+
+                container.innerHTML = `<div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                                <th style="padding:8px 6px;">Time</th>
+                                <th style="padding:8px 6px;">Event</th>
+                                <th style="padding:8px 6px;">Agent</th>
+                                <th style="padding:8px 6px;">Details</th>
+                                <th style="padding:8px 6px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${entries.map(e => {
+                                const color = eventColors[e.event_type] || 'var(--text-secondary)';
+                                const details = e.details || {};
+                                let summary = '';
+                                if (details.policy_id) summary += 'Policy #' + details.policy_id;
+                                if (details.field) summary += ' / ' + details.field;
+                                if (details.old_value && details.new_value) summary += ': ' + details.old_value + ' -> ' + details.new_value;
+                                if (details.reason) summary += ' (' + details.reason + ')';
+                                if (!summary && details.request_id) summary = 'Request #' + details.request_id;
+                                if (!summary && details.grant_id) summary = 'Grant #' + details.grant_id;
+
+                                const canRollback = (e.event_type === 'change_applied' || e.event_type === 'change_rolled_back');
+
+                                return `<tr style="border-bottom:1px solid var(--border);">
+                                    <td style="padding:8px 6px; white-space:nowrap;">${_govTimeAgo(e.created_at)}</td>
+                                    <td style="padding:8px 6px;"><span style="color:${color}; font-weight:500;">${e.event_type.replace(/_/g, ' ')}</span></td>
+                                    <td style="padding:8px 6px;">${e.agent_id ? '#' + e.agent_id : '-'}</td>
+                                    <td style="padding:8px 6px; max-width:300px; overflow:hidden; text-overflow:ellipsis;">${summary || '-'}</td>
+                                    <td style="padding:8px 6px;">${canRollback ? `<button class="btn btn-secondary" onclick="govRollback(${e.id})" style="font-size:11px; padding:3px 8px;">Rollback</button>` : ''}</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            } catch (e) { console.error('Error loading audit trail:', e); }
+        }
+
+        async function govRollback(auditEntryId) {
+            if (!confirm('Rollback this policy change? The policy will be restored to its previous state.')) return;
+            try {
+                const resp = await fetch(API_BASE + '/governance/rollback/' + auditEntryId, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Policy change rolled back successfully.');
+                    govLoadAudit();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        function _govTimeAgo(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            const now = new Date();
+            const diffMs = now - d;
+            const diffMin = Math.floor(diffMs / 60000);
+            if (diffMin < 1) return 'just now';
+            if (diffMin < 60) return diffMin + 'm ago';
+            const diffH = Math.floor(diffMin / 60);
+            if (diffH < 24) return diffH + 'h ago';
+            const diffD = Math.floor(diffH / 24);
+            return diffD + 'd ago';
+        }
+
+        // Load governance pending count on page load for the badge
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch(API_BASE + '/governance/pending', {credentials: 'include'})
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    const badge = document.getElementById('governance-pending-badge');
+                    if (badge && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline-block';
+                    }
+                })
+                .catch(() => {});
+        });

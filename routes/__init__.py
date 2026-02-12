@@ -27,3 +27,4 @@ from routes.spotify_routes import register_spotify_routes
 from routes.todoist_routes import register_todoist_routes
 from routes.dropbox_routes import register_dropbox_routes
 from routes.observability_routes import obs_bp
+from routes.governance_routes import register_governance_routes

@@ -1205,3 +1205,139 @@ class RiskAuditLog(db.Model):
         db.Index('ix_risk_audit_ws_created', 'workspace_id', 'created_at'),
         db.Index('ix_risk_audit_event', 'event_id'),
     )
+
+
+# ---------------------------------------------------------------------------
+# Governance models — Human-Approved Policy Delegation System
+# ---------------------------------------------------------------------------
+
+class PolicyChangeRequest(db.Model):
+    """Agent-submitted request to modify a risk policy.
+
+    Status lifecycle: pending -> approved | denied | expired -> applied
+    """
+    __tablename__ = 'policy_change_requests'
+
+    VALID_STATUSES = frozenset({'pending', 'approved', 'denied', 'expired', 'applied'})
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    policy_id = db.Column(db.Integer, db.ForeignKey('risk_policies.id'), nullable=True)
+    requested_changes = db.Column(db.JSON, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    requested_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    policy_snapshot = db.Column(db.JSON, nullable=True)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='policy_change_requests')
+    agent = db.relationship('Agent', backref='policy_change_requests')
+    policy = db.relationship('RiskPolicy', backref='change_requests')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+
+    __table_args__ = (
+        db.Index('ix_pcr_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_pcr_agent_status', 'agent_id', 'status'),
+        db.Index('ix_pcr_status_requested', 'status', 'requested_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_id': self.policy_id,
+            'requested_changes': self.requested_changes,
+            'reason': self.reason,
+            'status': self.status,
+            'requested_at': self.requested_at.isoformat() if self.requested_at else None,
+            'reviewed_by': self.reviewed_by,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'policy_snapshot': self.policy_snapshot,
+        }
+
+
+class DelegationGrant(db.Model):
+    """Time-bound, bounded autonomy grant for an agent to self-apply policy changes."""
+    __tablename__ = 'delegation_grants'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey('policy_change_requests.id'), nullable=True)
+    granted_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    allowed_changes = db.Column(db.JSON, nullable=False)
+    max_spend_delta = db.Column(db.Numeric(12, 4), nullable=True)
+    max_model_upgrade = db.Column(db.String(50), nullable=True)
+    duration_minutes = db.Column(db.Integer, nullable=False)
+    valid_from = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    valid_to = db.Column(db.DateTime, nullable=False)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+    revoked_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='delegation_grants')
+    agent = db.relationship('Agent', backref='delegation_grants')
+    request = db.relationship('PolicyChangeRequest', backref='delegation_grants')
+    granter = db.relationship('User', foreign_keys=[granted_by])
+    revoker = db.relationship('User', foreign_keys=[revoked_by])
+
+    __table_args__ = (
+        db.Index('ix_dg_ws_agent_active', 'workspace_id', 'agent_id', 'active'),
+        db.Index('ix_dg_active_valid_to', 'active', 'valid_to'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'request_id': self.request_id,
+            'granted_by': self.granted_by,
+            'allowed_changes': self.allowed_changes,
+            'max_spend_delta': str(self.max_spend_delta) if self.max_spend_delta else None,
+            'max_model_upgrade': self.max_model_upgrade,
+            'duration_minutes': self.duration_minutes,
+            'valid_from': self.valid_from.isoformat() if self.valid_from else None,
+            'valid_to': self.valid_to.isoformat() if self.valid_to else None,
+            'active': self.active,
+            'revoked_at': self.revoked_at.isoformat() if self.revoked_at else None,
+            'revoked_by': self.revoked_by,
+        }
+
+
+class GovernanceAuditLog(db.Model):
+    """Append-only audit trail for governance events (requests, approvals, delegations)."""
+    __tablename__ = 'governance_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    event_type = db.Column(db.String(50), nullable=False)
+    details = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='governance_audit_logs')
+    agent = db.relationship('Agent', backref='governance_audit_logs')
+    actor = db.relationship('User', foreign_keys=[actor_id])
+
+    __table_args__ = (
+        db.Index('ix_gov_audit_ws_created', 'workspace_id', 'created_at'),
+        db.Index('ix_gov_audit_ws_type', 'workspace_id', 'event_type'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'actor_id': self.actor_id,
+            'event_type': self.event_type,
+            'details': self.details,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

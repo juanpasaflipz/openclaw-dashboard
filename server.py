@@ -83,6 +83,7 @@ from routes import (
     register_discord_routes, register_telegram_routes,
     register_spotify_routes, register_todoist_routes,
     register_dropbox_routes,
+    register_governance_routes,
 )
 
 register_auth_routes(app)
@@ -114,6 +115,7 @@ register_telegram_routes(app)
 register_spotify_routes(app)
 register_todoist_routes(app)
 register_dropbox_routes(app)
+register_governance_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])

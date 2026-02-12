@@ -90,6 +90,10 @@
                         <button class="topnav-dropdown-item" data-tab="observability">
                             <span class="topnav-dropdown-icon">📡</span> Observability
                         </button>
+                        <button class="topnav-dropdown-item" data-tab="governance">
+                            <span class="topnav-dropdown-icon">🛡️</span> Governance
+                            <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
+                        </button>
                     </div>
                 </div>
 
@@ -2319,6 +2323,67 @@
                         <div id="obs-new-key-display" style="display:none; margin-top:12px; padding:12px; background:var(--success-bg, #064e3b); border-radius:8px;">
                             <strong>New key created! Copy it now — it won't be shown again:</strong>
                             <code id="obs-new-key-value" style="display:block; margin-top:8px; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; word-break:break-all;"></code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Governance Tab -->
+            <div class="tab-content" id="governance">
+                <h2>Policy Governance</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Review agent policy change requests, manage delegations, and audit the governance trail.</p>
+
+                <!-- Sub-navigation -->
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary gov-subtab active" data-gov-view="pending" onclick="govShowView('pending')">Pending Requests</button>
+                    <button class="btn btn-secondary gov-subtab" data-gov-view="delegations" onclick="govShowView('delegations')">Active Delegations</button>
+                    <button class="btn btn-secondary gov-subtab" data-gov-view="audit" onclick="govShowView('audit')">Audit Trail</button>
+                </div>
+
+                <!-- Pending Requests Sub-view -->
+                <div id="gov-view-pending" class="gov-view">
+                    <div class="card">
+                        <h3>Pending Policy Change Requests</h3>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Agents have requested the following policy changes. Approve or deny each request.</p>
+                        <div id="gov-pending-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Delegations Sub-view -->
+                <div id="gov-view-delegations" class="gov-view" style="display:none;">
+                    <div class="card">
+                        <h3>Active Delegation Grants</h3>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Time-bound grants allowing agents to self-apply policy changes within approved envelopes.</p>
+                        <div id="gov-delegations-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Trail Sub-view -->
+                <div id="gov-view-audit" class="gov-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                            <select id="gov-audit-type-filter" onchange="govLoadAudit()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Events</option>
+                                <option value="request_submitted">Request Submitted</option>
+                                <option value="request_approved">Request Approved</option>
+                                <option value="request_denied">Request Denied</option>
+                                <option value="request_expired">Request Expired</option>
+                                <option value="change_applied">Change Applied</option>
+                                <option value="change_rolled_back">Change Rolled Back</option>
+                                <option value="grant_created">Grant Created</option>
+                                <option value="grant_expired">Grant Expired</option>
+                                <option value="grant_revoked">Grant Revoked</option>
+                                <option value="grant_used">Grant Used</option>
+                                <option value="boundary_violation">Boundary Violation</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="govLoadAudit()" style="font-size:12px;">Refresh</button>
+                        </div>
+                        <div id="gov-audit-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
                         </div>
                     </div>
                 </div>
