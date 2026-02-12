@@ -3521,9 +3521,10 @@ Examples:
                 try {
                     const resp = await fetch('/api/agents', { credentials: 'include' });
                     if (resp.ok) {
-                        const agents = await resp.json();
+                        const data = await resp.json();
+                        const agents = data.agents || [];
                         const select = document.getElementById('field_agent_id');
-                        if (select && Array.isArray(agents)) {
+                        if (select && agents.length) {
                             agents.forEach(a => {
                                 const opt = document.createElement('option');
                                 opt.value = a.id;
