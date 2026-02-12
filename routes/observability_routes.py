@@ -642,6 +642,18 @@ def cron_evaluate_alerts():
     return jsonify({'success': True, 'alerts_fired': fired})
 
 
+@obs_bp.route('/internal/enforce-risk', methods=['POST'])
+def cron_enforce_risk():
+    """Cron: evaluate risk policies and execute interventions. Protected by CRON_SECRET."""
+    if not _require_cron_auth():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    from core.risk_engine.enforcement_worker import run_enforcement_cycle
+    result = run_enforcement_cycle()
+
+    return jsonify({'success': True, **result})
+
+
 # ===================================================================
 # G) LLM PRICING (session auth)
 # ===================================================================

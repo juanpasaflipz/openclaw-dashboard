@@ -1079,3 +1079,129 @@ class ObsAgentHealthDaily(db.Model):
             'details': self.details or {},
             'computed_at': self.computed_at.isoformat() if self.computed_at else None,
         }
+
+
+# ---------------------------------------------------------------------------
+# Risk Engine models
+# ---------------------------------------------------------------------------
+
+class RiskPolicy(db.Model):
+    """Configurable risk policy that defines thresholds and automated actions.
+
+    One policy per (workspace, agent, policy_type). agent_id=NULL means workspace-wide.
+    """
+    __tablename__ = 'risk_policies'
+
+    VALID_POLICY_TYPES = frozenset({'daily_spend_cap', 'error_rate_cap', 'token_rate_cap'})
+    VALID_ACTION_TYPES = frozenset({'alert_only', 'throttle', 'model_downgrade', 'pause_agent'})
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    policy_type = db.Column(db.String(50), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    cooldown_minutes = db.Column(db.Integer, nullable=False, default=360)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='risk_policies')
+    agent = db.relationship('Agent', backref='risk_policies')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'agent_id', 'policy_type', name='_risk_policy_scope_uc'),
+        db.Index('ix_risk_policies_ws_enabled', 'workspace_id', 'is_enabled'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_type': self.policy_type,
+            'threshold_value': str(self.threshold_value),
+            'action_type': self.action_type,
+            'cooldown_minutes': self.cooldown_minutes,
+            'is_enabled': self.is_enabled,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class RiskEvent(db.Model):
+    """A detected policy breach. Created by the evaluator, processed by the executor.
+
+    Status lifecycle: pending → executed | skipped | failed
+    """
+    __tablename__ = 'risk_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey('risk_policies.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    policy_type = db.Column(db.String(50), nullable=False)
+    breach_value = db.Column(db.Numeric(12, 4), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    evaluated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    executed_at = db.Column(db.DateTime, nullable=True)
+    execution_result = db.Column(db.JSON, nullable=True)
+    dedupe_key = db.Column(db.String(100), unique=True, nullable=True)
+
+    policy = db.relationship('RiskPolicy', backref='risk_events')
+    user = db.relationship('User', backref='risk_events')
+    agent = db.relationship('Agent', backref='risk_events')
+
+    __table_args__ = (
+        db.Index('ix_risk_events_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_risk_events_policy_status', 'policy_id', 'status'),
+        db.Index('ix_risk_events_status_eval', 'status', 'evaluated_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'uid': self.uid,
+            'policy_id': self.policy_id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_type': self.policy_type,
+            'breach_value': str(self.breach_value),
+            'threshold_value': str(self.threshold_value),
+            'action_type': self.action_type,
+            'status': self.status,
+            'evaluated_at': self.evaluated_at.isoformat() if self.evaluated_at else None,
+            'executed_at': self.executed_at.isoformat() if self.executed_at else None,
+            'execution_result': self.execution_result,
+        }
+
+
+class RiskAuditLog(db.Model):
+    """Append-only audit trail for risk interventions.
+
+    Stores before/after snapshots of agent state for every intervention.
+    """
+    __tablename__ = 'risk_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('risk_events.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    action_type = db.Column(db.String(50), nullable=False)
+    previous_state = db.Column(db.JSON, nullable=False)
+    new_state = db.Column(db.JSON, nullable=False)
+    result = db.Column(db.String(20), nullable=False)  # success | failed | skipped
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    event = db.relationship('RiskEvent', backref='audit_logs')
+    user = db.relationship('User', backref='risk_audit_logs')
+    agent = db.relationship('Agent', backref='risk_audit_logs')
+
+    __table_args__ = (
+        db.Index('ix_risk_audit_ws_created', 'workspace_id', 'created_at'),
+        db.Index('ix_risk_audit_event', 'event_id'),
+    )
