@@ -316,6 +316,9 @@ class Agent(db.Model):
     # Moltbook integration
     moltbook_api_key = db.Column(db.String(255))  # API key for Moltbook access
 
+    # Agent type: 'direct' (default LLM agent), 'websocket', 'http_api'
+    agent_type = db.Column(db.String(50), nullable=False, default='direct')
+
     # Status
     is_active = db.Column(db.Boolean, default=True)
     is_default = db.Column(db.Boolean, default=False)  # User's default agent
@@ -324,6 +327,14 @@ class Agent(db.Model):
     llm_config = db.Column(db.JSON)  # {provider, model, api_key, temperature, etc.}
     identity_config = db.Column(db.JSON)  # {personality, role, behavior, etc.}
     moltbook_config = db.Column(db.JSON)  # {api_key, default_submolt, etc.}
+
+    # External agent fields (only used for websocket/http_api types)
+    connection_url = db.Column(db.String(500))
+    auth_config = db.Column(db.JSON)
+    agent_config = db.Column(db.JSON)
+    is_featured = db.Column(db.Boolean, default=False)
+    last_connected_at = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
 
     # Usage statistics
     total_posts = db.Column(db.Integer, default=0)
@@ -338,18 +349,28 @@ class Agent(db.Model):
 
     def to_dict(self):
         """Convert agent to dictionary for API responses"""
-        return {
+        d = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'avatar_emoji': self.avatar_emoji,
+            'avatar_url': self.avatar_url,
+            'agent_type': self.agent_type,
             'is_active': self.is_active,
             'is_default': self.is_default,
+            'is_featured': self.is_featured,
             'total_posts': self.total_posts,
             'last_post_at': self.last_post_at.isoformat() if self.last_post_at else None,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+        if self.agent_type in ('websocket', 'http_api'):
+            d['connection_url'] = self.connection_url
+            d['auth_config'] = {k: ('***' if k in ('token', 'password') else v) for k, v in (self.auth_config or {}).items()}
+            d['agent_config'] = self.agent_config or {}
+            d['last_connected_at'] = self.last_connected_at.isoformat() if self.last_connected_at else None
+            d['last_error'] = self.last_error
+        return d
 
 
 # ============================================
@@ -574,7 +595,7 @@ class ChatConversation(db.Model):
     # What feature/agent this conversation belongs to
     feature = db.Column(db.String(50), default='chatbot')  # chatbot, web_browsing, utility, nautilus
     agent_type = db.Column(db.String(50), default='direct_llm')  # direct_llm, nautilus, external
-    agent_id = db.Column(db.Integer, db.ForeignKey('external_agents.id'), nullable=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
 
     # Channel linking (Telegram, Discord, etc.)
     channel_platform = db.Column(db.String(50), index=True)  # 'telegram', 'discord', etc.
@@ -622,52 +643,6 @@ class ChatMessage(db.Model):
             'role': self.role,
             'content': self.content,
             'metadata': self.metadata_json or {},
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-        }
-
-
-class ExternalAgent(db.Model):
-    """Third-party agent registrations"""
-    __tablename__ = 'external_agents'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    avatar_emoji = db.Column(db.String(10), default='🤖')
-    avatar_url = db.Column(db.String(500))
-
-    agent_type = db.Column(db.String(50), nullable=False, default='websocket')  # websocket, http_api, marketplace
-    connection_url = db.Column(db.String(500))  # ws:// or https://
-    auth_config = db.Column(db.JSON)  # {mode: 'pairing'|'password'|'none', token, password}
-    agent_config = db.Column(db.JSON)  # {capabilities, default_model, persona}
-
-    is_featured = db.Column(db.Boolean, default=False)
-    is_active = db.Column(db.Boolean, default=True)
-    last_connected_at = db.Column(db.DateTime)
-    last_error = db.Column(db.Text)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    user = db.relationship('User', backref='external_agents')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'avatar_emoji': self.avatar_emoji,
-            'avatar_url': self.avatar_url,
-            'agent_type': self.agent_type,
-            'connection_url': self.connection_url,
-            'auth_config': {k: ('***' if k in ('token', 'password') else v) for k, v in (self.auth_config or {}).items()},
-            'agent_config': self.agent_config or {},
-            'is_featured': self.is_featured,
-            'is_active': self.is_active,
-            'last_connected_at': self.last_connected_at.isoformat() if self.last_connected_at else None,
-            'last_error': self.last_error,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 

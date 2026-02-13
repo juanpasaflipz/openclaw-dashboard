@@ -59,7 +59,7 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, ExternalAgent, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily, CollaborationTask, TaskEvent, AgentMessage, AgentRole, TeamRule
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily, CollaborationTask, TaskEvent, AgentMessage, AgentRole, TeamRule
 db.init_app(app)
 
 # Initialize rate limiter
@@ -76,7 +76,7 @@ from routes import (
     register_calendar_routes, register_drive_routes,
     register_notion_routes, register_binance_routes,
     register_binance_actions_routes, register_agent_actions_routes,
-    register_model_config_routes, register_external_agents_routes,
+    register_model_config_routes,
     register_chatbot_routes, register_web_browsing_routes,
     register_utility_routes,
     register_slack_routes, register_github_routes,
@@ -107,7 +107,6 @@ register_binance_routes(app)
 register_binance_actions_routes(app)
 register_agent_actions_routes(app)
 register_model_config_routes(app)
-register_external_agents_routes(app)
 register_chatbot_routes(app)
 register_web_browsing_routes(app)
 register_utility_routes(app)

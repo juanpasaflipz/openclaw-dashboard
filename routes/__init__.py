@@ -15,7 +15,6 @@ from routes.binance_routes import register_binance_routes
 from routes.binance_actions_routes import register_binance_actions_routes
 from routes.agent_actions_routes import register_agent_actions_routes
 from routes.model_config_routes import register_model_config_routes
-from routes.external_agents_routes import register_external_agents_routes
 from routes.chatbot_routes import register_chatbot_routes
 from routes.web_browsing_routes import register_web_browsing_routes
 from routes.utility_routes import register_utility_routes

@@ -38,7 +38,6 @@
         const TAB_GROUP_MAP = {
             'overview': null,
             // Agents
-            'ext-agents': 'agents',
             'agents': 'agents',
             'identity': 'agents',
             'user': 'agents',
@@ -125,7 +124,7 @@
             if (tabName === 'web-browse') initWebBrowseTab();
             if (tabName === 'utility') initUtilityTab();
             if (tabName === 'model-config') initModelConfigTab();
-            if (tabName === 'ext-agents') initExtAgentsTab();
+            // ext-agents merged into agents tab
             if (tabName === 'observability') initObservabilityTab();
             if (tabName === 'governance') initGovernanceTab();
             if (tabName === 'collab-tasks') initCollabTasksTab();
@@ -1870,62 +1869,118 @@ Examples:
             }
         }
 
+        let agentTypeFilter = 'all';
+
+        function filterAgentsByType(type) {
+            agentTypeFilter = type;
+            document.querySelectorAll('.agent-type-filter').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.agent-type-filter[data-filter="${type}"]`);
+            if (btn) btn.classList.add('active');
+            displayAgents(currentAgents);
+        }
+
+        function getAgentTypeBadge(agentType) {
+            const badges = {
+                'direct': '<span style="background:#06b6d4; color:#0f172a; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600;">LLM</span>',
+                'websocket': '<span style="background:#a855f7; color:#fff; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600;">WS</span>',
+                'http_api': '<span style="background:#f59e0b; color:#0f172a; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600;">HTTP</span>',
+            };
+            return badges[agentType] || badges['direct'];
+        }
+
+        function onAgentTypeChange() {
+            const type = document.getElementById('agent-type-select').value;
+            const connFields = document.getElementById('agent-connection-fields');
+            if (connFields) connFields.style.display = (type === 'direct') ? 'none' : 'block';
+        }
+
         function displayAgents(agents) {
             const agentsList = document.getElementById('agents-list');
 
-            if (agents.length === 0) {
+            let filtered = agents;
+            if (agentTypeFilter !== 'all') {
+                filtered = agents.filter(a => a.agent_type === agentTypeFilter);
+            }
+
+            if (filtered.length === 0) {
                 agentsList.innerHTML = `
                     <div style="text-align: center; padding: 60px 20px;">
                         <p style="font-size: 48px; margin-bottom: 16px;">🤖</p>
-                        <h3 style="color: rgba(255, 255, 255, 0.9); margin-bottom: 12px;">No agents yet</h3>
+                        <h3 style="color: rgba(255, 255, 255, 0.9); margin-bottom: 12px;">No agents${agentTypeFilter !== 'all' ? ' of this type' : ''}</h3>
                         <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 24px;">
                             Create your first agent to get started
                         </p>
                         <button onclick="showCreateAgentModal()" style="background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));">
-                            ➕ Create Your First Agent
+                            + Create Agent
                         </button>
                     </div>
                 `;
                 return;
             }
 
-            agentsList.innerHTML = agents.map(agent => `
-                <div class="card" style="position: relative; ${agent.is_default ? 'border: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);' : ''}">
+            agentsList.innerHTML = filtered.map(agent => {
+                const isExternal = agent.agent_type === 'websocket' || agent.agent_type === 'http_api';
+                const typeBadge = getAgentTypeBadge(agent.agent_type);
+                const featuredBadge = agent.is_featured ? '<span style="background:#10b981; color:#fff; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600; margin-left:4px;">Featured</span>' : '';
+
+                let connInfo = '';
+                if (isExternal) {
+                    connInfo = `<span>${agent.connection_url || 'No URL'}</span>`;
+                    if (agent.last_connected_at) {
+                        connInfo += ` <span style="color:var(--success);">Last connected: ${new Date(agent.last_connected_at).toLocaleString()}</span>`;
+                    }
+                    if (agent.last_error) {
+                        connInfo += ` <span style="color:var(--error);">Error: ${agent.last_error}</span>`;
+                    }
+                }
+
+                let actionButtons = '';
+                if (agent.agent_type === 'direct') {
+                    actionButtons = `
+                        <button onclick="selectAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-cyan); color: #0f172a; font-weight: 600;">Select</button>
+                        <button onclick="editAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-purple); color: #fff; font-weight: 600;">Edit</button>
+                        <button onclick="cloneAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">Clone</button>
+                        <button onclick="exportAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">Export</button>
+                        ${!agent.is_default ? `<button onclick="deleteAgent(${agent.id}, '${agent.name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; font-size: 14px; background: #ef4444; color: #fff; font-weight: 600;">Delete</button>` : ''}
+                    `;
+                } else {
+                    actionButtons = `
+                        <button onclick="testAgent(${agent.id})" class="btn btn-secondary btn-sm">Test</button>
+                        <button onclick="editAgent(${agent.id})" class="btn btn-secondary btn-sm">Edit</button>
+                        <button onclick="deleteAgent(${agent.id}, '${agent.name.replace(/'/g, "\\'")}')" class="btn btn-secondary btn-sm" style="color:var(--error);">Delete</button>
+                    `;
+                }
+
+                return `
+                <div class="card" style="position: relative; margin-bottom:12px; ${agent.is_default ? 'border: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);' : ''}">
                     ${agent.is_default ? '<div style="position: absolute; top: 12px; right: 12px; background: var(--neon-cyan); color: #0f172a; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">DEFAULT</div>' : ''}
 
                     <div style="display: flex; align-items: start; gap: 16px;">
-                        <div style="font-size: 48px; line-height: 1;">${agent.avatar_emoji}</div>
+                        <div style="font-size: 48px; line-height: 1;">${agent.avatar_emoji || '🤖'}</div>
                         <div style="flex: 1;">
-                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.95);">${agent.name}</h3>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <h3 style="margin: 0; color: rgba(255, 255, 255, 0.95);">${agent.name}</h3>
+                                ${typeBadge}${featuredBadge}
+                            </div>
                             <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 12px;">
                                 ${agent.description || 'No description'}
                             </p>
 
-                            <div style="display: flex; gap: 16px; font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-bottom: 16px;">
-                                <span>📊 ${agent.total_posts} posts</span>
-                                <span>📅 Created ${new Date(agent.created_at).toLocaleDateString()}</span>
-                                ${!agent.is_active ? '<span style="color: #fbbf24;">⚠️ Inactive</span>' : ''}
+                            <div style="display: flex; gap: 16px; font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-bottom: 16px; flex-wrap:wrap;">
+                                ${agent.agent_type === 'direct' ? `<span>${agent.total_posts || 0} posts</span>` : ''}
+                                <span>Created ${agent.created_at ? new Date(agent.created_at).toLocaleDateString() : 'N/A'}</span>
+                                ${connInfo}
+                                ${!agent.is_active ? '<span style="color: #fbbf24;">Inactive</span>' : ''}
                             </div>
 
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button onclick="selectAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-cyan); color: #0f172a; font-weight: 600;">
-                                    ✅ Select
-                                </button>
-                                <button onclick="editAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: var(--neon-purple); color: #fff; font-weight: 600;">
-                                    ✏️ Edit
-                                </button>
-                                <button onclick="cloneAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">
-                                    📋 Clone
-                                </button>
-                                <button onclick="exportAgent(${agent.id})" style="padding: 8px 16px; font-size: 14px; background: #6b7280; color: #fff; font-weight: 600;">
-                                    📥 Export
-                                </button>
-                                ${!agent.is_default ? `<button onclick="deleteAgent(${agent.id}, '${agent.name}')" style="padding: 8px 16px; font-size: 14px; background: #ef4444; color: #fff; font-weight: 600;">🗑️ Delete</button>` : ''}
+                                ${actionButtons}
                             </div>
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateAgentLimitInfo(count, maxAgents, canCreateMore) {
@@ -1946,10 +2001,12 @@ Examples:
 
         function showCreateAgentModal() {
             editingAgentId = null;
-            document.getElementById('agent-modal-title').textContent = '🤖 Create New Agent';
+            document.getElementById('agent-modal-title').textContent = 'Create New Agent';
             document.getElementById('agent-form').reset();
             document.getElementById('agent-id').value = '';
             document.getElementById('agent-emoji').value = '🤖';
+            document.getElementById('agent-type-select').value = 'direct';
+            onAgentTypeChange();
             document.getElementById('agent-modal').style.display = 'flex';
         }
 
@@ -1967,12 +2024,16 @@ Examples:
                 const agent = data.agent;
 
                 editingAgentId = agentId;
-                document.getElementById('agent-modal-title').textContent = '✏️ Edit Agent';
+                document.getElementById('agent-modal-title').textContent = 'Edit Agent';
                 document.getElementById('agent-id').value = agent.id;
                 document.getElementById('agent-name').value = agent.name;
                 document.getElementById('agent-emoji').value = agent.avatar_emoji;
                 document.getElementById('agent-description').value = agent.description || '';
                 document.getElementById('agent-is-default').checked = agent.is_default;
+                document.getElementById('agent-type-select').value = agent.agent_type || 'direct';
+                onAgentTypeChange();
+                const connUrl = document.getElementById('agent-connection-url');
+                if (connUrl) connUrl.value = agent.connection_url || '';
 
                 document.getElementById('agent-modal').style.display = 'flex';
             } catch (error) {
@@ -1985,12 +2046,17 @@ Examples:
             event.preventDefault();
 
             const agentId = document.getElementById('agent-id').value;
+            const agentType = document.getElementById('agent-type-select').value;
             const agentData = {
                 name: document.getElementById('agent-name').value.trim(),
                 avatar_emoji: document.getElementById('agent-emoji').value || '🤖',
                 description: document.getElementById('agent-description').value.trim(),
-                is_default: document.getElementById('agent-is-default').checked
+                is_default: document.getElementById('agent-is-default').checked,
+                agent_type: agentType,
             };
+            if (agentType !== 'direct') {
+                agentData.connection_url = (document.getElementById('agent-connection-url') || {}).value || '';
+            }
 
             try {
                 const url = agentId ? `/api/agents/${agentId}` : '/api/agents';
@@ -4941,133 +5007,36 @@ Examples:
 
 
         // ============================================
-        // AI WORKBENCH — External Agents
+        // AI WORKBENCH — External Agent Helpers (unified)
         // ============================================
         let nautilusClient = null;
-        let extAgents = [];
 
-        async function initExtAgentsTab() {
-            // Ensure model configs are loaded for the banner
-            if (Object.keys(mcConfigs).length === 0) {
-                try {
-                    const resp = await fetch(`${API_BASE}/model-config`, { credentials: 'include' });
-                    const data = await resp.json();
-                    mcConfigs = {};
-                    (data.configs || []).forEach(c => { mcConfigs[c.feature_slot] = c; });
-                } catch (e) { console.error('Failed to load model configs:', e); }
-            }
-            // Ensure providers are loaded
-            if (mcProviders.length === 0) {
-                try {
-                    const resp = await fetch(`${API_BASE}/model-config/providers`);
-                    const data = await resp.json();
-                    mcProviders = data.providers || [];
-                    populateMCProviderDropdown();
-                } catch (e) { console.error('Failed to load providers:', e); }
-            }
-            updateNautilusModelBanner();
-            await loadExtAgents();
-            await loadNautilusConversations();
-        }
-
-        async function loadExtAgents() {
+        async function testAgent(agentId) {
             try {
-                const resp = await fetch(`${API_BASE}/external-agents`, { credentials: 'include' });
-                const data = await resp.json();
-                extAgents = data.agents || [];
-                renderExtAgents();
-            } catch (e) { console.error('Failed to load agents:', e); }
-        }
-
-        function renderExtAgents() {
-            const list = document.getElementById('external-agents-list');
-            if (!list) return;
-            const nonFeatured = extAgents.filter(a => !a.is_featured);
-            if (nonFeatured.length === 0) {
-                list.innerHTML = '<p style="color:var(--text-tertiary); font-size:13px;">No custom agents registered yet.</p>';
-                return;
-            }
-            list.innerHTML = nonFeatured.map(a => `
-                <div class="agent-card">
-                    <span style="font-size:24px;">${a.avatar_emoji || '🤖'}</span>
-                    <div class="agent-info">
-                        <h4>${a.name}</h4>
-                        <p>${a.agent_type} — ${a.connection_url || 'No URL'}</p>
-                    </div>
-                    <div class="agent-actions-btns">
-                        <button class="btn btn-secondary btn-sm" onclick="testExtAgent(${a.id})">Test</button>
-                        <button class="btn btn-secondary btn-sm" onclick="deleteExtAgent(${a.id})">Delete</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function showAddAgentForm() {
-            document.getElementById('add-agent-form').style.display = 'block';
-        }
-
-        async function registerAgent() {
-            const payload = {
-                name: document.getElementById('new-agent-name').value,
-                avatar_emoji: document.getElementById('new-agent-emoji').value || '🤖',
-                description: document.getElementById('new-agent-description').value,
-                agent_type: document.getElementById('new-agent-type').value,
-                connection_url: document.getElementById('new-agent-url').value,
-            };
-            try {
-                const resp = await fetch(`${API_BASE}/external-agents`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(payload),
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    showAlert('ext-agents', 'success', `Agent "${payload.name}" registered!`);
-                    document.getElementById('add-agent-form').style.display = 'none';
-                    await loadExtAgents();
-                } else {
-                    showAlert('ext-agents', 'error', data.error || 'Failed to register');
-                }
-            } catch (e) {
-                showAlert('ext-agents', 'error', 'Network error: ' + e.message);
-            }
-        }
-
-        async function deleteExtAgent(agentId) {
-            if (!confirm('Delete this agent?')) return;
-            try {
-                await fetch(`${API_BASE}/external-agents/${agentId}`, { method: 'DELETE', credentials: 'include' });
-                await loadExtAgents();
-            } catch (e) { console.error(e); }
-        }
-
-        async function testExtAgent(agentId) {
-            try {
-                const resp = await fetch(`${API_BASE}/external-agents/${agentId}/test`, {
+                const resp = await fetch(`${API_BASE}/agents/${agentId}/test`, {
                     method: 'POST',
                     credentials: 'include',
                 });
                 const data = await resp.json();
-                showAlert('ext-agents', data.success ? 'success' : 'error', data.message);
+                showAlert('agents', data.success ? 'success' : 'error', data.message);
             } catch (e) {
-                showAlert('ext-agents', 'error', 'Network error');
+                showAlert('agents', 'error', 'Network error');
             }
         }
 
         async function seedNautilus() {
             try {
-                const resp = await fetch(`${API_BASE}/external-agents/seed-nautilus`, {
+                const resp = await fetch(`${API_BASE}/agents/seed-nautilus`, {
                     method: 'POST',
                     credentials: 'include',
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    showAlert('ext-agents', 'success', data.already_exists ? 'Nautilus config reset.' : 'Nautilus seeded as featured agent!');
-                    await loadExtAgents();
+                    showAlert('agents', 'success', data.already_exists ? 'Nautilus config reset.' : 'Nautilus seeded as featured agent!');
+                    await loadAgents();
                 }
             } catch (e) {
-                showAlert('ext-agents', 'error', 'Network error');
+                showAlert('agents', 'error', 'Network error');
             }
         }
 
@@ -5106,9 +5075,9 @@ Examples:
                 document.getElementById('nautilus-connect-btn').style.display = 'none';
                 document.getElementById('nautilus-disconnect-btn').style.display = 'inline-flex';
                 // Update agent status in DB
-                const nautAgent = extAgents.find(a => a.name === 'Nautilus');
+                const nautAgent = currentAgents.find(a => a.name === 'Nautilus');
                 if (nautAgent) {
-                    fetch(`${API_BASE}/external-agents/${nautAgent.id}/update-status`, {
+                    fetch(`${API_BASE}/agents/${nautAgent.id}/update-status`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
@@ -5161,9 +5130,9 @@ Examples:
         function updateChatAgentOptions() {
             const sel = document.getElementById('chat-agent-mode');
             if (!sel) return;
-            // Keep existing options, add external agents
+            // Keep existing options, add external agents from unified list
             const existingValues = Array.from(sel.options).map(o => o.value);
-            extAgents.filter(a => !a.is_featured && a.agent_type === 'http_api').forEach(a => {
+            currentAgents.filter(a => !a.is_featured && (a.agent_type === 'http_api' || a.agent_type === 'websocket')).forEach(a => {
                 if (!existingValues.includes('ext_' + a.id)) {
                     const opt = document.createElement('option');
                     opt.value = 'ext_' + a.id;
@@ -5186,8 +5155,10 @@ Examples:
             document.querySelectorAll('.nautilus-mode-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nautilus-mode-panel').forEach(p => p.classList.remove('active'));
 
-            document.querySelector(`.nautilus-mode-tab[data-mode="${mode}"]`).classList.add('active');
-            document.getElementById(`nautilus-${mode}-panel`).classList.add('active');
+            const tab = document.querySelector(`.nautilus-mode-tab[data-mode="${mode}"]`);
+            if (tab) tab.classList.add('active');
+            const panel = document.getElementById(`nautilus-${mode}-panel`);
+            if (panel) panel.classList.add('active');
 
             if (mode === 'gateway') {
                 setupGatewayChatHandlers();
@@ -5197,6 +5168,7 @@ Examples:
         function updateNautilusModelBanner() {
             const cfg = mcConfigs['nautilus'];
             const statusEl = document.getElementById('nautilus-model-status');
+            if (!statusEl) return;
             const configBtn = document.getElementById('nautilus-configure-btn');
             const indicatorEl = document.getElementById('nautilus-model-indicator');
 
@@ -5260,7 +5232,7 @@ Examples:
                     renderNautilusConversationList();
                 }
             } catch (e) {
-                showAlert('ext-agents', 'error', 'Failed to create conversation');
+                showAlert('agents', 'error', 'Failed to create conversation');
             }
         }
 
