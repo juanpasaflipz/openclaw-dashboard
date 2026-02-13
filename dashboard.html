@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,6 @@
 
     <!-- Dashboard Styles -->
     <link rel="stylesheet" href="/static/css/dashboard.css">
-</head>
 </head>
 <body>
     <!-- Beta Banner -->
@@ -27,183 +26,249 @@
         </p>
     </div>
 
-    <!-- Top Navigation Bar -->
-    <nav class="topnav">
-        <div class="topnav-inner">
-            <div class="topnav-brand">
-                <span style="font-size: 22px;">🐵</span>
-                <span class="topnav-brand-text">Green Monkey</span>
-            </div>
+    <!-- App Shell -->
+    <div class="app-shell">
 
-            <button class="topnav-hamburger" id="topnav-hamburger" aria-label="Toggle menu">
-                <span></span><span></span><span></span>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-logo">🐵</span>
+            <span class="sidebar-brand">Green Monkey</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <!-- Overview (standalone) -->
+            <button class="sidebar-item active" data-tab="overview">
+                <span class="sidebar-item-icon">📊</span>
+                <span class="sidebar-item-label">Overview</span>
             </button>
 
-            <div class="topnav-links" id="topnav-links">
-                <button class="topnav-item active" data-tab="overview">Overview</button>
-
-                <div class="topnav-dropdown" data-group="agents">
-                    <button class="topnav-item topnav-dropdown-toggle">Agents <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="agents">
-                            <span class="topnav-dropdown-icon">🤖</span> Agents
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="identity">
-                            <span class="topnav-dropdown-icon">👤</span> Identity
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="user">
-                            <span class="topnav-dropdown-icon">📝</span> User Info
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="soul">
-                            <span class="topnav-dropdown-icon">✨</span> Soul &amp; Behavior
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="tools">
-                            <span class="topnav-dropdown-icon">🛠️</span> Tools
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="security">
-                            <span class="topnav-dropdown-icon">🔒</span> Security
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="tasks">
-                    <button class="topnav-item topnav-dropdown-toggle">Tasks <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="collab-tasks">
-                            <span class="topnav-dropdown-icon">📋</span> Task Queue
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="collab-team">
-                            <span class="topnav-dropdown-icon">👥</span> Team Hierarchy
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="governance">
-                    <button class="topnav-item topnav-dropdown-toggle">Governance <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="governance">
-                            <span class="topnav-dropdown-icon">🛡️</span> Risk Policies
-                            <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="actions">
-                            <span class="topnav-dropdown-icon">✅</span> Approval Queue
-                            <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="chatbot">
-                            <span class="topnav-dropdown-icon">💬</span> Chatbot
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="observability">
-                    <button class="topnav-item topnav-dropdown-toggle">Observability <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="observability">
-                            <span class="topnav-dropdown-icon">📡</span> Live Activity
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="analytics">
-                            <span class="topnav-dropdown-icon">📊</span> Analytics
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="integrations">
-                    <button class="topnav-item topnav-dropdown-toggle">Integrations <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="connect">
-                            <span class="topnav-dropdown-icon">🔌</span> Services
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="channels">
-                            <span class="topnav-dropdown-icon">💬</span> Channels
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="providers">
-                            <span class="topnav-dropdown-icon">🤖</span> Providers
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="model-config">
-                            <span class="topnav-dropdown-icon">⚙️</span> Model Config
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="llm">
-                            <span class="topnav-dropdown-icon">🔌</span> LLM Connection
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="workspace">
-                    <button class="topnav-item topnav-dropdown-toggle">Workspace <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="subscription">
-                            <span class="topnav-dropdown-icon">💎</span> Subscription
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="export">
-                            <span class="topnav-dropdown-icon">💾</span> Export
-                        </button>
-                        <button class="topnav-dropdown-item" id="admin-tab-button" data-tab="admin" style="display: none;">
-                            <span class="topnav-dropdown-icon">🔐</span> Admin
-                        </button>
-                    </div>
-                </div>
-
-                <div class="topnav-dropdown" data-group="labs">
-                    <button class="topnav-item topnav-dropdown-toggle">Labs <span class="topnav-arrow">▾</span></button>
-                    <div class="topnav-dropdown-menu">
-                        <button class="topnav-dropdown-item" data-tab="moltbook">
-                            <span class="topnav-dropdown-icon">🦞</span> Moltbook
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="feed">
-                            <span class="topnav-dropdown-icon">📖</span> Feed
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="web-browse">
-                            <span class="topnav-dropdown-icon">🌐</span> Web Browse
-                        </button>
-                        <button class="topnav-dropdown-item" data-tab="utility">
-                            <span class="topnav-dropdown-icon">🧰</span> Utility
-                        </button>
-                    </div>
-                </div>
-
-                <a href="https://docs.greenmonkey.dev" target="_blank" rel="noopener noreferrer" class="topnav-item topnav-docs-link">
-                    Docs <span style="font-size: 10px; margin-left: 2px;">↗</span>
-                </a>
-            </div>
-
-            <div class="topnav-right">
-                <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
-                    🔐 Login
+            <!-- Agents Group -->
+            <div class="sidebar-group expanded" data-group="agents">
+                <button class="sidebar-group-toggle">
+                    Agents
+                    <span class="sidebar-group-arrow">›</span>
                 </button>
-                <div id="user-info" style="display: none; align-items: center; gap: 12px;">
-                    <div style="text-align: right;">
-                        <div style="font-size: 10px; color: var(--text-tertiary);">Logged in as</div>
-                        <div id="user-email" style="font-weight: 500; font-size: 12px; color: var(--text-primary);"></div>
-                    </div>
-                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span id="subscription-tier-badge" style="font-weight: 600; font-size: 12px;"></span>
-                        <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 3px 8px; font-size: 10px;">
-                            Upgrade
-                        </button>
-                    </div>
-                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span id="credit-balance" style="font-weight: 600; font-size: 13px;">0</span>
-                        <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 3px 8px; font-size: 10px;">
-                            + Buy
-                        </button>
-                    </div>
-                    <button onclick="logout()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-                        Logout
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="agents">
+                        <span class="sidebar-item-icon">🤖</span>
+                        <span class="sidebar-item-label">Agents</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="identity">
+                        <span class="sidebar-item-icon">👤</span>
+                        <span class="sidebar-item-label">Identity</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="user">
+                        <span class="sidebar-item-icon">📝</span>
+                        <span class="sidebar-item-label">User Info</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="soul">
+                        <span class="sidebar-item-icon">✨</span>
+                        <span class="sidebar-item-label">Soul &amp; Behavior</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="tools">
+                        <span class="sidebar-item-icon">🛠️</span>
+                        <span class="sidebar-item-label">Tools</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="security">
+                        <span class="sidebar-item-icon">🔒</span>
+                        <span class="sidebar-item-label">Security</span>
                     </button>
                 </div>
             </div>
+
+            <!-- Tasks Group -->
+            <div class="sidebar-group" data-group="tasks">
+                <button class="sidebar-group-toggle">
+                    Tasks
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="collab-tasks">
+                        <span class="sidebar-item-icon">📋</span>
+                        <span class="sidebar-item-label">Task Queue</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="collab-team">
+                        <span class="sidebar-item-icon">👥</span>
+                        <span class="sidebar-item-label">Team Hierarchy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Governance Group -->
+            <div class="sidebar-group" data-group="governance">
+                <button class="sidebar-group-toggle">
+                    Governance
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="governance">
+                        <span class="sidebar-item-icon">🛡️</span>
+                        <span class="sidebar-item-label">Risk Policies</span>
+                        <span id="governance-pending-badge" class="sidebar-badge" style="display: none;">0</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="actions">
+                        <span class="sidebar-item-icon">✅</span>
+                        <span class="sidebar-item-label">Approval Queue</span>
+                        <span id="pending-actions-badge" class="sidebar-badge" style="display: none;">0</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="chatbot">
+                        <span class="sidebar-item-icon">💬</span>
+                        <span class="sidebar-item-label">Chatbot</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Observability Group -->
+            <div class="sidebar-group" data-group="observability">
+                <button class="sidebar-group-toggle">
+                    Observability
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="observability">
+                        <span class="sidebar-item-icon">📡</span>
+                        <span class="sidebar-item-label">Live Activity</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="analytics">
+                        <span class="sidebar-item-icon">📊</span>
+                        <span class="sidebar-item-label">Analytics</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Integrations Group -->
+            <div class="sidebar-group" data-group="integrations">
+                <button class="sidebar-group-toggle">
+                    Integrations
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="connect">
+                        <span class="sidebar-item-icon">🔌</span>
+                        <span class="sidebar-item-label">Services</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="channels">
+                        <span class="sidebar-item-icon">💬</span>
+                        <span class="sidebar-item-label">Channels</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="providers">
+                        <span class="sidebar-item-icon">🤖</span>
+                        <span class="sidebar-item-label">Providers</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="model-config">
+                        <span class="sidebar-item-icon">⚙️</span>
+                        <span class="sidebar-item-label">Model Config</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="llm">
+                        <span class="sidebar-item-icon">🔌</span>
+                        <span class="sidebar-item-label">LLM Connection</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Workspace Group -->
+            <div class="sidebar-group" data-group="workspace">
+                <button class="sidebar-group-toggle">
+                    Workspace
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="subscription">
+                        <span class="sidebar-item-icon">💎</span>
+                        <span class="sidebar-item-label">Subscription</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="export">
+                        <span class="sidebar-item-icon">💾</span>
+                        <span class="sidebar-item-label">Export</span>
+                    </button>
+                    <button class="sidebar-item" id="admin-tab-button" data-tab="admin" style="display: none;">
+                        <span class="sidebar-item-icon">🔐</span>
+                        <span class="sidebar-item-label">Admin</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Labs Group -->
+            <div class="sidebar-group" data-group="labs">
+                <button class="sidebar-group-toggle">
+                    Labs
+                    <span class="sidebar-group-arrow">›</span>
+                </button>
+                <div class="sidebar-group-items">
+                    <button class="sidebar-item" data-tab="moltbook">
+                        <span class="sidebar-item-icon">🦞</span>
+                        <span class="sidebar-item-label">Moltbook</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="feed">
+                        <span class="sidebar-item-icon">📖</span>
+                        <span class="sidebar-item-label">Feed</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="web-browse">
+                        <span class="sidebar-item-icon">🌐</span>
+                        <span class="sidebar-item-label">Web Browse</span>
+                    </button>
+                    <button class="sidebar-item" data-tab="utility">
+                        <span class="sidebar-item-icon">🧰</span>
+                        <span class="sidebar-item-label">Utility</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="https://docs.greenmonkey.dev" target="_blank" rel="noopener noreferrer">
+                📄 Documentation ↗
+            </a>
         </div>
-    </nav>
+    </aside>
 
-    <div class="container">
-        <div class="app-layout">
-            <!-- Main Content Area -->
-            <main class="main-content">
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-                <!-- Content Wrapper -->
-                <div class="content-wrapper">
+    <!-- Main Area -->
+    <div class="main-area">
+        <!-- Top Header -->
+        <header class="top-header">
+            <button class="header-hamburger" id="header-hamburger" aria-label="Toggle sidebar">
+                <span></span><span></span><span></span>
+            </button>
+            <span id="header-page-title">Overview</span>
+            <div class="header-spacer"></div>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle light/dark theme">
+                🌙
+            </button>
+            <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
+                🔐 Login
+            </button>
+            <div id="user-info" style="display: none; align-items: center; gap: 12px;">
+                <div class="header-user-details" style="text-align: right;">
+                    <div style="font-size: 10px; color: var(--text-tertiary);">Logged in as</div>
+                    <div id="user-email" style="font-weight: 500; font-size: 12px; color: var(--text-primary);"></div>
+                </div>
+                <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span id="subscription-tier-badge" style="font-weight: 600; font-size: 12px;"></span>
+                    <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 3px 8px; font-size: 10px;">
+                        Upgrade
+                    </button>
+                </div>
+                <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span id="credit-balance" style="font-weight: 600; font-size: 13px;">0</span>
+                    <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 3px 8px; font-size: 10px;">
+                        + Buy
+                    </button>
+                </div>
+                <button onclick="logout()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="content-wrapper">
 
             <!-- Overview Tab -->
             <div class="tab-content active" id="overview">
@@ -2405,8 +2470,22 @@
 
                 </div> <!-- end content-wrapper -->
             </main> <!-- end main-content -->
-        </div> <!-- end app-layout -->
-    </div> <!-- end container -->
+        </div> <!-- end main-area -->
+    </div> <!-- end app-shell -->
+
+    <!-- Buy Credits Modal -->
+    <div id="buy-credits-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="modal-close" onclick="closeModal('buy-credits-modal')">&times;</span>
+            <h2 style="margin-bottom: 4px;">Buy Credits</h2>
+            <p style="margin-bottom: 20px;">Credits are used for Moltbook posts and other premium actions.</p>
+            <div id="credit-packages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;"></div>
+            <div id="payment-processing" style="display: none; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0;">
+                <div class="spinner"></div>
+                <p style="color: var(--text-secondary); font-size: 14px;">Redirecting to checkout...</p>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/nautilus-client.js"></script>
     <script src="/static/js/dashboard-main.js"></script>
