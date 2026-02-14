@@ -914,4 +914,5 @@ def register_setup_routes(app):
                 'python_version': platform.python_version()
             })
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error in setup route: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

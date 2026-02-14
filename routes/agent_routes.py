@@ -67,7 +67,7 @@ def register_agent_routes(app):
 
         except Exception as e:
             print(f"Error listing agents: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/<int:agent_id>', methods=['GET'])
     @require_auth
@@ -93,7 +93,7 @@ def register_agent_routes(app):
 
         except Exception as e:
             print(f"Error getting agent: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents', methods=['POST'])
     @require_auth
@@ -163,7 +163,7 @@ def register_agent_routes(app):
         except Exception as e:
             print(f"Error creating agent: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/<int:agent_id>', methods=['PUT'])
     @require_auth
@@ -217,7 +217,7 @@ def register_agent_routes(app):
         except Exception as e:
             print(f"Error updating agent: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/<int:agent_id>', methods=['DELETE'])
     @require_auth
@@ -259,7 +259,7 @@ def register_agent_routes(app):
         except Exception as e:
             print(f"Error deleting agent: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/<int:agent_id>/test', methods=['POST'])
     @require_auth
@@ -405,7 +405,7 @@ def register_agent_routes(app):
         except Exception as e:
             print(f"Error cloning agent: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/<int:agent_id>/export', methods=['GET'])
     @require_auth
@@ -441,7 +441,7 @@ def register_agent_routes(app):
 
         except Exception as e:
             print(f"Error exporting agent: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agents/import', methods=['POST'])
     @require_auth
@@ -565,7 +565,7 @@ def register_agent_routes(app):
         except Exception as e:
             print(f"Error importing agent: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # =========================================================
     # Backward-compatibility aliases for /api/external-agents/*

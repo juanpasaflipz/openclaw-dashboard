@@ -13,10 +13,19 @@ from datetime import datetime
 import secrets
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+
+# CORS: restrict to allowed origins in production
+_allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+CORS(app, supports_credentials=True, origins=[o.strip() for o in _allowed_origins])
 
 # Secret key for sessions (generate a secure one for production)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Session cookie security
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if os.environ.get('FLASK_ENV') != 'development':
+    app.config['SESSION_COOKIE_SECURE'] = True
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL', f'sqlite:///{Path(__file__).parent}/openclaw.db')
@@ -182,7 +191,7 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
 
     except Exception as e:
         print(f"❌ Error generating post: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 def call_anthropic_api(prompt, llm_config):
     """Call Anthropic API"""
@@ -295,8 +304,10 @@ def get_config(filename):
         if filename not in allowed_files:
             return jsonify({'error': 'File not allowed'}), 403
 
-        # Get user_id from session (or use default user for backward compatibility)
-        user_id = session.get('user_id', 1)  # Default to user 1 if not logged in
+        # Require authentication
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
 
         # Try to get from database first
         config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
@@ -316,7 +327,7 @@ def get_config(filename):
 
     except Exception as e:
         print(f"❌ Error in get_config: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/config/<filename>', methods=['POST'])
 def save_config(filename):
@@ -331,18 +342,10 @@ def save_config(filename):
         data = request.get_json()
         content = data.get('content', '')
 
-        # Get user_id from session (or use default user)
+        # Require authentication
         user_id = session.get('user_id')
-
         if not user_id:
-            # If not logged in, create a default user or return error
-            # For now, create/use default user with ID 1
-            user = User.query.get(1)
-            if not user:
-                user = User(id=1, email='default@openclaw.local', credit_balance=0)
-                db.session.add(user)
-                db.session.commit()
-            user_id = 1
+            return jsonify({'error': 'Authentication required'}), 401
 
         # Find existing config or create new one
         config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
@@ -362,7 +365,7 @@ def save_config(filename):
     except Exception as e:
         print(f"❌ Error in save_config: {e}")
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
@@ -394,7 +397,8 @@ def get_status():
         return jsonify(status)
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in get_status: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/test-connection', methods=['POST'])
 def test_connection():
@@ -617,7 +621,8 @@ Next Steps:
             'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook claim: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/import', methods=['POST'])
 def moltbook_import():
@@ -716,7 +721,8 @@ Never share it with third parties, "verification" services, or other domains.
             'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook import: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/status', methods=['GET'])
 def moltbook_status():
@@ -759,7 +765,8 @@ def moltbook_status():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook status: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/profile', methods=['GET'])
 def moltbook_profile():
@@ -789,7 +796,8 @@ def moltbook_profile():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook profile: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/post', methods=['POST'])
 def moltbook_post():
@@ -827,7 +835,8 @@ def moltbook_post():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook post: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/init-db', methods=['POST'])
 def initialize_database():
@@ -840,7 +849,7 @@ def initialize_database():
         admin_password = data.get('password', '')
 
         # Simple password protection (change this in production!)
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         # Create all tables
@@ -912,7 +921,8 @@ def initialize_database():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in init-db: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/migrate-subscription-columns', methods=['POST'])
 def migrate_subscription_columns():
@@ -924,7 +934,7 @@ def migrate_subscription_columns():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         # Run raw SQL to add columns if they don't exist
@@ -977,7 +987,8 @@ def migrate_subscription_columns():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in migrate-subscription-columns: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/update-pricing', methods=['POST'])
 def update_pricing():
@@ -988,7 +999,7 @@ def update_pricing():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         pro_plan = SubscriptionPlan.query.filter_by(tier='pro').first()
@@ -1021,7 +1032,8 @@ def update_pricing():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in update-pricing: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/migrate-to-two-tier', methods=['POST'])
 def migrate_to_two_tier():
@@ -1035,7 +1047,7 @@ def migrate_to_two_tier():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         results = []
@@ -1090,7 +1102,8 @@ def migrate_to_two_tier():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in migrate-to-two-tier: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/update-stripe-ids', methods=['POST'])
 def update_stripe_ids():
@@ -1102,7 +1115,7 @@ def update_stripe_ids():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         updates = []
@@ -1128,7 +1141,8 @@ def update_stripe_ids():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in update-stripe-ids: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/run-migrations', methods=['POST'])
 def run_migrations():
@@ -1140,7 +1154,7 @@ def run_migrations():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         migrations_run = []
@@ -1194,7 +1208,7 @@ def run_migrations():
     except Exception as e:
         db.session.rollback()
         print(f"❌ Migration error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 if __name__ == '__main__':
     print("=" * 60)

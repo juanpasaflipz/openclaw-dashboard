@@ -72,7 +72,8 @@ def register_discord_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Discord guilds: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/discord/guilds/<guild_id>/channels', methods=['GET'])
     def discord_channels(guild_id):
@@ -106,4 +107,5 @@ def register_discord_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Discord channels: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

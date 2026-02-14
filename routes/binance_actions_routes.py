@@ -125,7 +125,7 @@ def register_binance_actions_routes(app):
         except Exception as e:
             print(f"Error proposing trade: {str(e)}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/agent-actions/analyze-portfolio', methods=['POST'])
     def analyze_portfolio():
@@ -224,4 +224,4 @@ Format your response as JSON with keys: summary, risk_level, risk_notes (array),
 
         except Exception as e:
             print(f"Error analyzing portfolio: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

@@ -142,7 +142,7 @@ def register_auth_routes(app):
         except Exception as e:
             print(f"❌ Error in request_magic_link: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/auth/verify', methods=['GET'])
     def verify_magic_link():
@@ -197,7 +197,7 @@ def register_auth_routes(app):
         except Exception as e:
             print(f"❌ Error in verify_magic_link: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/auth/me', methods=['GET'])
     def get_current_user():
@@ -232,7 +232,7 @@ def register_auth_routes(app):
 
         except Exception as e:
             print(f"❌ Error in get_current_user: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/auth/logout', methods=['POST'])
     def logout():
@@ -242,4 +242,4 @@ def register_auth_routes(app):
             return jsonify({'success': True, 'message': 'Logged out successfully'})
         except Exception as e:
             print(f"❌ Error in logout: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

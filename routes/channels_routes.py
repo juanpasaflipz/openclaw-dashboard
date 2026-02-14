@@ -444,7 +444,7 @@ def register_channels_routes(app):
 
         except Exception as e:
             print(f"Error getting available channels: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/channels/agent/<int:agent_id>/config', methods=['GET'])
     def get_agent_channels(agent_id):
@@ -468,7 +468,7 @@ def register_channels_routes(app):
 
         except Exception as e:
             print(f"Error getting agent channels: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/channels/agent/<int:agent_id>/connect', methods=['POST'])
     def connect_channel(agent_id):
@@ -518,7 +518,7 @@ def register_channels_routes(app):
 
         except Exception as e:
             print(f"Error connecting channel: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/channels/agent/<int:agent_id>/disconnect/<channel_id>', methods=['POST'])
     def disconnect_channel(agent_id, channel_id):
@@ -539,7 +539,7 @@ def register_channels_routes(app):
 
         except Exception as e:
             print(f"Error disconnecting channel: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/channels/test/<channel_id>', methods=['POST'])
     def test_channel_connection(channel_id):
@@ -563,7 +563,7 @@ def register_channels_routes(app):
 
         except Exception as e:
             print(f"Error testing channel: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ============================================
     # Telegram: activate / deactivate / webhook

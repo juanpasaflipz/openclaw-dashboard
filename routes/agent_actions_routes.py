@@ -157,7 +157,7 @@ Format your response as JSON with keys: summary, urgent_items (array), suggested
 
         except Exception as e:
             print(f"Error analyzing inbox: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/agent-actions/draft-reply', methods=['POST'])
@@ -254,7 +254,7 @@ Write a clear, professional reply. Be concise and helpful."""
         except Exception as e:
             print(f"Error drafting reply: {str(e)}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/agent-actions/pending', methods=['GET'])
@@ -278,7 +278,8 @@ Write a clear, professional reply. Be concise and helpful."""
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting pending actions: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/agent-actions/<int:action_id>/approve', methods=['POST'])
@@ -610,7 +611,7 @@ Write a clear, professional reply. Be concise and helpful."""
             action.status = 'failed'
             action.error_message = str(e)
             db.session.commit()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/agent-actions/<int:action_id>/reject', methods=['POST'])
@@ -643,4 +644,5 @@ Write a clear, professional reply. Be concise and helpful."""
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error rejecting action: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

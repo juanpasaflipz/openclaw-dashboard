@@ -106,4 +106,5 @@ def register_utility_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': f'Utility error: {str(e)[:300]}'}), 500
+            print(f"Utility error: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

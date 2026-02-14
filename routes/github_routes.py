@@ -70,7 +70,8 @@ def register_github_routes(app):
                 } for r in repos]
             })
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing GitHub repos: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/github/repos/<owner>/<repo>/issues', methods=['GET'])
     def github_issues(owner, repo):
@@ -108,4 +109,5 @@ def register_github_routes(app):
                 } for i in issues]
             })
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing GitHub issues: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

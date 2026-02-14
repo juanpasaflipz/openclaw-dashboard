@@ -1157,6 +1157,67 @@
                     </div>
                 </div>
 
+                <!-- Nautilus Chat Interface -->
+                <div class="card" style="margin-top:24px;">
+                    <div style="display:flex; gap:8px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+                        <button class="nautilus-mode-tab active" data-mode="direct" onclick="switchNautilusMode('direct')">Direct LLM</button>
+                        <button class="nautilus-mode-tab" data-mode="gateway" onclick="switchNautilusMode('gateway')">Gateway</button>
+                    </div>
+
+                    <!-- Direct LLM Panel -->
+                    <div id="nautilus-direct-panel" class="nautilus-mode-panel active">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-weight:600;">Model:</span>
+                                <span id="nautilus-model-status" class="nautilus-model-banner-value not-configured">Not configured</span>
+                                <span id="nautilus-model-indicator" class="model-indicator" style="display:none;"></span>
+                            </div>
+                            <button id="nautilus-configure-btn" class="btn btn-secondary btn-sm" onclick="switchTab('model-config')">Configure Model</button>
+                        </div>
+                        <div class="chat-layout" style="height:400px;">
+                            <div class="chat-sidebar" style="min-width:180px; max-width:200px;">
+                                <button class="btn btn-primary btn-sm" onclick="createNautilusConversation()" style="width:100%; margin-bottom:8px;">+ New Chat</button>
+                                <div id="nautilus-conversation-list" class="chat-conversation-list">
+                                    <p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>
+                                </div>
+                            </div>
+                            <div class="chat-main" style="flex:1;">
+                                <div class="chat-header">
+                                    <span id="nautilus-chat-title" style="font-weight:600;">Select or create a conversation</span>
+                                </div>
+                                <div id="nautilus-chat-messages" class="chat-messages">
+                                    <div class="chat-empty-state">
+                                        <span style="font-size:48px;">🐙</span>
+                                        <p>Send a message to start chatting with Nautilus</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-bar">
+                                    <textarea id="nautilus-chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNautilusMessage();}"></textarea>
+                                    <button class="btn btn-primary" onclick="sendNautilusMessage()">Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gateway Panel -->
+                    <div id="nautilus-gateway-panel" class="nautilus-mode-panel" style="display:none;">
+                        <div class="chat-layout" style="height:400px;">
+                            <div class="chat-main" style="flex:1;">
+                                <div id="gateway-chat-messages" class="chat-messages">
+                                    <div class="chat-empty-state">
+                                        <span style="font-size:48px;">🌐</span>
+                                        <p>Connect to the Gateway above, then start chatting</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-bar">
+                                    <textarea id="gateway-chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGatewayMessage();}"></textarea>
+                                    <button class="btn btn-primary" onclick="sendGatewayMessage()">Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="agents-alert" class="alert"></div>
 
                 <!-- Agent Create/Edit Modal -->
@@ -2407,6 +2468,20 @@
             </main> <!-- end main-content -->
         </div> <!-- end app-layout -->
     </div> <!-- end container -->
+
+    <!-- Buy Credits Modal -->
+    <div id="buy-credits-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="modal-close" onclick="closeModal('buy-credits-modal')">&times;</span>
+            <h2 style="margin-bottom: 4px;">Buy Credits</h2>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Credits are used for Moltbook posts and other premium actions.</p>
+            <div id="credit-packages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;"></div>
+            <div id="payment-processing" style="display: none; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0;">
+                <div class="spinner"></div>
+                <p style="color: var(--text-secondary); font-size: 14px;">Redirecting to checkout...</p>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/nautilus-client.js"></script>
     <script src="/static/js/dashboard-main.js"></script>

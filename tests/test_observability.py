@@ -146,8 +146,8 @@ class TestIngestionAPI:
             headers={'Authorization': f'Bearer {raw_key}', 'Content-Type': 'application/json'},
             json={'events': events})
 
-        assert resp.status_code == 400
-        assert 'Max 1000' in resp.get_json()['error']
+        assert resp.status_code == 403
+        assert 'exceeds tier limit' in resp.get_json()['error']
 
     def test_ingest_dedupe_key(self, client, user, agent, obs_api_key):
         _, raw_key = obs_api_key

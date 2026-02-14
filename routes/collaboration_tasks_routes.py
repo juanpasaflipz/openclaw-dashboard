@@ -185,7 +185,8 @@ def register_collaboration_tasks_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error creating task: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/tasks  — list tasks (filterable)
@@ -229,7 +230,8 @@ def register_collaboration_tasks_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing tasks: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/tasks/<id>  — get single task with events
@@ -254,7 +256,8 @@ def register_collaboration_tasks_routes(app):
             return jsonify({'success': True, 'task': result})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting task: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # POST /api/tasks/<id>/start  — transition queued/blocked -> running
@@ -353,7 +356,8 @@ def register_collaboration_tasks_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error reassigning task: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # Internal helper for state transitions
@@ -428,7 +432,8 @@ def register_collaboration_tasks_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error transitioning task: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
 def _parse_datetime(value):

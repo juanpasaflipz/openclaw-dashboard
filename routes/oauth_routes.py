@@ -99,7 +99,7 @@ def register_oauth_routes(app):
 
         except Exception as e:
             print(f"❌ Error starting OAuth: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/oauth/google/callback', methods=['GET'])
     def google_oauth_callback():
@@ -248,7 +248,7 @@ def register_oauth_routes(app):
 
         except Exception as e:
             print(f"❌ Error listing superpowers: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/superpowers/<int:superpower_id>/disconnect', methods=['POST'])
     def disconnect_superpower(superpower_id):
@@ -281,7 +281,7 @@ def register_oauth_routes(app):
         except Exception as e:
             print(f"❌ Error disconnecting superpower: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ========================================
     # Generic OAuth for third-party services
@@ -400,7 +400,7 @@ def register_oauth_routes(app):
 
         except Exception as e:
             print(f"Error starting {provider} OAuth: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/oauth/<provider>/callback', methods=['GET'])
     def oauth_callback(provider):

@@ -70,7 +70,8 @@ def register_telegram_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error connecting Telegram: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/telegram/me', methods=['GET'])
     def telegram_me():
@@ -99,7 +100,8 @@ def register_telegram_routes(app):
             return jsonify({'success': True, 'bot': result['result']})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Telegram bot info: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/telegram/updates', methods=['GET'])
     def telegram_updates():
@@ -131,4 +133,5 @@ def register_telegram_routes(app):
             return jsonify({'success': True, 'updates': result['result']})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Telegram updates: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

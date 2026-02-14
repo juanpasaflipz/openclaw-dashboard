@@ -121,10 +121,10 @@ def register_gmail_routes(app):
 
         except HttpError as error:
             print(f"❌ Gmail API error: {error}")
-            return jsonify({'error': f'Gmail API error: {error}'}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
         except Exception as e:
             print(f"❌ Error fetching emails: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/gmail/email/<email_id>', methods=['GET'])
     def get_email_details(email_id):
@@ -178,10 +178,10 @@ def register_gmail_routes(app):
 
         except HttpError as error:
             print(f"❌ Gmail API error: {error}")
-            return jsonify({'error': f'Gmail API error: {error}'}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
         except Exception as e:
             print(f"❌ Error fetching email: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/gmail/send', methods=['POST'])
     def send_email():
@@ -229,10 +229,10 @@ def register_gmail_routes(app):
 
         except HttpError as error:
             print(f"❌ Gmail API error: {error}")
-            return jsonify({'error': f'Gmail API error: {error}'}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
         except Exception as e:
             print(f"❌ Error sending email: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/gmail/labels', methods=['GET'])
     def get_labels():
@@ -262,7 +262,7 @@ def register_gmail_routes(app):
 
         except HttpError as error:
             print(f"❌ Gmail API error: {error}")
-            return jsonify({'error': f'Gmail API error: {error}'}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
         except Exception as e:
             print(f"❌ Error fetching labels: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

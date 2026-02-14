@@ -67,7 +67,8 @@ def register_slack_routes(app):
             return jsonify({'success': True, 'channels': channels})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Slack channels: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/slack/messages/<channel_id>', methods=['GET'])
     def slack_messages(channel_id):
@@ -101,4 +102,5 @@ def register_slack_routes(app):
             return jsonify({'success': True, 'messages': messages})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Slack messages: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

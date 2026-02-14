@@ -85,7 +85,7 @@ def register_binance_routes(app):
         except Exception as e:
             print(f"Error connecting Binance: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/disconnect', methods=['POST'])
     def disconnect_binance():
@@ -113,7 +113,8 @@ def register_binance_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error disconnecting Binance: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/portfolio', methods=['GET'])
     def binance_portfolio():
@@ -134,7 +135,7 @@ def register_binance_routes(app):
 
         except Exception as e:
             print(f"Error fetching portfolio: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/price/<symbol>', methods=['GET'])
     def binance_price(symbol):
@@ -158,7 +159,7 @@ def register_binance_routes(app):
 
         except Exception as e:
             print(f"Error fetching price: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/prices', methods=['GET'])
     def binance_prices():
@@ -199,7 +200,7 @@ def register_binance_routes(app):
 
         except Exception as e:
             print(f"Error fetching prices: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/order/<symbol>/<order_id>', methods=['GET'])
     def binance_order(symbol, order_id):
@@ -222,7 +223,7 @@ def register_binance_routes(app):
 
         except Exception as e:
             print(f"Error fetching order: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/enable-trading', methods=['POST'])
     def enable_trading():
@@ -253,7 +254,8 @@ def register_binance_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error enabling trading: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/binance/disable-trading', methods=['POST'])
     def disable_trading():
@@ -284,4 +286,5 @@ def register_binance_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error disabling trading: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

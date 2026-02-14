@@ -41,7 +41,7 @@ def register_stripe_routes(app):
             })
         except Exception as e:
             print(f"❌ Error in get_credit_packages: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/credits/create-checkout', methods=['POST'])
     @require_auth
@@ -104,7 +104,7 @@ def register_stripe_routes(app):
 
         except Exception as e:
             print(f"❌ Error in create_checkout_session: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/stripe/webhook', methods=['POST'])
     def stripe_webhook():
@@ -337,7 +337,7 @@ def register_stripe_routes(app):
 
         except Exception as e:
             print(f"❌ Error in get_credit_balance: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/moltbook/post', methods=['POST'])
     @require_auth
@@ -406,7 +406,7 @@ def register_stripe_routes(app):
         except Exception as e:
             print(f"❌ Error in create_moltbook_post_paid: {e}")
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ==================== SUBSCRIPTION ENDPOINTS ====================
 
@@ -434,7 +434,7 @@ def register_stripe_routes(app):
             })
         except Exception as e:
             print(f"❌ Error in get_subscription_plans: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/subscriptions/create-checkout', methods=['POST'])
     @require_auth
@@ -500,7 +500,7 @@ def register_stripe_routes(app):
 
         except Exception as e:
             print(f"❌ Error in create_subscription_checkout: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/subscriptions/portal', methods=['POST'])
     @require_auth
@@ -523,4 +523,4 @@ def register_stripe_routes(app):
 
         except Exception as e:
             print(f"❌ Error in create_customer_portal: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

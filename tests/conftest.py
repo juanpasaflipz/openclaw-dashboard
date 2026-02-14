@@ -57,8 +57,11 @@ def app():
 def _clean_db(app):
     """Clean up data between tests to avoid UNIQUE constraint violations."""
     from models import db
+    # Remove stale session from previous test entirely
+    db.session.remove()
     yield
-    db.session.rollback()
+    db.session.remove()
+    # Use a fresh session to clean all tables
     for table in reversed(db.metadata.sorted_tables):
         db.session.execute(table.delete())
     db.session.commit()

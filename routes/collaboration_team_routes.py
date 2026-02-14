@@ -39,7 +39,8 @@ def register_collaboration_team_routes(app):
                 'count': len(roles),
             })
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing roles: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/team/roles/<agent_id>  — get role for a specific agent
@@ -64,7 +65,8 @@ def register_collaboration_team_routes(app):
             return jsonify({'success': True, 'role': role.to_dict()})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting role: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # POST /api/team/roles  — assign or update a role for an agent
@@ -121,7 +123,8 @@ def register_collaboration_team_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error setting role: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # POST /api/team/roles/<agent_id>/delete  — remove a role assignment
@@ -143,7 +146,8 @@ def register_collaboration_team_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error deleting role: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/team/rules  — get workspace team rules
@@ -170,7 +174,8 @@ def register_collaboration_team_routes(app):
             return jsonify({'success': True, 'rules': rules.to_dict()})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting rules: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # POST /api/team/rules  — update workspace team rules
@@ -223,7 +228,8 @@ def register_collaboration_team_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error setting rules: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/team/summary  — team overview (roles + rules + agents)
@@ -260,4 +266,5 @@ def register_collaboration_team_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting team summary: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

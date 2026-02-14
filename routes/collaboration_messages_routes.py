@@ -86,7 +86,8 @@ def register_collaboration_messages_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 500
+            print(f"Error sending message: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     # ------------------------------------------------------------------
     # GET /api/messages  — list messages (by task_id or thread_id)
@@ -133,4 +134,5 @@ def register_collaboration_messages_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing messages: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

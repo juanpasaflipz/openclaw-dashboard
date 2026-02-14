@@ -70,7 +70,8 @@ def register_spotify_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Spotify profile: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/spotify/playlists', methods=['GET'])
     def spotify_playlists():
@@ -107,7 +108,8 @@ def register_spotify_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Spotify playlists: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/spotify/now-playing', methods=['GET'])
     def spotify_now_playing():
@@ -153,4 +155,5 @@ def register_spotify_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Spotify now playing: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

@@ -65,7 +65,8 @@ def register_todoist_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Todoist projects: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/todoist/tasks', methods=['GET'])
     def todoist_tasks():
@@ -108,4 +109,5 @@ def register_todoist_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Todoist tasks: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

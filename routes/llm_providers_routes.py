@@ -284,7 +284,7 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error getting available providers: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/providers/agent/<int:agent_id>/config', methods=['GET'])
     def get_agent_providers(agent_id):
@@ -310,7 +310,7 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error getting agent providers: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/providers/agent/<int:agent_id>/connect', methods=['POST'])
     def connect_provider(agent_id):
@@ -368,7 +368,7 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error connecting provider: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/providers/agent/<int:agent_id>/disconnect/<provider_id>', methods=['POST'])
     def disconnect_provider(agent_id, provider_id):
@@ -390,7 +390,7 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error disconnecting provider: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/providers/test/<provider_id>', methods=['POST'])
     def test_provider_connection(provider_id):
@@ -418,7 +418,7 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error testing provider: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/providers/<provider_id>/models', methods=['GET'])
     def get_provider_models(provider_id):
@@ -436,4 +436,4 @@ def register_llm_providers_routes(app):
 
         except Exception as e:
             print(f"Error getting provider models: {e}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

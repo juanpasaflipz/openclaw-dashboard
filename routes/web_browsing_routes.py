@@ -104,7 +104,8 @@ def register_web_browsing_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': f'Research failed: {str(e)[:300]}'}), 500
+            print(f"Research failed: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/browse/fetch', methods=['POST'])
     def fetch_url():
@@ -130,7 +131,8 @@ def register_web_browsing_routes(app):
                 'content_length': len(content),
             })
         except Exception as e:
-            return jsonify({'error': f'Fetch failed: {str(e)[:200]}'}), 500
+            print(f"Fetch failed: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/browse/history', methods=['GET'])
     def browse_history():

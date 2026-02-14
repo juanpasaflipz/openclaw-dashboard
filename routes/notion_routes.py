@@ -108,7 +108,7 @@ def register_notion_routes(app):
 
         except Exception as e:
             print(f"Error searching notion: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/notion/pages', methods=['POST'])
@@ -185,7 +185,7 @@ def register_notion_routes(app):
 
         except Exception as e:
             print(f"Error creating notion page: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/notion/pages/<page_id>', methods=['GET'])
@@ -230,7 +230,7 @@ def register_notion_routes(app):
 
         except Exception as e:
             print(f"Error getting notion page: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/notion/pages/<page_id>/append', methods=['POST'])
@@ -286,7 +286,7 @@ def register_notion_routes(app):
 
         except Exception as e:
             print(f"Error appending to notion page: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/notion/databases/<database_id>/query', methods=['POST'])
@@ -323,4 +323,4 @@ def register_notion_routes(app):
 
         except Exception as e:
             print(f"Error querying notion database: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500

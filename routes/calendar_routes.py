@@ -120,7 +120,7 @@ def register_calendar_routes(app):
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
             print(f"Error listing calendar events: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/calendar/events/<event_id>', methods=['GET'])
@@ -163,7 +163,8 @@ def register_calendar_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting calendar event: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/calendar/events', methods=['POST'])
@@ -227,7 +228,8 @@ def register_calendar_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error creating calendar event: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/calendar/events/<event_id>', methods=['PUT'])
@@ -286,7 +288,8 @@ def register_calendar_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error updating calendar event: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/calendar/events/<event_id>', methods=['DELETE'])
@@ -316,7 +319,8 @@ def register_calendar_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error deleting calendar event: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/calendar/free-busy', methods=['POST'])
@@ -356,4 +360,5 @@ def register_calendar_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Calendar API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error checking free/busy: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500

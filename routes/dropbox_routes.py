@@ -79,7 +79,8 @@ def register_dropbox_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing Dropbox files: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
     @app.route('/api/dropbox/files/metadata', methods=['GET'])
     def dropbox_metadata():
@@ -120,4 +121,5 @@ def register_dropbox_routes(app):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting Dropbox metadata: {e}")
+            return jsonify({'error': 'An internal error occurred'}), 500

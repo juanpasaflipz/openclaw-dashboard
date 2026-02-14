@@ -77,7 +77,8 @@ def get_feed():
         return jsonify(result)
 
     except requests.RequestException as e:
-        return jsonify({'error': f'Moltbook API error: {str(e)}'}), 500
+        print(f"Moltbook API error (feed): {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @moltbook_bp.route('/submolts/<submolt_name>/feed', methods=['GET'])
@@ -124,7 +125,8 @@ def get_submolt_feed(submolt_name):
         return jsonify(add_upvote_states(data, user_id))
 
     except requests.RequestException as e:
-        return jsonify({'error': f'Moltbook API error: {str(e)}'}), 500
+        print(f"Moltbook API error (submolt feed): {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 # ============================================
@@ -201,7 +203,8 @@ def upvote_post(post_id):
         })
 
     except requests.RequestException as e:
-        return jsonify({'error': f'Failed to upvote: {str(e)}'}), 500
+        print(f"Failed to upvote: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @moltbook_bp.route('/posts/<post_id>/upvote', methods=['DELETE'])
@@ -297,7 +300,8 @@ def get_agent_profile(agent_name):
         return jsonify(response.json())
 
     except requests.RequestException as e:
-        return jsonify({'error': f'Failed to load profile: {str(e)}'}), 500
+        print(f"Failed to load profile: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 # ============================================

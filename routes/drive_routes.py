@@ -124,7 +124,7 @@ def register_drive_routes(app):
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
             print(f"Error listing drive files: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/drive/files/<file_id>', methods=['GET'])
@@ -164,7 +164,8 @@ def register_drive_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error getting drive file: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/drive/files/<file_id>/download', methods=['GET'])
@@ -212,7 +213,8 @@ def register_drive_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error downloading drive file: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/drive/folders', methods=['GET'])
@@ -247,7 +249,8 @@ def register_drive_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error listing drive folders: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/drive/folders', methods=['POST'])
@@ -297,7 +300,8 @@ def register_drive_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error creating drive folder: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
 
 
     @app.route('/api/drive/search', methods=['GET'])
@@ -336,4 +340,5 @@ def register_drive_routes(app):
         except HttpError as e:
             return jsonify({'error': f'Drive API error: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"Error searching drive: {str(e)}")
+            return jsonify({'error': 'An internal error occurred'}), 500
