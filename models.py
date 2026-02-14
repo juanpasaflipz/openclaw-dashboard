@@ -647,6 +647,35 @@ class ChatMessage(db.Model):
         }
 
 
+class MemoryEmbedding(db.Model):
+    """Semantic memory store for cross-conversation recall via vector search."""
+    __tablename__ = 'memory_embeddings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    embedding = db.Column(db.Text)  # JSON-serialized float array (1536 dims)
+    source_type = db.Column(db.String(50))  # 'conversation', 'soul', 'manual'
+    source_id = db.Column(db.String(100))  # conversation_id or filename
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='memory_embeddings')
+
+    __table_args__ = (
+        db.Index('ix_memory_user_source', 'user_id', 'source_type'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'source_type': self.source_type,
+            'source_id': self.source_id,
+            'has_embedding': bool(self.embedding),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class WebBrowsingResult(db.Model):
     """Web browsing/research history and cache"""
     __tablename__ = 'web_browsing_results'

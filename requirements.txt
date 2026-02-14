@@ -18,6 +18,12 @@ google-api-python-client==2.116.0
 # Anthropic API for AI agent actions
 anthropic>=0.40.0
 
+# Token counting for context window management
+tiktoken>=0.7.0
+
+# OpenAI API for embeddings (semantic memory)
+openai>=1.40.0
+
 # Crypto exchange API (Binance + 100+ exchanges)
 ccxt>=4.0.0
 

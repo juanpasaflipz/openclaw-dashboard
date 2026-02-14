@@ -766,6 +766,475 @@ def register_channels_routes(app):
         return jsonify({'ok': True})
 
 
+    # ============================================
+    # Discord: activate / deactivate / webhook
+    # ============================================
+
+    @app.route('/api/channels/discord/activate', methods=['POST'])
+    def activate_discord():
+        """Store Discord bot token and configure webhook endpoint."""
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json() or {}
+
+        # Get the Discord superpower (holds bot_token)
+        sp = Superpower.query.filter_by(user_id=user_id, service_type='discord').first()
+        if not sp or not sp.access_token_encrypted:
+            return jsonify({'error': 'Discord bot not connected. Connect it in Superpowers first.'}), 400
+
+        # Optionally assign an agent
+        agent_id = data.get('agent_id')
+        if agent_id:
+            agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
+            if not agent:
+                return jsonify({'error': 'Agent not found'}), 400
+            sp.agent_id = agent.id
+        else:
+            sp.agent_id = None
+
+        config = json.loads(sp.config) if sp.config else {}
+        config['webhook_active'] = True
+        if data.get('application_id'):
+            config['application_id'] = data['application_id']
+        sp.config = json.dumps(config)
+        db.session.commit()
+
+        base_url = os.environ.get('BASE_URL', request.host_url.rstrip('/'))
+        webhook_url = f'{base_url}/api/channels/discord/webhook'
+
+        return jsonify({
+            'success': True,
+            'message': 'Discord webhook activated. Set this as your Interactions Endpoint URL in Discord Developer Portal.',
+            'webhook_url': webhook_url,
+        })
+
+    @app.route('/api/channels/discord/deactivate', methods=['POST'])
+    def deactivate_discord():
+        """Deactivate Discord webhook."""
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        sp = Superpower.query.filter_by(user_id=user_id, service_type='discord').first()
+        if not sp:
+            return jsonify({'error': 'Discord not connected'}), 400
+
+        config = json.loads(sp.config) if sp.config else {}
+        config['webhook_active'] = False
+        sp.config = json.dumps(config)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Discord webhook deactivated'})
+
+    @app.route('/api/channels/discord/webhook', methods=['POST'])
+    @limiter.exempt
+    def discord_webhook():
+        """Discord Interactions Endpoint webhook handler.
+
+        Handles:
+        - PING (type 1): Required by Discord for endpoint verification
+        - MESSAGE_CREATE events via Gateway Bot (forwarded by Discord)
+        - APPLICATION_COMMAND (type 2): Slash commands
+        """
+        try:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+            payload = request.get_json(silent=True) or {}
+
+            # Handle Discord PING verification (type 1)
+            if payload.get('type') == 1:
+                return jsonify({'type': 1})
+
+            # Extract message data from interaction or bot event
+            parsed = _parse_discord_message(payload)
+            if not parsed:
+                return jsonify({'ok': True})
+
+            channel_id = parsed['channel_id']
+            discord_user_id = parsed['user_id']
+            message_text = parsed['text']
+            bot_token = None
+
+            # Find the owner by checking all Discord superpowers
+            sp = _find_superpower_by_discord(discord_user_id, channel_id)
+            if not sp:
+                return jsonify({'ok': True})
+
+            bot_token = sp.access_token_encrypted
+            owner_user_id = sp.user_id
+
+            if not message_text:
+                return jsonify({'ok': True})
+
+            # Send typing indicator
+            _send_discord_typing(bot_token, channel_id)
+
+            # Get or create conversation
+            metadata = {
+                'username': parsed.get('username', ''),
+                'guild_id': parsed.get('guild_id', ''),
+            }
+            conv = _get_or_create_channel_conversation(owner_user_id, 'discord', channel_id, metadata)
+
+            # Build agent system prompt if assigned
+            system_prompt = None
+            if sp.agent_id:
+                agent = Agent.query.get(sp.agent_id)
+                if agent and agent.is_active:
+                    system_prompt = _build_agent_system_prompt(agent)
+
+            # Run LLM pipeline
+            from routes.chatbot_routes import run_llm_pipeline
+            result = run_llm_pipeline(owner_user_id, conv.conversation_id, message_text, system_prompt=system_prompt)
+
+            if result['success']:
+                response_text = result.get('last_assistant_content', '')
+                if not response_text:
+                    response_text = 'I processed your request but have no text response.'
+            else:
+                response_text = f"Error: {result.get('error', 'Unknown error')}"
+
+            _send_discord_response(bot_token, channel_id, response_text)
+
+        except Exception as e:
+            print(f"Discord webhook error: {e}")
+            try:
+                if bot_token and channel_id:
+                    _send_discord_response(bot_token, channel_id, f'Internal error: {str(e)[:200]}')
+            except Exception:
+                pass
+
+        return jsonify({'ok': True})
+
+    # ============================================
+    # Slack: activate / deactivate / webhook
+    # ============================================
+
+    @app.route('/api/channels/slack/activate', methods=['POST'])
+    def activate_slack():
+        """Store Slack bot token and configure webhook."""
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json() or {}
+
+        # Get the Slack superpower
+        sp = Superpower.query.filter_by(user_id=user_id, service_type='slack').first()
+        if not sp or not sp.access_token_encrypted:
+            return jsonify({'error': 'Slack not connected. Connect it in Superpowers first.'}), 400
+
+        # Optionally assign an agent
+        agent_id = data.get('agent_id')
+        if agent_id:
+            agent = Agent.query.filter_by(id=agent_id, user_id=user_id).first()
+            if not agent:
+                return jsonify({'error': 'Agent not found'}), 400
+            sp.agent_id = agent.id
+        else:
+            sp.agent_id = None
+
+        config = json.loads(sp.config) if sp.config else {}
+        config['webhook_active'] = True
+        if data.get('app_token'):
+            config['app_token'] = data['app_token']
+        # Store the bot user ID to filter out bot's own messages
+        if data.get('bot_user_id'):
+            config['bot_user_id'] = data['bot_user_id']
+        sp.config = json.dumps(config)
+        db.session.commit()
+
+        base_url = os.environ.get('BASE_URL', request.host_url.rstrip('/'))
+        webhook_url = f'{base_url}/api/channels/slack/webhook'
+
+        return jsonify({
+            'success': True,
+            'message': 'Slack webhook activated. Set this as your Request URL in Slack Event Subscriptions.',
+            'webhook_url': webhook_url,
+        })
+
+    @app.route('/api/channels/slack/deactivate', methods=['POST'])
+    def deactivate_slack():
+        """Deactivate Slack webhook."""
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        sp = Superpower.query.filter_by(user_id=user_id, service_type='slack').first()
+        if not sp:
+            return jsonify({'error': 'Slack not connected'}), 400
+
+        config = json.loads(sp.config) if sp.config else {}
+        config['webhook_active'] = False
+        sp.config = json.dumps(config)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Slack webhook deactivated'})
+
+    @app.route('/api/channels/slack/webhook', methods=['POST'])
+    @limiter.exempt
+    def slack_webhook():
+        """Slack Events API webhook handler.
+
+        Handles:
+        - url_verification challenge (required by Slack)
+        - message events: route through LLM pipeline
+        - Filters out bot's own messages to prevent loops
+        """
+        try:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+            payload = request.get_json(silent=True) or {}
+
+            # Handle Slack URL verification challenge
+            if payload.get('type') == 'url_verification':
+                return jsonify({'challenge': payload.get('challenge', '')})
+
+            # Handle event callbacks
+            if payload.get('type') != 'event_callback':
+                return jsonify({'ok': True})
+
+            event = payload.get('event', {})
+
+            # Only handle message events (not subtypes like message_changed, etc.)
+            if event.get('type') != 'message' or event.get('subtype'):
+                return jsonify({'ok': True})
+
+            parsed = _parse_slack_message(payload)
+            if not parsed:
+                return jsonify({'ok': True})
+
+            slack_channel = parsed['channel']
+            slack_user = parsed['user']
+            message_text = parsed['text']
+
+            if not message_text:
+                return jsonify({'ok': True})
+
+            # Find the owner by matching Slack workspace/channel
+            sp = _find_superpower_by_slack(slack_user, slack_channel)
+            if not sp:
+                return jsonify({'ok': True})
+
+            bot_token = sp.access_token_encrypted
+            owner_user_id = sp.user_id
+
+            # Filter out bot's own messages
+            config = json.loads(sp.config) if sp.config else {}
+            bot_user_id = config.get('bot_user_id', '')
+            if bot_user_id and slack_user == bot_user_id:
+                return jsonify({'ok': True})
+
+            # Get or create conversation
+            metadata = {
+                'slack_user': slack_user,
+                'team_id': payload.get('team_id', ''),
+            }
+            conv = _get_or_create_channel_conversation(owner_user_id, 'slack', slack_channel, metadata)
+
+            # Build agent system prompt if assigned
+            system_prompt = None
+            if sp.agent_id:
+                agent = Agent.query.get(sp.agent_id)
+                if agent and agent.is_active:
+                    system_prompt = _build_agent_system_prompt(agent)
+
+            # Run LLM pipeline
+            from routes.chatbot_routes import run_llm_pipeline
+            result = run_llm_pipeline(owner_user_id, conv.conversation_id, message_text, system_prompt=system_prompt)
+
+            if result['success']:
+                response_text = result.get('last_assistant_content', '')
+                if not response_text:
+                    response_text = 'I processed your request but have no text response.'
+            else:
+                response_text = f"Error: {result.get('error', 'Unknown error')}"
+
+            _send_slack_response(bot_token, slack_channel, response_text)
+
+        except Exception as e:
+            print(f"Slack webhook error: {e}")
+            try:
+                if bot_token and slack_channel:
+                    _send_slack_response(bot_token, slack_channel, f'Internal error: {str(e)[:200]}')
+            except Exception:
+                pass
+
+        return jsonify({'ok': True})
+
+
+# ============================================
+# Discord adapter functions
+# ============================================
+
+def _parse_discord_message(payload):
+    """Extract channel_id, user_id, content from Discord interaction/gateway event."""
+    # Handle interaction (slash command / message component)
+    if payload.get('type') in (2, 3):  # APPLICATION_COMMAND or MESSAGE_COMPONENT
+        data = payload.get('data', {})
+        user = payload.get('member', {}).get('user', {}) or payload.get('user', {})
+        options = data.get('options', [])
+        text = ''
+        for opt in options:
+            if opt.get('name') == 'message':
+                text = opt.get('value', '')
+                break
+        if not text:
+            text = data.get('name', '')
+        return {
+            'channel_id': payload.get('channel_id', ''),
+            'user_id': user.get('id', ''),
+            'username': user.get('username', ''),
+            'guild_id': payload.get('guild_id', ''),
+            'text': text,
+        }
+
+    # Handle gateway bot forwarded message event
+    if payload.get('t') == 'MESSAGE_CREATE' or (payload.get('content') and payload.get('author')):
+        author = payload.get('author', {})
+        # Skip bot messages
+        if author.get('bot'):
+            return None
+        return {
+            'channel_id': payload.get('channel_id', ''),
+            'user_id': author.get('id', ''),
+            'username': author.get('username', ''),
+            'guild_id': payload.get('guild_id', ''),
+            'text': payload.get('content', ''),
+        }
+
+    # Handle nested data (gateway event wrapper)
+    d = payload.get('d', {})
+    if d and d.get('content') and d.get('author'):
+        author = d.get('author', {})
+        if author.get('bot'):
+            return None
+        return {
+            'channel_id': d.get('channel_id', ''),
+            'user_id': author.get('id', ''),
+            'username': author.get('username', ''),
+            'guild_id': d.get('guild_id', ''),
+            'text': d.get('content', ''),
+        }
+
+    return None
+
+
+def _send_discord_response(bot_token, channel_id, text):
+    """Send a text reply via Discord REST API. Truncates at 2000 chars (Discord limit)."""
+    if not bot_token or not channel_id:
+        return
+    if len(text) > 2000:
+        text = text[:1997] + '...'
+
+    try:
+        requests.post(
+            f'https://discord.com/api/v10/channels/{channel_id}/messages',
+            headers={
+                'Authorization': f'Bot {bot_token}',
+                'Content-Type': 'application/json',
+            },
+            json={'content': text},
+            timeout=15,
+        )
+    except Exception as e:
+        print(f"Discord send error: {e}")
+
+
+def _send_discord_typing(bot_token, channel_id):
+    """Send typing indicator to a Discord channel."""
+    try:
+        requests.post(
+            f'https://discord.com/api/v10/channels/{channel_id}/typing',
+            headers={'Authorization': f'Bot {bot_token}'},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _find_superpower_by_discord(discord_user_id, channel_id):
+    """Find a Discord Superpower that should handle this message.
+
+    Matches by checking if webhook is active. For multi-user support,
+    we'd need to store guild/channel mappings.
+    """
+    superpowers = Superpower.query.filter_by(service_type='discord', is_enabled=True).all()
+    for sp in superpowers:
+        if not sp.config:
+            continue
+        try:
+            config = json.loads(sp.config) if isinstance(sp.config, str) else sp.config
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if config.get('webhook_active'):
+            return sp
+    return None
+
+
+# ============================================
+# Slack adapter functions
+# ============================================
+
+def _parse_slack_message(payload):
+    """Extract channel, user, text from Slack Events API payload."""
+    event = payload.get('event', {})
+    if not event:
+        return None
+
+    return {
+        'channel': event.get('channel', ''),
+        'user': event.get('user', ''),
+        'text': event.get('text', ''),
+        'ts': event.get('ts', ''),
+        'team_id': payload.get('team_id', ''),
+    }
+
+
+def _send_slack_response(bot_token, channel, text):
+    """Send a text reply via Slack chat.postMessage."""
+    if not bot_token or not channel:
+        return
+    if len(text) > 4000:
+        text = text[:4000] + '...'
+
+    try:
+        requests.post(
+            'https://slack.com/api/chat.postMessage',
+            headers={
+                'Authorization': f'Bearer {bot_token}',
+                'Content-Type': 'application/json',
+            },
+            json={'channel': channel, 'text': text},
+            timeout=15,
+        )
+    except Exception as e:
+        print(f"Slack send error: {e}")
+
+
+def _find_superpower_by_slack(slack_user_id, channel_id):
+    """Find a Slack Superpower that should handle this message."""
+    superpowers = Superpower.query.filter_by(service_type='slack', is_enabled=True).all()
+    for sp in superpowers:
+        if not sp.config:
+            continue
+        try:
+            config = json.loads(sp.config) if isinstance(sp.config, str) else sp.config
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if config.get('webhook_active'):
+            return sp
+    return None
+
+
 def _find_superpower_by_telegram_id(telegram_user_id):
     """Find the Superpower whose config.owner_telegram_id matches the sender."""
     superpowers = Superpower.query.filter_by(service_type='telegram', is_enabled=True).all()

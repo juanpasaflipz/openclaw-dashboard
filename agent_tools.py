@@ -13,7 +13,7 @@ import requests as http_requests
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from models import db, Superpower
+from models import db, Superpower, ConfigFile
 
 
 # ---------------------------------------------------------------------------
@@ -805,6 +805,61 @@ def _exec_spotify_play(user_id, params):
 
 
 # ---------------------------------------------------------------------------
+# Soul / Memory tool executors
+# ---------------------------------------------------------------------------
+
+def _exec_update_soul(user_id, params):
+    """Append an observation or fact to a soul file (SOUL.md, IDENTITY.md, or USER.md)."""
+    key = (params.get('key') or '').upper()
+    content = (params.get('content') or '').strip()
+    if key not in ('SOUL', 'IDENTITY', 'USER'):
+        return {'error': 'key must be one of: SOUL, IDENTITY, USER'}
+    if not content:
+        return {'error': 'content is required'}
+
+    filename = f'{key}.md'
+    cfg = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+    entry = f'\n\n[{timestamp}] {content}'
+
+    if cfg:
+        cfg.content = (cfg.content or '') + entry
+        cfg.updated_at = datetime.utcnow()
+    else:
+        cfg = ConfigFile(user_id=user_id, filename=filename, content=entry.strip())
+        db.session.add(cfg)
+
+    db.session.commit()
+    return {'success': True, 'file': filename, 'appended': content}
+
+
+def _exec_save_memory(user_id, params):
+    """Save a fact or observation to semantic memory for cross-conversation recall."""
+    content = (params.get('content') or '').strip()
+    if not content:
+        return {'error': 'content is required'}
+    try:
+        from memory_service import store_memory
+        store_memory(user_id, content, source_type='manual', source_id=None)
+        return {'success': True, 'stored': content}
+    except Exception as e:
+        return {'error': f'Memory storage failed: {str(e)[:200]}'}
+
+
+def _exec_recall_memory(user_id, params):
+    """Search past memories for relevant facts."""
+    query = (params.get('query') or '').strip()
+    if not query:
+        return {'error': 'query is required'}
+    try:
+        from memory_service import search_memories
+        results = search_memories(user_id, query, limit=params.get('limit', 5))
+        return {'memories': results}
+    except Exception as e:
+        return {'error': f'Memory search failed: {str(e)[:200]}'}
+
+
+# ---------------------------------------------------------------------------
 # TOOL_REGISTRY
 # ---------------------------------------------------------------------------
 
@@ -822,6 +877,34 @@ TOOL_REGISTRY = {
                              }, 'required': ['provider']}),
         'required_service': None,
         'execute': _exec_connect_service,
+    },
+
+    # -- Soul / Memory tools (always available) --
+    'update_soul': {
+        'schema': _fn_schema('update_soul', 'Append an observation or fact to your persistent memory files (SOUL, IDENTITY, or USER). Use this to remember important things about the user or yourself.',
+                             {'type': 'object', 'properties': {
+                                 'key': {'type': 'string', 'enum': ['SOUL', 'IDENTITY', 'USER'], 'description': 'Which file to update: SOUL (persistent memory), IDENTITY (your personality), USER (user profile)'},
+                                 'content': {'type': 'string', 'description': 'The observation or fact to save'},
+                             }, 'required': ['key', 'content']}),
+        'required_service': None,
+        'execute': _exec_update_soul,
+    },
+    'save_memory': {
+        'schema': _fn_schema('save_memory', 'Save a fact or observation to semantic memory for cross-conversation recall. Use this for important facts you want to remember across conversations.',
+                             {'type': 'object', 'properties': {
+                                 'content': {'type': 'string', 'description': 'The fact or observation to remember'},
+                             }, 'required': ['content']}),
+        'required_service': None,
+        'execute': _exec_save_memory,
+    },
+    'recall_memory': {
+        'schema': _fn_schema('recall_memory', 'Search your semantic memory for relevant facts from past conversations.',
+                             {'type': 'object', 'properties': {
+                                 'query': {'type': 'string', 'description': 'What to search for in memory'},
+                                 'limit': {'type': 'integer', 'description': 'Max results to return (default 5)', 'default': 5},
+                             }, 'required': ['query']}),
+        'required_service': None,
+        'execute': _exec_recall_memory,
     },
 
     # -- GitHub --

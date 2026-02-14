@@ -23,6 +23,18 @@
     {
       "path": "/api/obs/internal/evaluate-alerts",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/memories/index",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/obs/internal/retention-cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/obs/internal/enforce-risk",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

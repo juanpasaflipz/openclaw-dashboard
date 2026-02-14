@@ -3,8 +3,9 @@ Chatbot Routes — conversation management and direct-LLM chat with tool calling
 """
 from flask import jsonify, request, session
 from datetime import datetime
-from models import db, ChatConversation, ChatMessage, UserModelConfig
+from models import db, ChatConversation, ChatMessage, UserModelConfig, ConfigFile
 from llm_service import LLMService
+from context_manager import trim_messages
 import secrets
 import json
 
@@ -171,12 +172,38 @@ def run_llm_pipeline(user_id, conversation_id, message_text, feature_slot='chatb
     tools = get_tools_for_user(user_id)
     tools_system_prompt = get_tools_system_prompt(user_id)
 
-    # Build system prompt with tools context
+    # --- Soul Persistence: inject ConfigFile entries into system prompt ---
+    soul_parts = []
+    for filename, label in [('IDENTITY.md', 'IDENTITY'), ('SOUL.md', 'SOUL (Persistent Memory)'), ('USER.md', 'USER PROFILE')]:
+        cfg = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
+        if cfg and cfg.content and cfg.content.strip():
+            soul_parts.append(f'=== {label} ===\n{cfg.content.strip()}')
+    soul_block = '\n\n'.join(soul_parts) if soul_parts else ''
+
+    # --- Semantic Memory: inject relevant memories into prompt ---
+    memory_block = ''
+    try:
+        from memory_service import search_memories
+        memories = search_memories(user_id, message_text, limit=5)
+        if memories:
+            memory_lines = [f'- {m["content"]}' for m in memories]
+            memory_block = 'Relevant memories from past conversations:\n' + '\n'.join(memory_lines)
+    except Exception:
+        pass  # Memory must never break the pipeline
+
+    # Build system prompt with soul context + memory + tools context
     base_system = system_prompt or ''
+    if soul_block:
+        base_system = (soul_block + '\n\n' + base_system).strip()
+    if memory_block:
+        base_system = (base_system + '\n\n' + memory_block).strip()
     full_system = (base_system + '\n\n' + tools_system_prompt).strip() if tools_system_prompt else base_system
 
     # Build message history
     messages, history = _build_history_messages(conversation_id, config.provider, system_prompt=full_system)
+
+    # Context window guard: trim messages to fit within model limits
+    messages = trim_messages(messages, model=config.model)
 
     new_messages = []
 
