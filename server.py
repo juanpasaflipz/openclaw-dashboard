@@ -97,6 +97,7 @@ from routes import (
     register_collaboration_messages_routes,
     register_collaboration_team_routes,
     register_memory_routes,
+    register_blueprint_routes,
 )
 
 register_auth_routes(app)
@@ -132,6 +133,7 @@ register_collaboration_tasks_routes(app)
 register_collaboration_messages_routes(app)
 register_collaboration_team_routes(app)
 register_memory_routes(app)
+register_blueprint_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])

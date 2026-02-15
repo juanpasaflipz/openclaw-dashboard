@@ -12,6 +12,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,10 @@ class ExecutionContext:
     agent_id: int
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = field(default_factory=datetime.utcnow)
+
+    # Blueprint capability snapshot — None means legacy agent (no restrictions).
+    # When set, contains: {allowed_tools, allowed_models, risk_profile, ...}
+    resolved_capabilities: dict[str, Any] | None = field(default=None, repr=False)
 
     # --- factories -------------------------------------------------------
 
@@ -57,6 +62,26 @@ class ExecutionContext:
             run_id=run_id or str(uuid.uuid4()),
         )
 
+    def with_capabilities(self, capabilities: dict[str, Any]) -> ExecutionContext:
+        """Return a new context with blueprint capabilities attached.
+
+        The original context is not mutated (frozen dataclass).
+        Used by AgentRuntime to attach resolved capabilities at session start.
+
+        Args:
+            capabilities: Resolved capability dict from AgentInstance.policy_snapshot.
+
+        Returns:
+            A new ExecutionContext with resolved_capabilities set.
+        """
+        return ExecutionContext(
+            workspace_id=self.workspace_id,
+            agent_id=self.agent_id,
+            run_id=self.run_id,
+            created_at=self.created_at,
+            resolved_capabilities=capabilities,
+        )
+
     def for_agent(self, agent_id: int) -> ExecutionContext:
         """Derive a sibling context for another agent in the *same* workspace.
 
@@ -80,13 +105,49 @@ class ExecutionContext:
             agent_id=agent_id,
         )
 
+    # --- capability queries ----------------------------------------------
+
+    @property
+    def has_capabilities(self) -> bool:
+        """True if this context has blueprint-resolved capabilities."""
+        return self.resolved_capabilities is not None
+
+    @property
+    def allowed_tools(self) -> set[str] | None:
+        """The set of allowed tool names, or None for unrestricted (legacy).
+
+        Returns None if no capabilities are set or if the allowlist is ["*"].
+        """
+        if self.resolved_capabilities is None:
+            return None
+        tools = self.resolved_capabilities.get('allowed_tools', [])
+        if not tools or tools == ['*']:
+            return None
+        return set(tools)
+
+    @property
+    def allowed_models(self) -> set[str] | None:
+        """The set of allowed model identifiers, or None for unrestricted (legacy).
+
+        Returns None if no capabilities are set or if the allowlist is ["*"].
+        """
+        if self.resolved_capabilities is None:
+            return None
+        models = self.resolved_capabilities.get('allowed_models', [])
+        if not models or models == ['*']:
+            return None
+        return set(models)
+
     # --- helpers ---------------------------------------------------------
 
     def as_dict(self) -> dict:
         """Serialise to a plain dict (useful for logging / event payloads)."""
-        return {
+        d = {
             'workspace_id': self.workspace_id,
             'agent_id': self.agent_id,
             'run_id': self.run_id,
             'created_at': self.created_at.isoformat(),
         }
+        if self.resolved_capabilities is not None:
+            d['has_capabilities'] = True
+        return d

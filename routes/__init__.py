@@ -31,3 +31,4 @@ from routes.collaboration_tasks_routes import register_collaboration_tasks_route
 from routes.collaboration_messages_routes import register_collaboration_messages_routes
 from routes.collaboration_team_routes import register_collaboration_team_routes
 from routes.memory_routes import register_memory_routes
+from routes.blueprint_routes import register_blueprint_routes

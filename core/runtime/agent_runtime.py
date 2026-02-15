@@ -140,9 +140,10 @@ class AgentRuntime:
         """Start a governed session for *agent_id* in this workspace.
 
         1. Creates an ExecutionContext (verifies ownership).
-        2. Checks pre-start governance (tier limits, risk policies).
-        3. Opens an observability run.
-        4. Returns a RuntimeSession handle.
+        2. Loads blueprint capabilities if the agent has an instance binding.
+        3. Checks pre-start governance (tier limits, risk policies).
+        4. Opens an observability run.
+        5. Returns a RuntimeSession handle.
 
         Raises:
             PermissionError: Agent does not belong to this workspace.
@@ -155,6 +156,9 @@ class AgentRuntime:
                 f'Agent {agent_id} resolved to workspace {ctx.workspace_id}, '
                 f'but this runtime serves workspace {self._workspace_id}'
             )
+
+        # Load blueprint capabilities (if agent has an instance binding)
+        ctx = self._load_capabilities(ctx)
 
         # Pre-start governance
         self._pre_start_check(ctx)
@@ -238,6 +242,28 @@ class AgentRuntime:
         self._finish_obs_run(ctx, status, error)
         with self._lock:
             self._sessions.pop(ctx.run_id, None)
+
+    # --- blueprint capabilities ------------------------------------------
+
+    def _load_capabilities(self, ctx: ExecutionContext) -> ExecutionContext:
+        """Load blueprint capabilities for the agent, if an instance exists.
+
+        If the agent has an AgentInstance binding, the policy_snapshot is
+        attached to the context. Legacy agents (no instance) get None.
+
+        Returns a new context with capabilities attached (or the original
+        context unchanged for legacy agents).
+        """
+        try:
+            from core.identity.agent_instance import get_agent_instance
+            instance = get_agent_instance(ctx.agent_id)
+            if instance is not None and instance.policy_snapshot:
+                return ctx.with_capabilities(instance.policy_snapshot)
+        except Exception:
+            # Blueprint tables may not exist (e.g., during migrations).
+            # Fail open — treat as legacy agent.
+            pass
+        return ctx
 
     # --- governance ------------------------------------------------------
 

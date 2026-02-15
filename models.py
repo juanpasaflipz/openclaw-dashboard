@@ -1577,3 +1577,216 @@ class TeamRule(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+# ============================================
+# Agent Blueprint & Capability System
+# ============================================
+
+# Valid role types for blueprints
+BLUEPRINT_ROLE_TYPES = {'researcher', 'executor', 'supervisor', 'autonomous', 'worker'}
+# Valid blueprint statuses
+BLUEPRINT_STATUSES = {'draft', 'published', 'archived'}
+
+
+class AgentBlueprint(db.Model):
+    """Versioned, reusable agent profile template.
+
+    Lifecycle: draft -> published -> archived.
+    A published blueprint is the source of truth for agent instances.
+    """
+    __tablename__ = 'agent_blueprints'
+
+    id = db.Column(db.String(36), primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    role_type = db.Column(db.String(50), nullable=False, default='worker')
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id],
+                                backref=db.backref('blueprints', lazy='dynamic'))
+    versions = db.relationship('AgentBlueprintVersion', backref='blueprint',
+                               lazy='dynamic', order_by='AgentBlueprintVersion.version')
+    instances = db.relationship('AgentInstance', backref='blueprint', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<AgentBlueprint {self.name} ({self.status}) workspace={self.workspace_id}>'
+
+    @property
+    def latest_version(self):
+        """Return the highest version number, or 0 if no versions exist."""
+        from sqlalchemy import func
+        result = db.session.query(func.max(AgentBlueprintVersion.version)).filter_by(
+            blueprint_id=self.id
+        ).scalar()
+        return result or 0
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'name': self.name,
+            'description': self.description,
+            'role_type': self.role_type,
+            'status': self.status,
+            'latest_version': self.latest_version,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_by': self.created_by,
+        }
+
+
+class AgentBlueprintVersion(db.Model):
+    """Immutable, append-only snapshot of a blueprint configuration.
+
+    Once inserted, no column may be updated. This is the foundational
+    guarantee that makes auditing meaningful.
+    """
+    __tablename__ = 'agent_blueprint_versions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    blueprint_id = db.Column(db.String(36), db.ForeignKey('agent_blueprints.id'), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False)
+
+    # Capability definitions
+    allowed_models = db.Column(db.JSON)      # ["openai/gpt-4o", "anthropic/claude-sonnet-4-5-20250929"]
+    allowed_tools = db.Column(db.JSON)       # ["gmail_send", "calendar_read"]
+    default_risk_profile = db.Column(db.JSON)  # {daily_spend_cap: 10.00, action_type: "alert_only"}
+    hierarchy_defaults = db.Column(db.JSON)  # {role: "worker", can_assign_to_peers: false}
+    memory_strategy = db.Column(db.JSON)     # {type: "semantic", retention_days: 30}
+    escalation_rules = db.Column(db.JSON)    # {on_tool_denied: "notify_supervisor"}
+    llm_defaults = db.Column(db.JSON)        # {provider: "openai", model: "gpt-4o", temperature: 0.7}
+    identity_defaults = db.Column(db.JSON)   # {personality: "...", system_prompt: "..."}
+    override_policy = db.Column(db.JSON)     # {allowed_overrides: ["temperature"], denied_overrides: ["provider"]}
+
+    # Publish metadata
+    published_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    published_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    changelog = db.Column(db.Text)
+
+    __table_args__ = (
+        db.UniqueConstraint('blueprint_id', 'version', name='_blueprint_version_uc'),
+    )
+
+    def __repr__(self):
+        return f'<AgentBlueprintVersion blueprint={self.blueprint_id} v{self.version}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'blueprint_id': self.blueprint_id,
+            'version': self.version,
+            'allowed_models': self.allowed_models,
+            'allowed_tools': self.allowed_tools,
+            'default_risk_profile': self.default_risk_profile,
+            'hierarchy_defaults': self.hierarchy_defaults,
+            'memory_strategy': self.memory_strategy,
+            'escalation_rules': self.escalation_rules,
+            'llm_defaults': self.llm_defaults,
+            'identity_defaults': self.identity_defaults,
+            'override_policy': self.override_policy,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'published_by': self.published_by,
+            'changelog': self.changelog,
+        }
+
+
+# Join table: blueprint versions <-> capability bundles (M:N)
+blueprint_capabilities = db.Table(
+    'blueprint_capabilities',
+    db.Column('blueprint_version_id', db.Integer,
+              db.ForeignKey('agent_blueprint_versions.id'), primary_key=True),
+    db.Column('capability_id', db.Integer,
+              db.ForeignKey('capability_bundles.id'), primary_key=True),
+)
+
+
+class CapabilityBundle(db.Model):
+    """Named, reusable permission set attachable to blueprint versions.
+
+    Defines what tools, models, and risk constraints a capability grants.
+    """
+    __tablename__ = 'capability_bundles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    tool_set = db.Column(db.JSON)             # ["gmail_send", "gmail_read", "gmail_draft"]
+    model_constraints = db.Column(db.JSON)    # {allowed_providers: ["openai"], max_model_tier: "standard"}
+    risk_constraints = db.Column(db.JSON)     # {max_daily_spend: 5.00, max_single_action_cost: 1.00}
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    blueprint_versions = db.relationship(
+        'AgentBlueprintVersion', secondary=blueprint_capabilities,
+        backref=db.backref('capabilities', lazy='select'),
+        lazy='select',
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='_workspace_capability_name_uc'),
+    )
+
+    def __repr__(self):
+        return f'<CapabilityBundle {self.name} workspace={self.workspace_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'name': self.name,
+            'description': self.description,
+            'tool_set': self.tool_set,
+            'model_constraints': self.model_constraints,
+            'risk_constraints': self.risk_constraints,
+            'is_system': self.is_system,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class AgentInstance(db.Model):
+    """Binding of an Agent to a specific blueprint version with constrained overrides.
+
+    One agent maps to at most one instance (1:1). Agents without an instance
+    binding operate in legacy mode with no capability restrictions.
+    """
+    __tablename__ = 'agent_instances'
+
+    id = db.Column(db.Integer, primary_key=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False, unique=True)
+    blueprint_id = db.Column(db.String(36), db.ForeignKey('agent_blueprints.id'), nullable=False)
+    blueprint_version = db.Column(db.Integer, nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    overrides = db.Column(db.JSON)           # limited set, validated against override_policy
+    policy_snapshot = db.Column(db.JSON, nullable=False)  # full resolved capability at instantiation
+    instantiated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    instantiated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    last_policy_refresh = db.Column(db.DateTime)
+
+    # Relationships
+    agent = db.relationship('Agent', backref=db.backref('instance', uselist=False))
+
+    def __repr__(self):
+        return (f'<AgentInstance agent={self.agent_id} '
+                f'blueprint={self.blueprint_id} v{self.blueprint_version}>')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'blueprint_id': self.blueprint_id,
+            'blueprint_version': self.blueprint_version,
+            'workspace_id': self.workspace_id,
+            'overrides': self.overrides,
+            'policy_snapshot': self.policy_snapshot,
+            'instantiated_at': self.instantiated_at.isoformat() if self.instantiated_at else None,
+            'instantiated_by': self.instantiated_by,
+            'last_policy_refresh': self.last_policy_refresh.isoformat() if self.last_policy_refresh else None,
+        }
